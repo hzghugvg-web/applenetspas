@@ -14,6 +14,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppVpnRouteImport } from './routes/_app.vpn'
 import { Route as AppProfileRouteImport } from './routes/_app.profile'
+import { Route as AppAdminRouteImport } from './routes/_app.admin'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -39,16 +40,23 @@ const AppProfileRoute = AppProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/admin': typeof AppAdminRoute
   '/profile': typeof AppProfileRoute
   '/vpn': typeof AppVpnRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/admin': typeof AppAdminRoute
   '/profile': typeof AppProfileRoute
   '/vpn': typeof AppVpnRoute
 }
@@ -57,15 +65,23 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_app/admin': typeof AppAdminRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/vpn': typeof AppVpnRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/profile' | '/vpn'
+  fullPaths: '/' | '/auth' | '/admin' | '/profile' | '/vpn'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/profile' | '/vpn'
-  id: '__root__' | '/' | '/_app' | '/auth' | '/_app/profile' | '/_app/vpn'
+  to: '/' | '/auth' | '/admin' | '/profile' | '/vpn'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/auth'
+    | '/_app/admin'
+    | '/_app/profile'
+    | '/_app/vpn'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -111,15 +127,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProfileRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin': {
+      id: '/_app/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppAdminRoute: typeof AppAdminRoute
   AppProfileRoute: typeof AppProfileRoute
   AppVpnRoute: typeof AppVpnRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAdminRoute: AppAdminRoute,
   AppProfileRoute: AppProfileRoute,
   AppVpnRoute: AppVpnRoute,
 }

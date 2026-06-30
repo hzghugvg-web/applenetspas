@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { translateAuthError } from "@/lib/errors";
@@ -10,7 +10,7 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   beforeLoad: async () => {
     const { data } = await supabase.auth.getSession();
-    if (data.session) throw (await import("@tanstack/react-router")).redirect({ to: "/vpn" });
+    if (data.session) throw redirect({ to: "/vpn" });
   },
   component: AuthPage,
 });
