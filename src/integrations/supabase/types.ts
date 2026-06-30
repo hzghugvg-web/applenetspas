@@ -14,16 +14,194 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      directions: {
+        Row: {
+          created_at: string
+          flag: string | null
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          flag?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          flag?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
+      issued_configs: {
+        Row: {
+          direction_id: string | null
+          id: string
+          issued_at: string
+          user_id: string
+          vless_url: string
+        }
+        Insert: {
+          direction_id?: string | null
+          id?: string
+          issued_at?: string
+          user_id: string
+          vless_url: string
+        }
+        Update: {
+          direction_id?: string | null
+          id?: string
+          issued_at?: string
+          user_id?: string
+          vless_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issued_configs_direction_id_fkey"
+            columns: ["direction_id"]
+            isOneToOne: false
+            referencedRelation: "directions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          cooldown_until: string | null
+          created_at: string
+          device_count: number
+          email: string
+          id: string
+          is_blocked: boolean
+          subscription_until: string | null
+          updated_at: string
+        }
+        Insert: {
+          cooldown_until?: string | null
+          created_at?: string
+          device_count?: number
+          email: string
+          id: string
+          is_blocked?: boolean
+          subscription_until?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cooldown_until?: string | null
+          created_at?: string
+          device_count?: number
+          email?: string
+          id?: string
+          is_blocked?: boolean
+          subscription_until?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      system_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vless_links: {
+        Row: {
+          created_at: string
+          direction_id: string
+          id: string
+          is_active: boolean
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          direction_id: string
+          id?: string
+          is_active?: boolean
+          url: string
+        }
+        Update: {
+          created_at?: string
+          direction_id?: string
+          id?: string
+          is_active?: boolean
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vless_links_direction_id_fkey"
+            columns: ["direction_id"]
+            isOneToOne: false
+            referencedRelation: "directions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      admin_reset_cooldown: { Args: { _target: string }; Returns: undefined }
+      admin_toggle_block: {
+        Args: { _block: boolean; _target: string }
+        Returns: undefined
+      }
+      bootstrap_user: { Args: never; Returns: undefined }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
+      issue_vpn_config: {
+        Args: { _direction_id: string }
+        Returns: {
+          vless_url: string
+        }[]
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +328,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
