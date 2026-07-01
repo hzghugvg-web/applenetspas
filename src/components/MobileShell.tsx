@@ -41,13 +41,13 @@ export function MobileShell({ title, children }: Props) {
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={pathname}
-            initial={{ opacity: 0, x: 16 }}
+            initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -16 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             className="ns-scroll h-full px-4 py-4"
           >
-            {children}
+            <div className="tg-stagger space-y-3">{children}</div>
           </motion.div>
         </AnimatePresence>
       </main>
