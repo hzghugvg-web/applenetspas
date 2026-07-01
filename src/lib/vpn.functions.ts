@@ -30,6 +30,31 @@ function rewriteFragment(link: string, brand: string): string {
 
 function extractLinks(body: string, brand: string): string[] {
   const trimmed = body.trim();
+  // Xray/V2Ray JSON config (array of configs or single config with outbounds)
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      const configs = Array.isArray(parsed) ? parsed : [parsed];
+      const out: string[] = [];
+      configs.forEach((cfg: any) => {
+        const outbounds: any[] = cfg?.outbounds ?? [];
+        outbounds.forEach((ob) => {
+          const uri = outboundToUri(ob);
+          if (uri) out.push(uri);
+        });
+      });
+      if (out.length) {
+        return out.map((line, i) => {
+          const tag = i === 0 ? brand : brand + "-" + (i + 1);
+          return line.toLowerCase().startsWith("vmess://")
+            ? rewriteVmess(line, tag)
+            : rewriteFragment(line, tag);
+        });
+      }
+    } catch {
+      // fall through
+    }
+  }
   const source =
     /^(vless|vmess|trojan|ss):\/\//im.test(trimmed) ? trimmed : tryBase64Decode(trimmed) ?? trimmed;
   const lines = source
@@ -42,6 +67,82 @@ function extractLinks(body: string, brand: string): string[] {
       ? rewriteVmess(line, tag)
       : rewriteFragment(line, tag);
   });
+}
+
+function outboundToUri(ob: any): string | null {
+  const proto = String(ob?.protocol ?? "").toLowerCase();
+  const stream = ob?.streamSettings ?? {};
+  const network = String(stream.network ?? "tcp");
+  const security = String(stream.security ?? "none");
+
+  const streamParams: Record<string, string> = { type: network, security };
+  if (security === "tls" || security === "reality") {
+    const tls = stream.tlsSettings ?? {};
+    const reality = stream.realitySettings ?? {};
+    const sni = reality.serverName ?? tls.serverName;
+    if (sni) streamParams.sni = sni;
+    const fp = reality.fingerprint ?? tls.fingerprint;
+    if (fp) streamParams.fp = fp;
+    if (reality.publicKey) streamParams.pbk = reality.publicKey;
+    if (reality.shortId !== undefined) streamParams.sid = String(reality.shortId);
+    if (tls.alpn?.length) streamParams.alpn = tls.alpn.join(",");
+  }
+  if (network === "ws") {
+    const ws = stream.wsSettings ?? {};
+    if (ws.path) streamParams.path = ws.path;
+    if (ws.headers?.Host) streamParams.host = ws.headers.Host;
+  } else if (network === "grpc") {
+    const g = stream.grpcSettings ?? {};
+    if (g.serviceName) streamParams.serviceName = g.serviceName;
+  }
+
+  const enc = (o: Record<string, string>) =>
+    Object.entries(o)
+      .filter(([, v]) => v !== undefined && v !== "")
+      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+      .join("&");
+
+  if (proto === "vless") {
+    const v = ob.settings?.vnext?.[0];
+    if (!v) return null;
+    const u = v.users?.[0];
+    if (!u?.id) return null;
+    const params = { ...streamParams, encryption: u.encryption ?? "none", flow: u.flow ?? "" };
+    return `vless://${u.id}@${v.address}:${v.port}?${enc(params)}#Config`;
+  }
+  if (proto === "trojan") {
+    const s = ob.settings?.servers?.[0];
+    if (!s?.password) return null;
+    return `trojan://${encodeURIComponent(s.password)}@${s.address}:${s.port}?${enc(streamParams)}#Config`;
+  }
+  if (proto === "vmess") {
+    const v = ob.settings?.vnext?.[0];
+    const u = v?.users?.[0];
+    if (!u?.id) return null;
+    const obj = {
+      v: "2",
+      ps: "Config",
+      add: v.address,
+      port: String(v.port),
+      id: u.id,
+      aid: String(u.alterId ?? 0),
+      scy: u.security ?? "auto",
+      net: network,
+      type: "none",
+      host: streamParams.host ?? "",
+      path: streamParams.path ?? "",
+      tls: security === "tls" ? "tls" : "",
+      sni: streamParams.sni ?? "",
+    };
+    return "vmess://" + btoa(JSON.stringify(obj));
+  }
+  if (proto === "shadowsocks") {
+    const s = ob.settings?.servers?.[0];
+    if (!s?.password || !s?.method) return null;
+    const userinfo = btoa(`${s.method}:${s.password}`);
+    return `ss://${userinfo}@${s.address}:${s.port}#Config`;
+  }
+  return null;
 }
 
 export const issueVpnConfig = createServerFn({ method: "POST" })
