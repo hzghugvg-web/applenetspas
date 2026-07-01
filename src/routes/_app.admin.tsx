@@ -215,11 +215,18 @@ function ComplaintsTab() {
   async function load() {
     let q = supabase
       .from("complaints")
-      .select("id,user_id,description,video_url,status,admin_reply,created_at,profiles(email)")
+      .select("id,user_id,description,video_url,status,admin_reply,created_at")
       .order("created_at", { ascending: false });
     if (filter !== "all") q = q.eq("status", filter);
     const { data } = await q;
-    setList((data ?? []) as any);
+    const rows = (data ?? []) as AdminComplaint[];
+    const ids = Array.from(new Set(rows.map((r) => r.user_id)));
+    if (ids.length) {
+      const { data: profs } = await supabase.from("profiles").select("id,email").in("id", ids);
+      const map = new Map((profs ?? []).map((p: any) => [p.id, p.email]));
+      for (const r of rows) r.profiles = { email: map.get(r.user_id) ?? "—" };
+    }
+    setList(rows);
   }
   useEffect(() => { load(); }, [filter]);
 
