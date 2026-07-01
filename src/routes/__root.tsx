@@ -11,8 +11,8 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { Toaster } from "sonner";
 import { PlatformGate } from "@/components/PlatformGate";
+import { AlertHost } from "@/lib/alert";
 
 function NotFoundComponent() {
   return (
@@ -128,7 +128,7 @@ function RootComponent() {
       <PlatformGate>
         <Outlet />
       </PlatformGate>
-      <Toaster theme="dark" position="top-center" richColors closeButton />
+      <AlertHost />
     </QueryClientProvider>
   );
 }
