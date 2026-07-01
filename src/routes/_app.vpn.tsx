@@ -29,11 +29,20 @@ function VpnPage() {
 
   async function loadAll() {
     const [{ data: dirs }, { data: u }] = await Promise.all([
-      supabase.from("directions").select("id,name,flag").eq("is_active", true).order("name"),
+      supabase
+        .from("directions")
+        .select("id,name,flag,vless_links!inner(id)")
+        .eq("is_active", true)
+        .eq("vless_links.is_active", true)
+        .order("name"),
       supabase.auth.getUser(),
     ]);
-    setDirections(dirs ?? []);
-    if (!selected && dirs?.length) setSelected(dirs[0].id);
+    const unique = Array.from(
+      new Map((dirs ?? []).map((d: any) => [d.id, { id: d.id, name: d.name, flag: d.flag }])).values()
+    );
+    setDirections(unique);
+    if (unique.length && !unique.find((d) => d.id === selected)) setSelected(unique[0].id);
+    if (!unique.length) setSelected(null);
     if (u.user) {
       const { data: p } = await supabase
         .from("profiles")
