@@ -4,49 +4,34 @@ import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/MobileShell";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { LogOut, Trash2, Mail, KeyRound, Loader2 } from "lucide-react";
+import { LogOut, Trash2, KeyRound, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_app/profile")({ component: ProfilePage });
 
 function ProfilePage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
-  const [newEmail, setNewEmail] = useState("");
+  const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => { setEmail(data.user?.email ?? ""); setNewEmail(data.user?.email ?? ""); });
+    supabase.auth.getUser().then(({ data }) => { setEmail(data.user?.email ?? ""); });
   }, []);
 
-  async function updateEmail() {
-    if (!newEmail || newEmail === email) {
-      toast.error("Новый email совпадает с текущим");
-      return;
-    }
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ email: newEmail });
-      if (error) throw error;
-      const { data: u } = await supabase.auth.getUser();
-      if (u.user) {
-        await supabase.from("profiles").update({ email: newEmail }).eq("id", u.user.id);
-      }
-      await supabase.auth.signOut();
-      toast.success("Email изменён. Войдите заново.");
-      navigate({ to: "/auth" });
-    } catch (e: any) { toast.error(translateAuthError(e?.message)); }
-    finally { setLoading(false); }
-  }
-
   async function updatePassword() {
-    if (newPassword.length < 6) { toast.error("Пароль должен содержать минимум 6 символов"); return; }
+    if (!oldPassword) { toast.error("Введите текущий пароль"); return; }
+    if (newPassword.length < 6) { toast.error("Новый пароль минимум 6 символов"); return; }
+    if (oldPassword === newPassword) { toast.error("Новый пароль совпадает с текущим"); return; }
     setLoading(true);
     try {
+      const { error: signErr } = await supabase.auth.signInWithPassword({ email, password: oldPassword });
+      if (signErr) { toast.error("Неверный текущий пароль"); return; }
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-      toast.success("Пароль обновлён");
+      setOldPassword("");
       setNewPassword("");
+      toast.success("Пароль обновлён");
     } catch (e: any) { toast.error(translateAuthError(e?.message)); }
     finally { setLoading(false); }
   }
@@ -76,18 +61,12 @@ function ProfilePage() {
         </section>
 
         <section className="space-y-2 rounded-2xl border border-border bg-card p-4">
-          <div className="flex items-center gap-2 text-sm font-medium"><Mail className="h-4 w-4 text-primary" /> Сменить email</div>
-          <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)}
-            className="h-11 w-full rounded-xl border border-border bg-input px-3 outline-none focus:border-primary" />
-          <button onClick={updateEmail} disabled={loading} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-secondary font-medium disabled:opacity-60">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Сохранить"}
-          </button>
-        </section>
-
-        <section className="space-y-2 rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 text-sm font-medium"><KeyRound className="h-4 w-4 text-primary" /> Сменить пароль</div>
+          <input type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)}
+            placeholder="Текущий пароль" autoComplete="current-password"
+            className="h-11 w-full rounded-xl border border-border bg-input px-3 outline-none focus:border-primary" />
           <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="Новый пароль" minLength={6}
+            placeholder="Новый пароль (минимум 6 символов)" minLength={6} autoComplete="new-password"
             className="h-11 w-full rounded-xl border border-border bg-input px-3 outline-none focus:border-primary" />
           <button onClick={updatePassword} disabled={loading} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-secondary font-medium disabled:opacity-60">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Обновить пароль"}
