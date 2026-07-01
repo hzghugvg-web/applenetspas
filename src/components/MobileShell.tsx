@@ -1,30 +1,14 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Globe, User, Settings } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 interface Props { title: string; children: ReactNode; }
 
 export function MobileShell({ title, children }: Props) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", u.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      if (mounted) setIsAdmin(!!data);
-    })();
-    return () => { mounted = false; };
-  }, []);
+  const { data: isAdmin } = useIsAdmin();
 
   const tabs = [
     { to: "/vpn", label: "VPN", icon: Globe },
@@ -57,13 +41,13 @@ export function MobileShell({ title, children }: Props) {
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={pathname}
-            initial={{ opacity: 0, x: 16 }}
+            initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -16 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             className="ns-scroll h-full px-4 py-4"
           >
-            {children}
+            <div className="tg-stagger space-y-3">{children}</div>
           </motion.div>
         </AnimatePresence>
       </main>
