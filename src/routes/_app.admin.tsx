@@ -151,7 +151,6 @@ function LinksTab() {
 
 function UsersTab() {
   const [users, setUsers] = useState<UserRow[]>([]);
-  const [openId, setOpenId] = useState<string | null>(null);
   async function load() {
     const { data } = await supabase.from("profiles").select("id,email,is_blocked,cooldown_until,subscription_from,subscription_until").order("created_at", { ascending: false });
     setUsers((data ?? []) as UserRow[]);
@@ -169,10 +168,10 @@ function UsersTab() {
     <div className="space-y-2">
       {users.map((u) => (
         <div key={u.id} className="space-y-2 rounded-xl border border-border bg-card p-3">
-          <button onClick={() => setOpenId(openId === u.id ? null : u.id)} className="flex w-full items-center gap-2 text-left">
+          <div className="flex w-full items-center gap-2">
             <span className="flex-1 truncate text-sm font-medium">{u.email}</span>
             {u.is_blocked && <span className="rounded bg-destructive/20 px-2 py-0.5 text-xs text-destructive">Блок</span>}
-          </button>
+          </div>
           <div className="text-xs text-muted-foreground">
             CD: {u.cooldown_until ? new Date(u.cooldown_until).toLocaleString("ru-RU") : "—"}
           </div>
@@ -184,7 +183,7 @@ function UsersTab() {
               {u.is_blocked ? <><CheckCircle2 className="h-3.5 w-3.5" /> Разблок</> : <><Ban className="h-3.5 w-3.5" /> Блок</>}
             </button>
           </div>
-          {openId === u.id && <UserDetails user={u} onChanged={load} />}
+          <UserDetails user={u} onChanged={load} />
         </div>
       ))}
       {!users.length && <div className="text-center text-sm text-muted-foreground">Нет пользователей</div>}
