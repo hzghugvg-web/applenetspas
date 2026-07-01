@@ -219,8 +219,8 @@ function UserDetails({ user, onChanged }: { user: UserRow; onChanged: () => void
     setSaving(true);
     const { error } = await supabase.rpc("admin_set_subscription_dates", {
       _target: user.id,
-      _from: from ? new Date(from).toISOString() : null,
-      _until: until ? new Date(until).toISOString() : null,
+      _from: (from ? new Date(from).toISOString() : null) as any,
+      _until: (until ? new Date(until).toISOString() : null) as any,
     });
     setSaving(false);
     if (error) toast.error(translateAuthError(error.message));
