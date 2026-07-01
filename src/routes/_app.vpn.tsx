@@ -87,7 +87,18 @@ function VpnPage() {
       const res = await issue({ data: { directionId: selected } });
       if (!res.links.length) throw new Error("Не удалось получить конфигурацию");
       setLinks(res.links);
-      toast.success("Конфигурация выдана");
+      const { data: u } = await supabase.auth.getUser();
+      const key = u.user ? `ns_first_key_shown_${u.user.id}` : null;
+      const alreadyShown = key ? localStorage.getItem(key) : "1";
+      if (!alreadyShown) {
+        localStorage.setItem(key!, "1");
+        toast.success(
+          "Вот и ваш первый ключ! 🎉\n\nУважаемый пользователь, пожалуйста, не передавайте ключ никому — он привязан к вашему аккаунту.\n\nЕсли VPN не работает сразу — это нормально: он ищет подходящий сервер. Подождите 3–5 минут, и соединение установится.\n\nОбратите внимание: VPN-серверы не наши, мы бесплатно раздаём готовые конфигурации. Подробнее — в разделе «Обращения» → вкладка FAQ, там собраны ответы на частые вопросы.\n\nПриятного пользования и стабильного интернета! 💙",
+          "Ваш первый ключ готов"
+        );
+      } else {
+        toast.success("Конфигурация выдана");
+      }
       await loadAll();
     } catch (e: any) {
       toast.error(translateAuthError(e?.message));
