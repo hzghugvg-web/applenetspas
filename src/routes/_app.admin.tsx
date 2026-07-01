@@ -197,6 +197,8 @@ type AdminComplaint = {
   status: "new" | "in_progress" | "resolved" | "rejected";
   admin_reply: string | null;
   created_at: string;
+  category: "question" | "problem";
+  phone: string | null;
   profiles?: { email: string } | null;
 };
 
@@ -215,7 +217,7 @@ function ComplaintsTab() {
   async function load() {
     let q = supabase
       .from("complaints")
-      .select("id,user_id,description,video_url,status,admin_reply,created_at")
+      .select("id,user_id,description,video_url,status,admin_reply,created_at,category,phone")
       .order("created_at", { ascending: false });
     if (filter !== "all") q = q.eq("status", filter);
     const { data } = await q;
@@ -343,6 +345,16 @@ function AdminComplaintCard({
             className="overflow-hidden"
           >
             <div className="space-y-3 px-3 pb-3 text-[14px]">
+              <div className="flex flex-wrap gap-2 text-[12px] text-muted-foreground">
+                <span className="rounded-full bg-[#1C2C3C] px-2 py-0.5">
+                  {c.category === "problem" ? "Проблема" : "Вопрос"}
+                </span>
+                {c.phone && (
+                  <a href={`tel:${c.phone}`} className="rounded-full bg-[#1C2C3C] px-2 py-0.5 text-primary">
+                    📞 {c.phone}
+                  </a>
+                )}
+              </div>
               <p className="whitespace-pre-wrap text-foreground/90">{c.description}</p>
               {videoUrl && (
                 <video src={videoUrl} controls playsInline className="w-full rounded-lg bg-black" />
