@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { translateAuthError } from "@/lib/errors";
 import { bootstrapUser } from "@/lib/bootstrap";
-import { toast } from "sonner";
+import { alertDialog as toast } from "@/lib/alert";
 import { Shield } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({

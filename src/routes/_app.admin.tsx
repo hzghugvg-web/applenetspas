@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/MobileShell";
 import { translateAuthError } from "@/lib/errors";
-import { toast } from "sonner";
+import { alertDialog as toast } from "@/lib/alert";
 import { Plus, Trash2, RotateCcw, Ban, CheckCircle2, ChevronDown, Send } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/MobileShell";
 import { translateAuthError } from "@/lib/errors";
-import { toast } from "sonner";
+import { alertDialog as toast } from "@/lib/alert";
 import { Copy, QrCode, RefreshCw, Clock, Smartphone, CalendarClock } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 

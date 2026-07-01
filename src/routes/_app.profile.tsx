@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/MobileShell";
 import { translateAuthError } from "@/lib/errors";
-import { toast } from "sonner";
+import { alertDialog as toast } from "@/lib/alert";
 import { LogOut, Trash2, Mail, KeyRound } from "lucide-react";
 
 export const Route = createFileRoute("/_app/profile")({ component: ProfilePage });
