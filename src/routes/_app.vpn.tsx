@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { issueVpnConfig } from "@/lib/vpn.functions";
 import { MobileShell } from "@/components/MobileShell";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { Copy, QrCode, RefreshCw, Clock, Smartphone, CalendarClock, Loader2 } from "lucide-react";
+import { Copy, QrCode, RefreshCw, Clock, Smartphone, CalendarClock, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 export const Route = createFileRoute("/_app/vpn")({ component: VpnPage });
@@ -16,10 +18,12 @@ function VpnPage() {
   const [directions, setDirections] = useState<Direction[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [link, setLink] = useState<string | null>(null);
+  const [links, setLinks] = useState<string[]>([]);
+  const [linkIdx, setLinkIdx] = useState(0);
   const [loading, setLoading] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const issue = useServerFn(issueVpnConfig);
 
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
 
@@ -44,14 +48,13 @@ function VpnPage() {
   const cooldownMs = profile?.cooldown_until ? new Date(profile.cooldown_until).getTime() - now : 0;
   const onCooldown = cooldownMs > 0;
 
-  async function issue() {
+  async function handleIssue() {
     if (!selected) return;
-    setLoading(true); setLink(null);
+    setLoading(true); setLinks([]); setLinkIdx(0);
     try {
-      const { data, error } = await supabase.rpc("issue_vpn_config", { _direction_id: selected });
-      if (error) throw error;
-      const url = (data as any)?.[0]?.vless_url ?? null;
-      setLink(url);
+      const res = await issue({ data: { directionId: selected } });
+      if (!res.links.length) throw new Error("Не удалось получить конфигурацию");
+      setLinks(res.links);
       toast.success("Конфигурация выдана");
       await loadAll();
     } catch (e: any) {
@@ -59,9 +62,11 @@ function VpnPage() {
     } finally { setLoading(false); }
   }
 
+  const currentLink = links[linkIdx] ?? null;
+
   async function copyLink() {
-    if (!link) return;
-    try { await navigator.clipboard.writeText(link); toast.success("Скопировано"); }
+    if (!currentLink) return;
+    try { await navigator.clipboard.writeText(currentLink); toast.success("Скопировано"); }
     catch { toast.error("Не удалось скопировать"); }
   }
 
@@ -109,7 +114,7 @@ function VpnPage() {
         </section>
 
         <button
-          onClick={issue}
+          onClick={handleIssue}
           disabled={loading || onCooldown || profile?.is_blocked || !selected}
           className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl font-semibold text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-50"
           style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
@@ -117,10 +122,35 @@ function VpnPage() {
           {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (onCooldown ? "Кулдаун активен" : "Получить конфигурацию")}
         </button>
 
-        {link && (
+        {currentLink && (
           <section className="ns-fade space-y-2 rounded-2xl border border-border bg-card p-4">
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">Ваша ссылка</div>
-            <div className="break-all rounded-xl bg-muted p-3 text-xs">{link}</div>
+            <div className="flex items-center justify-between">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                Ваш конфиг {links.length > 1 ? `${linkIdx + 1}/${links.length}` : ""}
+              </div>
+              {links.length > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setLinkIdx((i) => (i - 1 + links.length) % links.length)}
+                    className="grid h-7 w-7 place-items-center rounded-full bg-secondary"
+                    aria-label="Предыдущий"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setLinkIdx((i) => (i + 1) % links.length)}
+                    className="grid h-7 w-7 place-items-center rounded-full bg-secondary"
+                    aria-label="Следующий"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="break-all rounded-xl bg-muted p-3 text-xs">{currentLink}</div>
+            <p className="text-[11px] text-muted-foreground">
+              Скопируйте ссылку или отсканируйте QR в Happ, v2rayTun, Streisand — работает в России, наш сервер не нужен.
+            </p>
             <div className="flex gap-2">
               <button onClick={copyLink} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-secondary py-3 text-sm font-medium">
                 <Copy className="h-4 w-4" /> Копировать
@@ -128,7 +158,7 @@ function VpnPage() {
               <button onClick={() => setQrOpen(true)} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-secondary py-3 text-sm font-medium">
                 <QrCode className="h-4 w-4" /> QR-код
               </button>
-              <button onClick={issue} disabled={loading || onCooldown} className="flex items-center justify-center rounded-xl bg-secondary px-4 py-3 text-sm font-medium disabled:opacity-50">
+              <button onClick={handleIssue} disabled={loading || onCooldown} className="flex items-center justify-center rounded-xl bg-secondary px-4 py-3 text-sm font-medium disabled:opacity-50">
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               </button>
             </div>
@@ -136,11 +166,11 @@ function VpnPage() {
         )}
       </div>
 
-      {qrOpen && link && (
+      {qrOpen && currentLink && (
         <div onClick={() => setQrOpen(false)} className="ns-fade fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6">
           <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-2xl bg-card p-6">
             <div className="rounded-xl bg-white p-4">
-              <QRCodeSVG value={link} size={256} className="mx-auto h-auto w-full" />
+              <QRCodeSVG value={currentLink} size={256} className="mx-auto h-auto w-full" />
             </div>
             <button onClick={() => setQrOpen(false)} className="mt-4 h-12 w-full rounded-xl bg-secondary font-medium">Закрыть</button>
           </div>
