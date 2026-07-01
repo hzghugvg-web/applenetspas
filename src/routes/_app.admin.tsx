@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/MobileShell";
 import { translateAuthError } from "@/lib/errors";
 import { toast } from "sonner";
-import { Plus, Trash2, RotateCcw, Ban, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, RotateCcw, Ban, CheckCircle2, ChevronDown, Send } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 
 export const Route = createFileRoute("/_app/admin")({ component: AdminPage });
 
@@ -13,7 +14,7 @@ type VlessLink = { id: string; url: string; direction_id: string; is_active: boo
 type UserRow = { id: string; email: string; is_blocked: boolean; cooldown_until: string | null; subscription_until: string | null };
 
 function AdminPage() {
-  const [tab, setTab] = useState<"dirs" | "links" | "users">("dirs");
+  const [tab, setTab] = useState<"dirs" | "links" | "users" | "complaints">("dirs");
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -30,14 +31,15 @@ function AdminPage() {
 
   return (
     <MobileShell title="Админ-панель">
-      <div className="mb-4 grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
+      <div className="mb-4 grid grid-cols-4 gap-1 rounded-xl bg-muted p-1">
         {([
           ["dirs", "Направления"],
           ["links", "Ссылки"],
           ["users", "Пользователи"],
+          ["complaints", "Обращения"],
         ] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`rounded-lg py-2 text-sm font-medium transition-colors ${tab === k ? "bg-card text-foreground" : "text-muted-foreground"}`}>
+            className={`rounded-lg py-2 text-xs font-medium transition-colors ${tab === k ? "bg-card text-foreground" : "text-muted-foreground"}`}>
             {l}
           </button>
         ))}
@@ -45,6 +47,7 @@ function AdminPage() {
       {tab === "dirs" && <DirectionsTab />}
       {tab === "links" && <LinksTab />}
       {tab === "users" && <UsersTab />}
+      {tab === "complaints" && <ComplaintsTab />}
     </MobileShell>
   );
 }
