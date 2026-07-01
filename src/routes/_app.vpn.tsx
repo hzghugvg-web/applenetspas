@@ -6,7 +6,7 @@ import { issueVpnConfig, getMyIssuedLinks } from "@/lib/vpn.functions";
 import { MobileShell } from "@/components/MobileShell";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { Copy, QrCode, RefreshCw, Clock, Smartphone, CalendarClock, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Copy, QrCode, RefreshCw, Clock, CalendarClock, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 export const Route = createFileRoute("/_app/vpn")({ component: VpnPage });
