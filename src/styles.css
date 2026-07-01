@@ -77,7 +77,11 @@
     height: 100%;
     overflow: hidden;
     overscroll-behavior: none;
-    touch-action: manipulation;
+    touch-action: pan-y;
+    overscroll-behavior-x: none;
+  }
+  html, body {
+    overscroll-behavior-x: contain;
   }
   body {
     background-color: var(--color-background);
