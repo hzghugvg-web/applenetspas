@@ -212,18 +212,21 @@ export const getMyIssuedLinks = createServerFn({ method: "GET" })
       const url = (row as any).upstream_url as string | null;
       if (!url) continue;
       if (/^(vless|vmess|trojan|ss):\/\//i.test(url)) {
-        all.push(...extractLinks(url, brand));
+        const ex = extractLinks(url, brand);
+        if (ex[0]) all.push(ex[0]);
       } else {
         try {
           const r = await fetch(url, { headers: { "User-Agent": "NetSpas/1.0" } });
           if (r.ok) {
             const text = await r.text();
-            all.push(...extractLinks(text, brand));
+            const ex = extractLinks(text, brand);
+            if (ex[0]) all.push(ex[0]);
           }
         } catch {
           // skip
         }
       }
+      if (all.length >= 2) break;
     }
-    return { links: all };
+    return { links: all.slice(0, 2) };
   });
