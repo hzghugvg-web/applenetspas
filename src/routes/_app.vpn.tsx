@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { issueVpnConfig } from "@/lib/vpn.functions";
+import { issueVpnConfig, getMyIssuedLinks } from "@/lib/vpn.functions";
 import { MobileShell } from "@/components/MobileShell";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
@@ -24,6 +24,7 @@ function VpnPage() {
   const [qrOpen, setQrOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
   const issue = useServerFn(issueVpnConfig);
+  const loadIssued = useServerFn(getMyIssuedLinks);
 
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
 
@@ -53,6 +54,14 @@ function VpnPage() {
     }
   }
   useEffect(() => { loadAll(); }, []); // eslint-disable-line
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await loadIssued({});
+        if (res.links.length) { setLinks(res.links); setLinkIdx(0); }
+      } catch { /* ignore */ }
+    })();
+  }, []); // eslint-disable-line
 
   const cooldownMs = profile?.cooldown_until ? new Date(profile.cooldown_until).getTime() - now : 0;
   const onCooldown = cooldownMs > 0;

@@ -187,3 +187,43 @@ export const issueVpnConfig = createServerFn({ method: "POST" })
       subscriptionUrl: row.vless_url,
     };
   });
+
+export const getMyIssuedLinks = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("issued_configs")
+      .select("upstream_url, issued_at")
+      .eq("user_id", context.userId)
+      .order("issued_at", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    let brand = "NetSpas";
+    const { data: setting } = await context.supabase
+      .from("system_settings")
+      .select("value")
+      .eq("key", "config_name")
+      .maybeSingle();
+    const raw = (setting?.value ?? null) as unknown;
+    if (typeof raw === "string" && raw.trim()) brand = raw.trim();
+
+    const all: string[] = [];
+    for (const row of rows ?? []) {
+      const url = (row as any).upstream_url as string | null;
+      if (!url) continue;
+      if (/^(vless|vmess|trojan|ss):\/\//i.test(url)) {
+        all.push(...extractLinks(url, brand));
+      } else {
+        try {
+          const r = await fetch(url, { headers: { "User-Agent": "NetSpas/1.0" } });
+          if (r.ok) {
+            const text = await r.text();
+            all.push(...extractLinks(text, brand));
+          }
+        } catch {
+          // skip
+        }
+      }
+    }
+    return { links: all };
+  });
