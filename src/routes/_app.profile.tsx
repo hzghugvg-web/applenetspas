@@ -20,13 +20,21 @@ function ProfilePage() {
   }, []);
 
   async function updateEmail() {
-    if (!newEmail || newEmail === email) return;
+    if (!newEmail || newEmail === email) {
+      toast.error("Новый email совпадает с текущим");
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({ email: newEmail });
       if (error) throw error;
-      toast.success("Email обновлён");
-      setEmail(newEmail);
+      const { data: u } = await supabase.auth.getUser();
+      if (u.user) {
+        await supabase.from("profiles").update({ email: newEmail }).eq("id", u.user.id);
+      }
+      await supabase.auth.signOut();
+      toast.success("Email изменён. Войдите заново.");
+      navigate({ to: "/auth" });
     } catch (e: any) { toast.error(translateAuthError(e?.message)); }
     finally { setLoading(false); }
   }
