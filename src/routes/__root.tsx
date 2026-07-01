@@ -81,7 +81,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" },
       { title: "NetSpas — бесплатные VPN-конфигурации" },
       { name: "description", content: "NetSpas — менеджер бесплатных VPN-конфигураций VLESS." },
-      { name: "theme-color", content: "#1a1f2b" },
+      { name: "theme-color", content: "#17212B" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { property: "og:title", content: "NetSpas — бесплатные VPN-конфигурации" },
