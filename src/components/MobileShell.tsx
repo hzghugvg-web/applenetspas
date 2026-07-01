@@ -14,7 +14,7 @@ export function MobileShell({ title, children }: Props) {
     { to: "/vpn", label: "VPN", icon: Globe },
     { to: "/support", label: "Поддержка", icon: MessageCircle },
     { to: "/profile", label: "Профиль", icon: User },
-    ...(isAdmin ? [{ to: "/admin", label: "Админ", icon: Settings }] : []),
+    ...(isAdmin === true ? [{ to: "/admin", label: "Админ", icon: Settings }] : []),
   ];
 
   return (
