@@ -84,7 +84,7 @@ export function ComplaintChat({ complaintId, asAdmin, closed, onClosed }: Props)
   async function closeComplaint() {
     setClosing(true);
     const { error } = asAdmin
-      ? await supabase.rpc("admin_update_complaint", { _id: complaintId, _status: "resolved", _reply: null })
+      ? await supabase.rpc("admin_update_complaint", { _id: complaintId, _status: "resolved", _reply: "" })
       : await supabase.rpc("close_own_complaint", { _id: complaintId });
     setClosing(false);
     if (error) toast.error(translateAuthError(error.message));
