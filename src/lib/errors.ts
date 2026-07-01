@@ -11,6 +11,7 @@ export function translateAuthError(msg?: string | null): string {
   if (m.includes("blocked")) return "Аккаунт заблокирован";
   if (m.includes("cooldown")) return "Подождите до окончания кулдауна";
   if (m.includes("no_links")) return "Нет доступных конфигураций для этого направления";
+  if (m.includes("limit_reached")) return "Достигнут лимит: не более 2 конфигураций на аккаунт";
   if (m.includes("forbidden") || m.includes("unauthorized")) return "Недостаточно прав";
   return msg;
 }
