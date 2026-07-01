@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/MobileShell";
 import { FaqList } from "@/components/FaqList";
@@ -238,7 +239,7 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
     }
   }
 
-  return (
+  const node = (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -327,4 +328,5 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
       </motion.div>
     </motion.div>
   );
+  return typeof document !== "undefined" ? createPortal(node, document.body) : node;
 }
