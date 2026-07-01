@@ -150,6 +150,8 @@ export type Database = {
           direction_id: string | null
           id: string
           issued_at: string
+          sub_token: string | null
+          upstream_url: string | null
           user_id: string
           vless_url: string
         }
@@ -157,6 +159,8 @@ export type Database = {
           direction_id?: string | null
           id?: string
           issued_at?: string
+          sub_token?: string | null
+          upstream_url?: string | null
           user_id: string
           vless_url: string
         }
@@ -164,6 +168,8 @@ export type Database = {
           direction_id?: string | null
           id?: string
           issued_at?: string
+          sub_token?: string | null
+          upstream_url?: string | null
           user_id?: string
           vless_url?: string
         }
