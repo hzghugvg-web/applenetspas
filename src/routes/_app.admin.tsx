@@ -12,7 +12,7 @@ export const Route = createFileRoute("/_app/admin")({ component: AdminPage });
 type Direction = { id: string; name: string; flag: string | null; is_active: boolean };
 type VlessLink = { id: string; url: string; direction_id: string; is_active: boolean };
 type UserRow = { id: string; email: string; is_blocked: boolean; cooldown_until: string | null; subscription_from: string | null; subscription_until: string | null };
-type IssuedConfig = { id: string; vless_url: string; created_at: string; direction_id: string | null };
+type IssuedConfig = { id: string; vless_url: string; issued_at: string; direction_id: string | null };
 
 function AdminPage() {
   const [tab, setTab] = useState<"dirs" | "links" | "users" | "complaints">("dirs");
@@ -208,9 +208,9 @@ function UserDetails({ user, onChanged }: { user: UserRow; onChanged: () => void
   async function loadConfigs() {
     const { data } = await supabase
       .from("issued_configs")
-      .select("id,vless_url,created_at,direction_id")
+      .select("id,vless_url,issued_at,direction_id")
       .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+      .order("issued_at", { ascending: false });
     setConfigs((data ?? []) as IssuedConfig[]);
   }
   useEffect(() => { loadConfigs(); }, [user.id]);
@@ -257,7 +257,7 @@ function UserDetails({ user, onChanged }: { user: UserRow; onChanged: () => void
         {configs.map((c) => (
           <div key={c.id} className="flex items-start gap-2 rounded-md bg-card p-2">
             <div className="min-w-0 flex-1">
-              <div className="text-[10px] text-muted-foreground">{new Date(c.created_at).toLocaleString("ru-RU")}</div>
+              <div className="text-[10px] text-muted-foreground">{new Date(c.issued_at).toLocaleString("ru-RU")}</div>
               <div className="break-all text-[10px] text-muted-foreground">{c.vless_url.slice(0, 60)}...</div>
             </div>
             <button onClick={() => deleteConfig(c.id)} className="text-destructive">
