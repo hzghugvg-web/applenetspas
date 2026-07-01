@@ -374,6 +374,7 @@ export type Database = {
       issue_vpn_config: {
         Args: { _direction_id: string }
         Returns: {
+          upstream_url: string
           vless_url: string
         }[]
       }
