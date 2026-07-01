@@ -183,7 +183,7 @@ export const issueVpnConfig = createServerFn({ method: "POST" })
     }
 
     return {
-      links,
+      links: links.slice(0, 1),
       subscriptionUrl: row.vless_url,
     };
   });
