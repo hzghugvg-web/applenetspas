@@ -1,30 +1,14 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Globe, User, Settings } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 interface Props { title: string; children: ReactNode; }
 
 export function MobileShell({ title, children }: Props) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", u.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      if (mounted) setIsAdmin(!!data);
-    })();
-    return () => { mounted = false; };
-  }, []);
+  const { data: isAdmin } = useIsAdmin();
 
   const tabs = [
     { to: "/vpn", label: "VPN", icon: Globe },
