@@ -53,7 +53,7 @@ export function MobileShell({ title, children }: Props) {
           </AnimatePresence>
         </div>
       </header>
-      <main className="ns-scroll flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={pathname}
