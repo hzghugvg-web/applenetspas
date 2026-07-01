@@ -55,6 +55,20 @@ function VpnPage() {
   }
   useEffect(() => { loadAll(); }, []); // eslint-disable-line
   useEffect(() => {
+    const t = setInterval(() => { loadAll(); }, 8000);
+    const onVis = () => { if (document.visibilityState === "visible") loadAll(); };
+    document.addEventListener("visibilitychange", onVis);
+    const ch = supabase
+      .channel("vless_links_changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "vless_links" }, () => loadAll())
+      .subscribe();
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onVis);
+      supabase.removeChannel(ch);
+    };
+  }, []); // eslint-disable-line
+  useEffect(() => {
     (async () => {
       try {
         const res = await loadIssued({});
