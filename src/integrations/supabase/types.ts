@@ -215,6 +215,7 @@ export type Database = {
           email: string
           id: string
           is_blocked: boolean
+          subscription_from: string | null
           subscription_until: string | null
           updated_at: string
         }
@@ -225,6 +226,7 @@ export type Database = {
           email: string
           id: string
           is_blocked?: boolean
+          subscription_from?: string | null
           subscription_until?: string | null
           updated_at?: string
         }
@@ -235,6 +237,7 @@ export type Database = {
           email?: string
           id?: string
           is_blocked?: boolean
+          subscription_from?: string | null
           subscription_until?: string | null
           updated_at?: string
         }
@@ -340,6 +343,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_delete_issued_config: {
+        Args: { _config_id: string }
+        Returns: undefined
+      }
       admin_issue_config_for: {
         Args: { _direction_id: string; _target: string }
         Returns: string
@@ -347,6 +354,10 @@ export type Database = {
       admin_reset_cooldown: { Args: { _target: string }; Returns: undefined }
       admin_reset_cooldown_for: {
         Args: { _target: string }
+        Returns: undefined
+      }
+      admin_set_subscription_dates: {
+        Args: { _from: string; _target: string; _until: string }
         Returns: undefined
       }
       admin_toggle_block: {

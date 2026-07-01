@@ -11,7 +11,8 @@ export const Route = createFileRoute("/_app/admin")({ component: AdminPage });
 
 type Direction = { id: string; name: string; flag: string | null; is_active: boolean };
 type VlessLink = { id: string; url: string; direction_id: string; is_active: boolean };
-type UserRow = { id: string; email: string; is_blocked: boolean; cooldown_until: string | null; subscription_until: string | null };
+type UserRow = { id: string; email: string; is_blocked: boolean; cooldown_until: string | null; subscription_from: string | null; subscription_until: string | null };
+type IssuedConfig = { id: string; vless_url: string; issued_at: string; direction_id: string | null };
 
 function AdminPage() {
   const [tab, setTab] = useState<"dirs" | "links" | "users" | "complaints">("dirs");
@@ -150,8 +151,9 @@ function LinksTab() {
 
 function UsersTab() {
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [openId, setOpenId] = useState<string | null>(null);
   async function load() {
-    const { data } = await supabase.from("profiles").select("id,email,is_blocked,cooldown_until,subscription_until").order("created_at", { ascending: false });
+    const { data } = await supabase.from("profiles").select("id,email,is_blocked,cooldown_until,subscription_from,subscription_until").order("created_at", { ascending: false });
     setUsers((data ?? []) as UserRow[]);
   }
   useEffect(() => { load(); }, []);
@@ -167,10 +169,10 @@ function UsersTab() {
     <div className="space-y-2">
       {users.map((u) => (
         <div key={u.id} className="space-y-2 rounded-xl border border-border bg-card p-3">
-          <div className="flex items-center gap-2">
+          <button onClick={() => setOpenId(openId === u.id ? null : u.id)} className="flex w-full items-center gap-2 text-left">
             <span className="flex-1 truncate text-sm font-medium">{u.email}</span>
             {u.is_blocked && <span className="rounded bg-destructive/20 px-2 py-0.5 text-xs text-destructive">Блок</span>}
-          </div>
+          </button>
           <div className="text-xs text-muted-foreground">
             CD: {u.cooldown_until ? new Date(u.cooldown_until).toLocaleString("ru-RU") : "—"}
           </div>
@@ -182,9 +184,88 @@ function UsersTab() {
               {u.is_blocked ? <><CheckCircle2 className="h-3.5 w-3.5" /> Разблок</> : <><Ban className="h-3.5 w-3.5" /> Блок</>}
             </button>
           </div>
+          {openId === u.id && <UserDetails user={u} onChanged={load} />}
         </div>
       ))}
       {!users.length && <div className="text-center text-sm text-muted-foreground">Нет пользователей</div>}
+    </div>
+  );
+}
+
+function toLocalInput(v: string | null): string {
+  if (!v) return "";
+  const d = new Date(v);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function UserDetails({ user, onChanged }: { user: UserRow; onChanged: () => void }) {
+  const [from, setFrom] = useState(toLocalInput(user.subscription_from));
+  const [until, setUntil] = useState(toLocalInput(user.subscription_until));
+  const [configs, setConfigs] = useState<IssuedConfig[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  async function loadConfigs() {
+    const { data } = await supabase
+      .from("issued_configs")
+      .select("id,vless_url,issued_at,direction_id")
+      .eq("user_id", user.id)
+      .order("issued_at", { ascending: false });
+    setConfigs((data ?? []) as IssuedConfig[]);
+  }
+  useEffect(() => { loadConfigs(); }, [user.id]);
+
+  async function saveDates() {
+    setSaving(true);
+    const { error } = await supabase.rpc("admin_set_subscription_dates", {
+      _target: user.id,
+      _from: (from ? new Date(from).toISOString() : null) as any,
+      _until: (until ? new Date(until).toISOString() : null) as any,
+    });
+    setSaving(false);
+    if (error) toast.error(translateAuthError(error.message));
+    else { toast.success("Даты обновлены"); onChanged(); }
+  }
+
+  async function deleteConfig(id: string) {
+    if (!confirm("Удалить конфигурацию у пользователя?")) return;
+    const { error } = await supabase.rpc("admin_delete_issued_config", { _config_id: id });
+    if (error) toast.error(translateAuthError(error.message));
+    else { toast.success("Конфигурация удалена"); loadConfigs(); }
+  }
+
+  return (
+    <div className="mt-2 space-y-3 rounded-lg bg-[#1C2C3C] p-3">
+      <div className="space-y-1">
+        <div className="text-[11px] text-muted-foreground">Дата начала VPN</div>
+        <input type="datetime-local" value={from} onChange={(e) => setFrom(e.target.value)}
+          className="h-9 w-full rounded-md border border-border bg-input px-2 text-xs outline-none" />
+      </div>
+      <div className="space-y-1">
+        <div className="text-[11px] text-muted-foreground">Дата окончания VPN</div>
+        <input type="datetime-local" value={until} onChange={(e) => setUntil(e.target.value)}
+          className="h-9 w-full rounded-md border border-border bg-input px-2 text-xs outline-none" />
+      </div>
+      <button onClick={saveDates} disabled={saving}
+        className="tg-press h-9 w-full rounded-md bg-primary text-xs text-primary-foreground disabled:opacity-60">
+        {saving ? "Сохранение..." : "Сохранить даты"}
+      </button>
+
+      <div className="space-y-2">
+        <div className="text-[11px] text-muted-foreground">Выданные конфигурации ({configs.length})</div>
+        {configs.length === 0 && <p className="text-[11px] text-muted-foreground">Нет конфигураций</p>}
+        {configs.map((c) => (
+          <div key={c.id} className="flex items-start gap-2 rounded-md bg-card p-2">
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] text-muted-foreground">{new Date(c.issued_at).toLocaleString("ru-RU")}</div>
+              <div className="break-all text-[10px] text-muted-foreground">{c.vless_url.slice(0, 60)}...</div>
+            </div>
+            <button onClick={() => deleteConfig(c.id)} className="text-destructive">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
