@@ -46,7 +46,7 @@ export function MobileShell({ title, children }: Props) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="ns-scroll h-full px-4 py-4"
+            className="ns-scroll h-full px-4 pt-4 pb-24"
           >
             <div className="tg-stagger space-y-3">{children}</div>
           </motion.div>
