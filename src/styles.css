@@ -31,29 +31,32 @@
 }
 
 :root {
-  --radius: 0.875rem;
-  --background: oklch(0.16 0.02 260);
-  --foreground: oklch(0.97 0.01 250);
-  --card: oklch(0.21 0.02 260);
-  --card-foreground: oklch(0.97 0.01 250);
-  --popover: oklch(0.21 0.02 260);
-  --popover-foreground: oklch(0.97 0.01 250);
-  --primary: oklch(0.78 0.17 155);
-  --primary-foreground: oklch(0.14 0.02 260);
-  --primary-glow: oklch(0.85 0.18 155);
-  --secondary: oklch(0.27 0.02 260);
-  --secondary-foreground: oklch(0.97 0.01 250);
-  --muted: oklch(0.24 0.02 260);
-  --muted-foreground: oklch(0.7 0.02 260);
-  --accent: oklch(0.36 0.06 200);
-  --accent-foreground: oklch(0.97 0.01 250);
-  --destructive: oklch(0.65 0.22 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.3 0.02 260);
-  --input: oklch(0.27 0.02 260);
-  --ring: oklch(0.78 0.17 155);
-  --gradient-primary: linear-gradient(135deg, var(--primary), var(--primary-glow));
-  --shadow-elegant: 0 10px 30px -10px color-mix(in oklab, var(--primary) 40%, transparent);
+  /* Telegram iOS dark palette */
+  --radius: 0.75rem;
+  --background: #17212B;
+  --foreground: #FFFFFF;
+  --card: #182533;
+  --card-foreground: #FFFFFF;
+  --popover: #182533;
+  --popover-foreground: #FFFFFF;
+  --primary: #2AABEE;
+  --primary-foreground: #FFFFFF;
+  --primary-glow: #2AABEE;
+  --secondary: #1F2C38;
+  --secondary-foreground: #FFFFFF;
+  --muted: #1F2C38;
+  --muted-foreground: #8E99A5;
+  --accent: #2AABEE;
+  --accent-foreground: #FFFFFF;
+  --destructive: #E53935;
+  --destructive-foreground: #FFFFFF;
+  --border: #1C2C3C;
+  --input: #1F2C38;
+  --ring: #2AABEE;
+  --gradient-primary: linear-gradient(135deg, #2AABEE, #229ED9);
+  --shadow-elegant: none;
+  --nav-blur: saturate(180%) blur(20px);
+  --nav-bg: rgba(15, 15, 15, 0.85);
 }
 
 .dark { color-scheme: dark; }
@@ -103,3 +106,13 @@
 @utility safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+@utility tg-blur {
+  background-color: var(--nav-bg);
+  backdrop-filter: var(--nav-blur);
+}
+
+@utility tg-press {
+  transition: transform 120ms ease-out, opacity 120ms ease-out;
+}
+.tg-press:active { transform: scale(0.97); opacity: 0.85; }
