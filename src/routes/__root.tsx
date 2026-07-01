@@ -123,6 +123,19 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    const onTouchStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (!t) return;
+      const w = window.innerWidth;
+      if (t.clientX < 24 || t.clientX > w - 24) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener("touchstart", onTouchStart, { passive: false });
+    return () => document.removeEventListener("touchstart", onTouchStart);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <PlatformGate>
