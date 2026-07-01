@@ -262,7 +262,8 @@ export function ComplaintChatModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[60] bg-background"
+          className="fixed inset-x-0 top-0 z-[60] bg-background"
+          style={{ height: "100dvh" }}
         >
           <motion.div
             initial={{ y: 20, opacity: 0 }}
@@ -272,8 +273,7 @@ export function ComplaintChatModal({
             className="flex h-full w-full flex-col"
           >
             <header
-              className="safe-top tg-blur flex shrink-0 items-center gap-3 border-b border-border px-3"
-              style={{ paddingBottom: 8, paddingTop: 8 }}
+              className="safe-top tg-blur flex shrink-0 items-center gap-3 border-b border-border px-3 pb-2"
             >
               <button
                 onClick={onClose}
