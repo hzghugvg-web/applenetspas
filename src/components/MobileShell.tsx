@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Globe, User, Settings } from "lucide-react";
+import { Globe, User, Settings, HelpCircle } from "lucide-react";
 import { type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -12,6 +12,7 @@ export function MobileShell({ title, children }: Props) {
 
   const tabs = [
     { to: "/vpn", label: "VPN", icon: Globe },
+    { to: "/faq", label: "FAQ", icon: HelpCircle },
     { to: "/profile", label: "Профиль", icon: User },
     ...(isAdmin ? [{ to: "/admin", label: "Админ", icon: Settings }] : []),
   ];
