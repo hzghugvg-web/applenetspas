@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { alertDialog as toast } from "@/lib/alert";
 import { translateAuthError } from "@/lib/errors";
 import { Plus, Upload, X, Loader2, ChevronDown } from "lucide-react";
+import { ComplaintChat } from "@/components/ComplaintChat";
 
 export const Route = createFileRoute("/_app/support")({ component: SupportPage });
 
@@ -144,12 +145,12 @@ function MyComplaints() {
                     </div>
                     <p className="whitespace-pre-wrap text-foreground/90">{c.description}</p>
                     {c.video_url && <VideoPlayer path={c.video_url} />}
-                    {c.admin_reply && (
-                      <div className="rounded-lg bg-[#1C2C3C] p-3">
-                        <p className="mb-1 text-[12px] font-medium text-primary">Ответ поддержки</p>
-                        <p className="whitespace-pre-wrap text-foreground/90">{c.admin_reply}</p>
-                      </div>
-                    )}
+                    <ComplaintChat
+                      complaintId={c.id}
+                      asAdmin={false}
+                      closed={c.status === "resolved" || c.status === "rejected"}
+                      onClosed={load}
+                    />
                   </div>
                 </motion.div>
               )}

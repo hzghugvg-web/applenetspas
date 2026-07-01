@@ -41,6 +41,41 @@ export type Database = {
         }
         Relationships: []
       }
+      complaint_messages: {
+        Row: {
+          body: string
+          complaint_id: string
+          created_at: string
+          id: string
+          is_admin: boolean
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          complaint_id: string
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          complaint_id?: string
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complaint_messages_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       complaints: {
         Row: {
           admin_reply: string | null
@@ -321,6 +356,7 @@ export type Database = {
         Returns: undefined
       }
       bootstrap_user: { Args: never; Returns: undefined }
+      close_own_complaint: { Args: { _id: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
