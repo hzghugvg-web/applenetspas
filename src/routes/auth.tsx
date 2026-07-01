@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { translateAuthError } from "@/lib/errors";
 import { bootstrapUser } from "@/lib/bootstrap";
-import { toast } from "sonner";
-import { Shield } from "lucide-react";
+import { alertDialog as toast } from "@/lib/alert";
+import { Shield, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -91,10 +91,10 @@ function AuthPage() {
           />
           <button
             type="submit" disabled={loading}
-            className="h-12 w-full rounded-xl font-semibold text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-60"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl font-semibold text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-60"
             style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
           >
-            {loading ? "..." : mode === "signup" ? "Зарегистрироваться" : "Войти"}
+            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (mode === "signup" ? "Зарегистрироваться" : "Войти")}
           </button>
         </form>
 

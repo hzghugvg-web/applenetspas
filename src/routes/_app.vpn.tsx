@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/MobileShell";
 import { translateAuthError } from "@/lib/errors";
-import { toast } from "sonner";
-import { Copy, QrCode, RefreshCw, Clock, Smartphone, CalendarClock } from "lucide-react";
+import { alertDialog as toast } from "@/lib/alert";
+import { Copy, QrCode, RefreshCw, Clock, Smartphone, CalendarClock, Loader2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 export const Route = createFileRoute("/_app/vpn")({ component: VpnPage });
@@ -111,10 +111,10 @@ function VpnPage() {
         <button
           onClick={issue}
           disabled={loading || onCooldown || profile?.is_blocked || !selected}
-          className="h-14 w-full rounded-2xl font-semibold text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-50"
+          className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl font-semibold text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-50"
           style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
         >
-          {loading ? "..." : onCooldown ? "Кулдаун активен" : "Получить конфигурацию"}
+          {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (onCooldown ? "Кулдаун активен" : "Получить конфигурацию")}
         </button>
 
         {link && (
@@ -129,7 +129,7 @@ function VpnPage() {
                 <QrCode className="h-4 w-4" /> QR-код
               </button>
               <button onClick={issue} disabled={loading || onCooldown} className="flex items-center justify-center rounded-xl bg-secondary px-4 py-3 text-sm font-medium disabled:opacity-50">
-                <RefreshCw className="h-4 w-4" />
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               </button>
             </div>
           </section>

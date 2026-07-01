@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/MobileShell";
 import { FaqList } from "@/components/FaqList";
 import { AnimatePresence, motion } from "framer-motion";
-import { toast } from "sonner";
+import { alertDialog as toast } from "@/lib/alert";
 import { translateAuthError } from "@/lib/errors";
 import { Plus, Upload, X, Loader2, ChevronDown } from "lucide-react";
 
