@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/MobileShell";
 import { translateAuthError } from "@/lib/errors";
 import { toast } from "sonner";
-import { Plus, Trash2, RotateCcw, Ban, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, RotateCcw, Ban, CheckCircle2, ChevronDown, Send } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 
 export const Route = createFileRoute("/_app/admin")({ component: AdminPage });
 
@@ -13,7 +14,7 @@ type VlessLink = { id: string; url: string; direction_id: string; is_active: boo
 type UserRow = { id: string; email: string; is_blocked: boolean; cooldown_until: string | null; subscription_until: string | null };
 
 function AdminPage() {
-  const [tab, setTab] = useState<"dirs" | "links" | "users">("dirs");
+  const [tab, setTab] = useState<"dirs" | "links" | "users" | "complaints">("dirs");
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -30,14 +31,15 @@ function AdminPage() {
 
   return (
     <MobileShell title="Админ-панель">
-      <div className="mb-4 grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
+      <div className="mb-4 grid grid-cols-4 gap-1 rounded-xl bg-muted p-1">
         {([
           ["dirs", "Направления"],
           ["links", "Ссылки"],
           ["users", "Пользователи"],
+          ["complaints", "Обращения"],
         ] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`rounded-lg py-2 text-sm font-medium transition-colors ${tab === k ? "bg-card text-foreground" : "text-muted-foreground"}`}>
+            className={`rounded-lg py-2 text-xs font-medium transition-colors ${tab === k ? "bg-card text-foreground" : "text-muted-foreground"}`}>
             {l}
           </button>
         ))}
@@ -45,6 +47,7 @@ function AdminPage() {
       {tab === "dirs" && <DirectionsTab />}
       {tab === "links" && <LinksTab />}
       {tab === "users" && <UsersTab />}
+      {tab === "complaints" && <ComplaintsTab />}
     </MobileShell>
   );
 }
@@ -182,6 +185,221 @@ function UsersTab() {
         </div>
       ))}
       {!users.length && <div className="text-center text-sm text-muted-foreground">Нет пользователей</div>}
+    </div>
+  );
+}
+
+type AdminComplaint = {
+  id: string;
+  user_id: string;
+  description: string;
+  video_url: string | null;
+  status: "new" | "in_progress" | "resolved" | "rejected";
+  admin_reply: string | null;
+  created_at: string;
+  profiles?: { email: string } | null;
+};
+
+const CSTATUS: Record<AdminComplaint["status"], { label: string; dot: string }> = {
+  new: { label: "Новая", dot: "bg-yellow-400" },
+  in_progress: { label: "В работе", dot: "bg-primary" },
+  resolved: { label: "Решена", dot: "bg-emerald-500" },
+  rejected: { label: "Отклонена", dot: "bg-destructive" },
+};
+
+function ComplaintsTab() {
+  const [list, setList] = useState<AdminComplaint[]>([]);
+  const [filter, setFilter] = useState<"all" | AdminComplaint["status"]>("all");
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  async function load() {
+    let q = supabase
+      .from("complaints")
+      .select("id,user_id,description,video_url,status,admin_reply,created_at")
+      .order("created_at", { ascending: false });
+    if (filter !== "all") q = q.eq("status", filter);
+    const { data } = await q;
+    const rows = (data ?? []) as AdminComplaint[];
+    const ids = Array.from(new Set(rows.map((r) => r.user_id)));
+    if (ids.length) {
+      const { data: profs } = await supabase.from("profiles").select("id,email").in("id", ids);
+      const map = new Map((profs ?? []).map((p: any) => [p.id, p.email]));
+      for (const r of rows) r.profiles = { email: map.get(r.user_id) ?? "—" };
+    }
+    setList(rows);
+  }
+  useEffect(() => { load(); }, [filter]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-1 overflow-x-auto rounded-full bg-[#1C2C3C] p-1">
+        {([
+          ["all", "Все"],
+          ["new", "Новые"],
+          ["in_progress", "В работе"],
+          ["resolved", "Решены"],
+          ["rejected", "Отклонены"],
+        ] as const).map(([k, l]) => (
+          <button
+            key={k}
+            onClick={() => setFilter(k)}
+            className={`tg-press whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${
+              filter === k ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+            }`}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+      {list.length === 0 && <p className="text-center text-sm text-muted-foreground">Обращений нет</p>}
+      {list.map((c) => (
+        <AdminComplaintCard
+          key={c.id}
+          c={c}
+          open={openId === c.id}
+          onToggle={() => setOpenId(openId === c.id ? null : c.id)}
+          onChanged={load}
+        />
+      ))}
+    </div>
+  );
+}
+
+function AdminComplaintCard({
+  c, open, onToggle, onChanged,
+}: {
+  c: AdminComplaint;
+  open: boolean;
+  onToggle: () => void;
+  onChanged: () => void;
+}) {
+  const [reply, setReply] = useState(c.admin_reply ?? "");
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [dirs, setDirs] = useState<{ id: string; name: string; flag: string | null }[]>([]);
+  const [dir, setDir] = useState<string>("");
+
+  useEffect(() => {
+    if (!open || !c.video_url) return;
+    supabase.storage.from("complaints").createSignedUrl(c.video_url, 3600)
+      .then(({ data }) => setVideoUrl(data?.signedUrl ?? null));
+  }, [open, c.video_url]);
+
+  useEffect(() => {
+    if (!open) return;
+    supabase.from("directions").select("id,name,flag").eq("is_active", true).order("name")
+      .then(({ data }) => {
+        setDirs(data ?? []);
+        if (data?.length && !dir) setDir(data[0].id);
+      });
+  }, [open]);
+
+  async function update(status: AdminComplaint["status"]) {
+    const { error } = await supabase.rpc("admin_update_complaint", {
+      _id: c.id, _status: status, _reply: reply,
+    });
+    if (error) toast.error(translateAuthError(error.message));
+    else { toast.success("Обновлено"); onChanged(); }
+  }
+
+  async function issueConfig() {
+    if (!dir) return;
+    const { error } = await supabase.rpc("admin_issue_config_for", {
+      _target: c.user_id, _direction_id: dir,
+    });
+    if (error) toast.error(translateAuthError(error.message));
+    else {
+      await supabase.rpc("admin_update_complaint", {
+        _id: c.id, _status: "resolved", _reply: reply || "Выдана новая конфигурация",
+      });
+      toast.success("Конфигурация выдана");
+      onChanged();
+    }
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl bg-card">
+      <button
+        onClick={onToggle}
+        className="tg-press flex w-full items-center gap-3 p-3 text-left"
+      >
+        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${CSTATUS[c.status].dot}`} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[14px] font-medium">{c.profiles?.email ?? c.user_id.slice(0, 8)}</p>
+          <p className="truncate text-[12px] text-muted-foreground">
+            {CSTATUS[c.status].label} · {new Date(c.created_at).toLocaleDateString("ru-RU")}
+          </p>
+        </div>
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="space-y-3 px-3 pb-3 text-[14px]">
+              <p className="whitespace-pre-wrap text-foreground/90">{c.description}</p>
+              {videoUrl && (
+                <video src={videoUrl} controls playsInline className="w-full rounded-lg bg-black" />
+              )}
+              <textarea
+                value={reply}
+                onChange={(e) => setReply(e.target.value)}
+                placeholder="Ответ пользователю…"
+                rows={3}
+                className="w-full rounded-lg border border-border bg-[#1C2C3C] p-2 text-[13px] outline-none focus:border-primary/60"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => update("in_progress")}
+                  className="tg-press rounded-lg bg-secondary py-2 text-xs"
+                >
+                  Взять в работу
+                </button>
+                <button
+                  onClick={() => update("resolved")}
+                  className="tg-press rounded-lg bg-emerald-600 py-2 text-xs text-white"
+                >
+                  Решено
+                </button>
+                <button
+                  onClick={() => update("rejected")}
+                  className="tg-press rounded-lg bg-destructive py-2 text-xs text-destructive-foreground"
+                >
+                  Отклонить
+                </button>
+                <button
+                  onClick={() => update(c.status)}
+                  className="tg-press flex items-center justify-center gap-1 rounded-lg bg-primary py-2 text-xs text-primary-foreground"
+                >
+                  <Send className="h-3.5 w-3.5" /> Отправить ответ
+                </button>
+              </div>
+              <div className="space-y-2 rounded-lg bg-[#1C2C3C] p-2">
+                <p className="text-[12px] text-muted-foreground">Выдать конфигурацию (сбросит кулдаун):</p>
+                <select
+                  value={dir}
+                  onChange={(e) => setDir(e.target.value)}
+                  className="h-9 w-full rounded-md border border-border bg-input px-2 text-xs outline-none"
+                >
+                  {dirs.map((d) => <option key={d.id} value={d.id}>{d.flag} {d.name}</option>)}
+                </select>
+                <button
+                  onClick={issueConfig}
+                  className="tg-press w-full rounded-md bg-primary py-2 text-xs text-primary-foreground"
+                >
+                  Выдать конфигурацию
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

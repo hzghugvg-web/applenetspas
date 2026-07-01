@@ -47,6 +47,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          resolved_at: string | null
           status: Database["public"]["Enums"]["complaint_status"]
           updated_at: string
           user_id: string
@@ -57,6 +58,7 @@ export type Database = {
           created_at?: string
           description: string
           id?: string
+          resolved_at?: string | null
           status?: Database["public"]["Enums"]["complaint_status"]
           updated_at?: string
           user_id: string
@@ -67,6 +69,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          resolved_at?: string | null
           status?: Database["public"]["Enums"]["complaint_status"]
           updated_at?: string
           user_id?: string
@@ -290,6 +293,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_issue_config_for: {
+        Args: { _direction_id: string; _target: string }
+        Returns: string
+      }
       admin_reset_cooldown: { Args: { _target: string }; Returns: undefined }
       admin_reset_cooldown_for: {
         Args: { _target: string }

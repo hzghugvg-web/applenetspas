@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Globe, User, Settings, HelpCircle } from "lucide-react";
+import { Globe, User, Settings, MessageCircle } from "lucide-react";
 import { type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -12,7 +12,7 @@ export function MobileShell({ title, children }: Props) {
 
   const tabs = [
     { to: "/vpn", label: "VPN", icon: Globe },
-    { to: "/faq", label: "FAQ", icon: HelpCircle },
+    { to: "/support", label: "Поддержка", icon: MessageCircle },
     { to: "/profile", label: "Профиль", icon: User },
     ...(isAdmin ? [{ to: "/admin", label: "Админ", icon: Settings }] : []),
   ];
@@ -53,8 +53,13 @@ export function MobileShell({ title, children }: Props) {
         </AnimatePresence>
       </main>
       <nav
-        className="safe-bottom tg-blur grid shrink-0 border-t border-border"
-        style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+        className="safe-bottom grid shrink-0 border-t border-border"
+        style={{
+          gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
+          marginBottom: 64,
+          backgroundColor: "#17212B",
+          borderTopColor: "#1C2C3C",
+        }}
       >
         {tabs.map(({ to, label, icon: Icon }) => {
           const active = pathname.startsWith(to);
