@@ -17,6 +17,8 @@ type Complaint = {
   status: "new" | "in_progress" | "resolved" | "rejected";
   admin_reply: string | null;
   created_at: string;
+  category: "question" | "problem";
+  phone: string | null;
 };
 
 const STATUS_LABEL: Record<Complaint["status"], string> = {
@@ -78,7 +80,7 @@ function MyComplaints() {
   async function load() {
     const { data } = await supabase
       .from("complaints")
-      .select("id,description,video_url,status,admin_reply,created_at")
+      .select("id,description,video_url,status,admin_reply,created_at,category,phone")
       .order("created_at", { ascending: false });
     setItems((data ?? []) as Complaint[]);
   }
@@ -131,6 +133,14 @@ function MyComplaints() {
                   className="overflow-hidden"
                 >
                   <div className="space-y-2 px-3 pb-3 pt-1 text-[14px]">
+                    <div className="flex flex-wrap gap-2 text-[12px] text-muted-foreground">
+                      <span className="rounded-full bg-[#1C2C3C] px-2 py-0.5">
+                        {c.category === "problem" ? "Проблема" : "Вопрос"}
+                      </span>
+                      {c.phone && (
+                        <span className="rounded-full bg-[#1C2C3C] px-2 py-0.5">📞 {c.phone}</span>
+                      )}
+                    </div>
                     <p className="whitespace-pre-wrap text-foreground/90">{c.description}</p>
                     {c.video_url && <VideoPlayer path={c.video_url} />}
                     {c.admin_reply && (
@@ -174,7 +184,9 @@ function VideoPlayer({ path }: { path: string }) {
 }
 
 function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const [category, setCategory] = useState<"question" | "problem">("question");
   const [desc, setDesc] = useState("");
+  const [phone, setPhone] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
@@ -189,24 +201,31 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
 
   async function submit() {
     if (!desc.trim()) { toast.error("Опишите проблему"); return; }
-    if (!file) { toast.error("Прикрепите видео"); return; }
+    if (category === "problem" && !file) { toast.error("Для проблемы прикрепите видео"); return; }
     setUploading(true);
     try {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("unauthorized");
-      const ext = file.name.split(".").pop() || "mp4";
-      const path = `${u.user.id}/${crypto.randomUUID()}.${ext}`;
-      setProgress(20);
-      const { error: upErr } = await supabase.storage
-        .from("complaints")
-        .upload(path, file, { contentType: file.type, upsert: false });
-      if (upErr) throw upErr;
-      setProgress(80);
+      let path: string | null = null;
+      if (file) {
+        const ext = file.name.split(".").pop() || "mp4";
+        path = `${u.user.id}/${crypto.randomUUID()}.${ext}`;
+        setProgress(20);
+        const { error: upErr } = await supabase.storage
+          .from("complaints")
+          .upload(path, file, { contentType: file.type, upsert: false });
+        if (upErr) throw upErr;
+        setProgress(80);
+      } else {
+        setProgress(60);
+      }
       const { error: insErr } = await supabase.from("complaints").insert({
         user_id: u.user.id,
         description: desc.trim(),
         video_url: path,
         status: "new",
+        category,
+        phone: phone.trim() || null,
       });
       if (insErr) throw insErr;
       setProgress(100);
@@ -224,7 +243,7 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/60 backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div
@@ -233,7 +252,8 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
         exit={{ y: 40, opacity: 0 }}
         transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md space-y-3 rounded-t-2xl bg-card p-4 pb-6"
+        className="mt-auto max-h-[92vh] w-full max-w-md space-y-3 overflow-y-auto rounded-t-2xl bg-card p-4 pb-8"
+        style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
       >
         <div className="flex items-center justify-between">
           <h3 className="text-[17px] font-semibold">Новое обращение</h3>
@@ -241,11 +261,36 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
             <X className="h-5 w-5" />
           </button>
         </div>
+        <div className="grid grid-cols-2 gap-1 rounded-full bg-[#1C2C3C] p-1">
+          {([
+            ["question", "Вопрос"],
+            ["problem", "Проблема"],
+          ] as const).map(([k, l]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setCategory(k)}
+              className={`tg-press rounded-full py-1.5 text-[13px] font-medium transition-colors ${
+                category === k ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+              }`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
         <textarea
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
-          placeholder="Опишите проблему…"
+          placeholder={category === "problem" ? "Опишите проблему…" : "Ваш вопрос…"}
           rows={4}
+          className="w-full rounded-xl border border-border bg-[#1C2C3C] p-3 text-[15px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
+        />
+        <input
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          type="tel"
+          inputMode="tel"
+          placeholder="Телефон (необязательно)"
           className="w-full rounded-xl border border-border bg-[#1C2C3C] p-3 text-[15px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
         />
         <input
@@ -260,7 +305,11 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
           className="tg-press flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-[#1C2C3C] py-3 text-[14px] text-muted-foreground"
         >
           <Upload className="h-4 w-4" />
-          {file ? file.name : "Прикрепить видео (до 20 МБ, 30 сек)"}
+          {file
+            ? file.name
+            : category === "problem"
+              ? "Прикрепить видео (до 20 МБ) — обязательно"
+              : "Прикрепить видео (необязательно)"}
         </button>
         {uploading && (
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#1C2C3C]">
