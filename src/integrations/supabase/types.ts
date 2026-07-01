@@ -14,8 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_logs: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          details: Json | null
+          id: string
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
+      complaints: {
+        Row: {
+          admin_reply: string | null
+          created_at: string
+          description: string
+          id: string
+          status: Database["public"]["Enums"]["complaint_status"]
+          updated_at: string
+          user_id: string
+          video_url: string | null
+        }
+        Insert: {
+          admin_reply?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          status?: Database["public"]["Enums"]["complaint_status"]
+          updated_at?: string
+          user_id: string
+          video_url?: string | null
+        }
+        Update: {
+          admin_reply?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          status?: Database["public"]["Enums"]["complaint_status"]
+          updated_at?: string
+          user_id?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       directions: {
         Row: {
+          country_code: string | null
           created_at: string
           flag: string | null
           id: string
@@ -23,6 +84,7 @@ export type Database = {
           name: string
         }
         Insert: {
+          country_code?: string | null
           created_at?: string
           flag?: string | null
           id?: string
@@ -30,6 +92,7 @@ export type Database = {
           name: string
         }
         Update: {
+          country_code?: string | null
           created_at?: string
           flag?: string | null
           id?: string
@@ -70,6 +133,30 @@ export type Database = {
           },
         ]
       }
+      login_history: {
+        Row: {
+          created_at: string
+          id: string
+          ip: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           cooldown_until: string | null
@@ -100,6 +187,30 @@ export type Database = {
           is_blocked?: boolean
           subscription_until?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          subscription_json: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          subscription_json: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          subscription_json?: Json
+          user_id?: string
         }
         Relationships: []
       }
@@ -180,8 +291,20 @@ export type Database = {
     }
     Functions: {
       admin_reset_cooldown: { Args: { _target: string }; Returns: undefined }
+      admin_reset_cooldown_for: {
+        Args: { _target: string }
+        Returns: undefined
+      }
       admin_toggle_block: {
         Args: { _block: boolean; _target: string }
+        Returns: undefined
+      }
+      admin_update_complaint: {
+        Args: {
+          _id: string
+          _reply: string
+          _status: Database["public"]["Enums"]["complaint_status"]
+        }
         Returns: undefined
       }
       bootstrap_user: { Args: never; Returns: undefined }
@@ -199,9 +322,14 @@ export type Database = {
           vless_url: string
         }[]
       }
+      log_admin_action: {
+        Args: { _action: string; _details: Json; _target: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user"
+      complaint_status: "new" | "in_progress" | "resolved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -330,6 +458,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      complaint_status: ["new", "in_progress", "resolved", "rejected"],
     },
   },
 } as const
