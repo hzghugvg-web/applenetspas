@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/MobileShell";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { Plus, Trash2, RotateCcw, Ban, CheckCircle2, ChevronDown, Send } from "lucide-react";
+import { Plus, Trash2, RotateCcw, Ban, CheckCircle2, ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { ComplaintChat } from "@/components/ComplaintChat";
 
 export const Route = createFileRoute("/_app/admin")({ component: AdminPage });
 
@@ -275,7 +276,6 @@ function AdminComplaintCard({
   onToggle: () => void;
   onChanged: () => void;
 }) {
-  const [reply, setReply] = useState(c.admin_reply ?? "");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [dirs, setDirs] = useState<{ id: string; name: string; flag: string | null }[]>([]);
   const [dir, setDir] = useState<string>("");
@@ -295,14 +295,6 @@ function AdminComplaintCard({
       });
   }, [open]);
 
-  async function update(status: AdminComplaint["status"]) {
-    const { error } = await supabase.rpc("admin_update_complaint", {
-      _id: c.id, _status: status, _reply: reply,
-    });
-    if (error) toast.error(translateAuthError(error.message));
-    else { toast.success("Обновлено"); onChanged(); }
-  }
-
   async function issueConfig() {
     if (!dir) return;
     const { error } = await supabase.rpc("admin_issue_config_for", {
@@ -311,7 +303,7 @@ function AdminComplaintCard({
     if (error) toast.error(translateAuthError(error.message));
     else {
       await supabase.rpc("admin_update_complaint", {
-        _id: c.id, _status: "resolved", _reply: reply || "Выдана новая конфигурация",
+        _id: c.id, _status: "resolved", _reply: "Выдана новая конфигурация",
       });
       toast.success("Конфигурация выдана");
       onChanged();
@@ -359,39 +351,12 @@ function AdminComplaintCard({
               {videoUrl && (
                 <video src={videoUrl} controls playsInline className="w-full rounded-lg bg-black" />
               )}
-              <textarea
-                value={reply}
-                onChange={(e) => setReply(e.target.value)}
-                placeholder="Ответ пользователю…"
-                rows={3}
-                className="w-full rounded-lg border border-border bg-[#1C2C3C] p-2 text-[13px] outline-none focus:border-primary/60"
+              <ComplaintChat
+                complaintId={c.id}
+                asAdmin={true}
+                closed={c.status === "resolved" || c.status === "rejected"}
+                onClosed={onChanged}
               />
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => update("in_progress")}
-                  className="tg-press rounded-lg bg-secondary py-2 text-xs"
-                >
-                  Взять в работу
-                </button>
-                <button
-                  onClick={() => update("resolved")}
-                  className="tg-press rounded-lg bg-emerald-600 py-2 text-xs text-white"
-                >
-                  Решено
-                </button>
-                <button
-                  onClick={() => update("rejected")}
-                  className="tg-press rounded-lg bg-destructive py-2 text-xs text-destructive-foreground"
-                >
-                  Отклонить
-                </button>
-                <button
-                  onClick={() => update(c.status)}
-                  className="tg-press flex items-center justify-center gap-1 rounded-lg bg-primary py-2 text-xs text-primary-foreground"
-                >
-                  <Send className="h-3.5 w-3.5" /> Отправить ответ
-                </button>
-              </div>
               <div className="space-y-2 rounded-lg bg-[#1C2C3C] p-2">
                 <p className="text-[12px] text-muted-foreground">Выдать конфигурацию (сбросит кулдаун):</p>
                 <select
