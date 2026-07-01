@@ -4,9 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/MobileShell";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { Plus, Trash2, RotateCcw, Ban, CheckCircle2, ChevronDown } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
-import { ComplaintChat } from "@/components/ComplaintChat";
+import { Plus, Trash2, RotateCcw, Ban, CheckCircle2, MessageCircle } from "lucide-react";
+import { ComplaintChatModal } from "@/components/ComplaintChat";
 
 export const Route = createFileRoute("/_app/admin")({ component: AdminPage });
 
@@ -311,72 +310,59 @@ function AdminComplaintCard({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl bg-card">
+    <>
       <button
         onClick={onToggle}
-        className="tg-press flex w-full items-center gap-3 p-3 text-left"
+        className="tg-press flex w-full items-center gap-3 rounded-xl bg-card p-3 text-left"
       >
         <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${CSTATUS[c.status].dot}`} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[14px] font-medium">{c.profiles?.email ?? c.user_id.slice(0, 8)}</p>
           <p className="truncate text-[12px] text-muted-foreground">
-            {CSTATUS[c.status].label} · {new Date(c.created_at).toLocaleDateString("ru-RU")}
+            {CSTATUS[c.status].label} · {c.category === "problem" ? "Проблема" : "Вопрос"} · {new Date(c.created_at).toLocaleDateString("ru-RU")}
           </p>
         </div>
-        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        </motion.span>
+        <MessageCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
       </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="space-y-3 px-3 pb-3 text-[14px]">
-              <div className="flex flex-wrap gap-2 text-[12px] text-muted-foreground">
-                <span className="rounded-full bg-[#1C2C3C] px-2 py-0.5">
-                  {c.category === "problem" ? "Проблема" : "Вопрос"}
-                </span>
-                {c.phone && (
-                  <a href={`tel:${c.phone}`} className="rounded-full bg-[#1C2C3C] px-2 py-0.5 text-primary">
-                    📞 {c.phone}
-                  </a>
-                )}
-              </div>
-              <p className="whitespace-pre-wrap text-foreground/90">{c.description}</p>
-              {videoUrl && (
-                <video src={videoUrl} controls playsInline className="w-full rounded-lg bg-black" />
-              )}
-              <ComplaintChat
-                complaintId={c.id}
-                asAdmin={true}
-                closed={c.status === "resolved" || c.status === "rejected"}
-                onClosed={onChanged}
-              />
-              <div className="space-y-2 rounded-lg bg-[#1C2C3C] p-2">
-                <p className="text-[12px] text-muted-foreground">Выдать конфигурацию (сбросит кулдаун):</p>
+      <ComplaintChatModal
+        open={open}
+        onClose={onToggle}
+        title={c.profiles?.email ?? "Обращение"}
+        subtitle={`${CSTATUS[c.status].label} · ${c.category === "problem" ? "Проблема" : "Вопрос"}`}
+        complaintId={c.id}
+        asAdmin={true}
+        closed={c.status === "resolved" || c.status === "rejected"}
+        onClosed={onChanged}
+        beforeChat={
+          <div className="space-y-2 rounded-xl bg-card p-2 text-[13px]">
+            {c.phone && (
+              <a href={`tel:${c.phone}`} className="inline-block rounded-full bg-[#1C2C3C] px-2 py-0.5 text-[12px] text-primary">
+                📞 {c.phone}
+              </a>
+            )}
+            <p className="whitespace-pre-wrap text-foreground/90">{c.description}</p>
+            {videoUrl && <video src={videoUrl} controls playsInline className="w-full rounded-lg bg-black" />}
+            <div className="space-y-2 rounded-lg bg-[#1C2C3C] p-2">
+              <p className="text-[11px] text-muted-foreground">Выдать конфигурацию (сбросит кулдаун):</p>
+              <div className="flex gap-2">
                 <select
                   value={dir}
                   onChange={(e) => setDir(e.target.value)}
-                  className="h-9 w-full rounded-md border border-border bg-input px-2 text-xs outline-none"
+                  className="h-9 flex-1 rounded-md border border-border bg-input px-2 text-xs outline-none"
                 >
                   {dirs.map((d) => <option key={d.id} value={d.id}>{d.flag} {d.name}</option>)}
                 </select>
                 <button
                   onClick={issueConfig}
-                  className="tg-press w-full rounded-md bg-primary py-2 text-xs text-primary-foreground"
+                  className="tg-press rounded-md bg-primary px-3 text-xs text-primary-foreground"
                 >
-                  Выдать конфигурацию
+                  Выдать
                 </button>
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+          </div>
+        }
+      />
+    </>
   );
 }

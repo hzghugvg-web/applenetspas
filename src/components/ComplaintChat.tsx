@@ -27,7 +27,14 @@ export function ComplaintChat({ complaintId, asAdmin, closed, onClosed }: Props)
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [peerTyping, setPeerTyping] = useState(false);
+  const [localClosed, setLocalClosed] = useState(closed);
   const endRef = useRef<HTMLDivElement>(null);
+  const chanRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSentRef = useRef<number>(0);
+
+  useEffect(() => setLocalClosed(closed), [closed]);
 
   useEffect(() => {
     let alive = true;
@@ -52,16 +59,48 @@ export function ComplaintChat({ complaintId, asAdmin, closed, onClosed }: Props)
           );
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "complaints", filter: `id=eq.${complaintId}` },
+        (payload) => {
+          const st = (payload.new as { status?: string }).status;
+          if (st === "resolved" || st === "rejected") {
+            setLocalClosed(true);
+            onClosed?.();
+          }
+        },
+      )
+      .on("broadcast", { event: "typing" }, (msg) => {
+        const from = (msg.payload as { from?: string })?.from;
+        if (from && from !== (asAdmin ? "admin" : "user")) {
+          setPeerTyping(true);
+          if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+          typingTimerRef.current = setTimeout(() => setPeerTyping(false), 2500);
+        }
+      })
       .subscribe();
+    chanRef.current = ch;
     return () => {
       alive = false;
       supabase.removeChannel(ch);
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     };
-  }, [complaintId]);
+  }, [complaintId, asAdmin, onClosed]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [msgs.length]);
+  }, [msgs.length, peerTyping]);
+
+  function emitTyping() {
+    const now = Date.now();
+    if (now - lastSentRef.current < 1200) return;
+    lastSentRef.current = now;
+    chanRef.current?.send({
+      type: "broadcast",
+      event: "typing",
+      payload: { from: asAdmin ? "admin" : "user" },
+    });
+  }
 
   async function send() {
     const body = text.trim();
@@ -89,14 +128,22 @@ export function ComplaintChat({ complaintId, asAdmin, closed, onClosed }: Props)
     setClosing(false);
     if (error) toast.error(translateAuthError(error.message));
     else {
+      setLocalClosed(true);
       toast.success("Обращение завершено");
       onClosed?.();
     }
   }
 
+  function fmt(iso: string) {
+    const d = new Date(iso);
+    const date = d.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "2-digit" });
+    const time = d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+    return `${date} · ${time}`;
+  }
+
   return (
-    <div className="flex flex-col gap-2">
-      <div className="max-h-[52vh] min-h-[120px] space-y-1.5 overflow-y-auto rounded-xl bg-[#0F171F] p-2">
+    <div className="flex h-full min-h-0 flex-col gap-2">
+      <div className="ns-scroll min-h-0 flex-1 space-y-1.5 overflow-y-auto rounded-xl bg-[#0F171F] p-2">
         {msgs.length === 0 && (
           <p className="py-4 text-center text-[12px] text-muted-foreground">Сообщений пока нет</p>
         )}
@@ -127,7 +174,7 @@ export function ComplaintChat({ complaintId, asAdmin, closed, onClosed }: Props)
                   </p>
                   <p className="whitespace-pre-wrap break-words">{m.body}</p>
                   <p className={`mt-0.5 text-[10px] ${mine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                    {new Date(m.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+                    {fmt(m.created_at)}
                   </p>
                 </div>
               </motion.div>
@@ -137,7 +184,13 @@ export function ComplaintChat({ complaintId, asAdmin, closed, onClosed }: Props)
         <div ref={endRef} />
       </div>
 
-      {closed ? (
+      {peerTyping && !localClosed && (
+        <div className="px-1 text-[11px] italic text-muted-foreground">
+          {asAdmin ? "Пользователь печатает…" : "Оператор печатает…"}
+        </div>
+      )}
+
+      {localClosed ? (
         <div className="rounded-xl bg-emerald-500/10 py-2 text-center text-[12px] text-emerald-400">
           Обращение завершено
         </div>
@@ -146,7 +199,10 @@ export function ComplaintChat({ complaintId, asAdmin, closed, onClosed }: Props)
           <div className="flex items-center gap-2">
             <textarea
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                setText(e.target.value);
+                if (e.target.value.trim()) emitTyping();
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -176,5 +232,72 @@ export function ComplaintChat({ complaintId, asAdmin, closed, onClosed }: Props)
         </>
       )}
     </div>
+  );
+}
+
+// Fullscreen modal wrapper for the chat.
+import { createPortal } from "react-dom";
+import { X } from "lucide-react";
+
+export function ComplaintChatModal({
+  open,
+  onClose,
+  title,
+  subtitle,
+  beforeChat,
+  ...props
+}: Props & {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  subtitle?: string;
+  beforeChat?: React.ReactNode;
+}) {
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-[60] bg-background"
+        >
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 20, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="flex h-full w-full flex-col"
+          >
+            <header
+              className="safe-top tg-blur flex shrink-0 items-center gap-3 border-b border-border px-3"
+              style={{ paddingBottom: 8, paddingTop: 8 }}
+            >
+              <button
+                onClick={onClose}
+                className="tg-press grid h-9 w-9 place-items-center rounded-full text-muted-foreground"
+                aria-label="Закрыть"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[15px] font-semibold text-foreground">{title}</p>
+                {subtitle && <p className="truncate text-[11px] text-muted-foreground">{subtitle}</p>}
+              </div>
+            </header>
+            <div
+              className="flex min-h-0 flex-1 flex-col p-3"
+              style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+            >
+              {beforeChat && <div className="mb-2 shrink-0">{beforeChat}</div>}
+              <ComplaintChat {...props} />
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body,
   );
 }
