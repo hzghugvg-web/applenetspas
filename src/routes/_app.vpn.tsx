@@ -6,7 +6,7 @@ import { issueVpnConfig, getMyIssuedLinks } from "@/lib/vpn.functions";
 import { MobileShell } from "@/components/MobileShell";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { Copy, QrCode, RefreshCw, Clock, Smartphone, CalendarClock, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Copy, QrCode, RefreshCw, Clock, CalendarClock, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 export const Route = createFileRoute("/_app/vpn")({ component: VpnPage });
@@ -101,10 +101,6 @@ function VpnPage() {
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2 text-muted-foreground"><CalendarClock className="h-4 w-4" /> Подписка до</div>
             <div className="font-medium">{profile?.subscription_until ? new Date(profile.subscription_until).toLocaleDateString("ru-RU") : "—"}</div>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2 text-muted-foreground"><Smartphone className="h-4 w-4" /> Устройства</div>
-            <div className="font-medium">{profile?.device_count ?? 0} / 3</div>
           </div>
           {onCooldown && (
             <div className="mt-3 flex items-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm">

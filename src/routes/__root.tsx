@@ -124,16 +124,31 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
+    let startX = 0, startY = 0, edge = false;
     const onTouchStart = (e: TouchEvent) => {
       const t = e.touches[0];
       if (!t) return;
-      const w = window.innerWidth;
-      if (t.clientX < 24 || t.clientX > w - 24) {
+      startX = t.clientX; startY = t.clientY;
+      edge = t.clientX < 32 || t.clientX > window.innerWidth - 32;
+      if (edge) e.preventDefault();
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (!t) return;
+      const dx = Math.abs(t.clientX - startX);
+      const dy = Math.abs(t.clientY - startY);
+      if (edge || (dx > dy && dx > 8)) {
+        const target = e.target as HTMLElement | null;
+        if (target?.closest("[data-allow-hscroll]")) return;
         e.preventDefault();
       }
     };
     document.addEventListener("touchstart", onTouchStart, { passive: false });
-    return () => document.removeEventListener("touchstart", onTouchStart);
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => {
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchmove", onTouchMove);
+    };
   }, []);
 
   return (
