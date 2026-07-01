@@ -252,10 +252,10 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
         exit={{ y: 40, opacity: 0 }}
         transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
         onClick={(e) => e.stopPropagation()}
-        className="absolute inset-x-0 bottom-0 mx-auto flex max-h-[92dvh] w-full max-w-md flex-col overflow-y-auto overscroll-contain rounded-t-2xl bg-card p-4"
+        className="absolute inset-x-0 bottom-0 mx-auto flex max-h-[92dvh] w-full max-w-md flex-col gap-3 overflow-y-auto overscroll-contain rounded-t-2xl bg-card p-4"
         style={{ paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}
       >
-        <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center justify-between">
           <h3 className="text-[17px] font-semibold">Новое обращение</h3>
           <button onClick={onClose} className="tg-press text-muted-foreground">
             <X className="h-5 w-5" />
