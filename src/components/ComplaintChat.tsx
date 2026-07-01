@@ -118,11 +118,13 @@ export function ComplaintChat({ complaintId, asAdmin, closed, onClosed }: Props)
                       : "rounded-bl-md bg-[#1C2C3C] text-foreground"
                   }`}
                 >
-                  {!mine && (
-                    <p className="mb-0.5 text-[10px] font-medium opacity-70">
-                      {m.is_admin ? "Поддержка" : "Пользователь"}
-                    </p>
-                  )}
+                  <p
+                    className={`mb-0.5 text-[10px] font-semibold ${
+                      mine ? "text-primary-foreground/80" : "text-primary"
+                    }`}
+                  >
+                    {mine ? "Я" : m.is_admin ? "Оператор" : "Пользователь"}
+                  </p>
                   <p className="whitespace-pre-wrap break-words">{m.body}</p>
                   <p className={`mt-0.5 text-[10px] ${mine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                     {new Date(m.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
