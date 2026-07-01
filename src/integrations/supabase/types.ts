@@ -44,9 +44,11 @@ export type Database = {
       complaints: {
         Row: {
           admin_reply: string | null
+          category: Database["public"]["Enums"]["complaint_category"]
           created_at: string
           description: string
           id: string
+          phone: string | null
           resolved_at: string | null
           status: Database["public"]["Enums"]["complaint_status"]
           updated_at: string
@@ -55,9 +57,11 @@ export type Database = {
         }
         Insert: {
           admin_reply?: string | null
+          category?: Database["public"]["Enums"]["complaint_category"]
           created_at?: string
           description: string
           id?: string
+          phone?: string | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["complaint_status"]
           updated_at?: string
@@ -66,9 +70,11 @@ export type Database = {
         }
         Update: {
           admin_reply?: string | null
+          category?: Database["public"]["Enums"]["complaint_category"]
           created_at?: string
           description?: string
           id?: string
+          phone?: string | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["complaint_status"]
           updated_at?: string
@@ -336,6 +342,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      complaint_category: "question" | "problem"
       complaint_status: "new" | "in_progress" | "resolved" | "rejected"
     }
     CompositeTypes: {
@@ -465,6 +472,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      complaint_category: ["question", "problem"],
       complaint_status: ["new", "in_progress", "resolved", "rejected"],
     },
   },
