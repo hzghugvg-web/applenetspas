@@ -243,7 +243,7 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div
@@ -252,8 +252,8 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
         exit={{ y: 40, opacity: 0 }}
         transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
         onClick={(e) => e.stopPropagation()}
-        className="mt-auto max-h-[92vh] w-full max-w-md space-y-3 overflow-y-auto rounded-t-2xl bg-card p-4 pb-8"
-        style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
+        className="absolute inset-x-0 bottom-0 mx-auto flex max-h-[92dvh] w-full max-w-md flex-col gap-3 overflow-y-auto overscroll-contain rounded-t-2xl bg-card p-4"
+        style={{ paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}
       >
         <div className="flex items-center justify-between">
           <h3 className="text-[17px] font-semibold">Новое обращение</h3>
