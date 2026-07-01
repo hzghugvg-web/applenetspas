@@ -7,8 +7,8 @@ import { FaqList } from "@/components/FaqList";
 import { AnimatePresence, motion } from "framer-motion";
 import { alertDialog as toast } from "@/lib/alert";
 import { translateAuthError } from "@/lib/errors";
-import { Plus, Upload, X, Loader2, ChevronDown } from "lucide-react";
-import { ComplaintChat } from "@/components/ComplaintChat";
+import { Plus, Upload, X, Loader2, MessageCircle } from "lucide-react";
+import { ComplaintChatModal } from "@/components/ComplaintChat";
 
 export const Route = createFileRoute("/_app/support")({ component: SupportPage });
 
@@ -77,7 +77,7 @@ function SupportPage() {
 function MyComplaints() {
   const [items, setItems] = useState<Complaint[]>([]);
   const [openForm, setOpenForm] = useState(false);
-  const [openIdx, setOpenIdx] = useState<string | null>(null);
+  const [chatId, setChatId] = useState<string | null>(null);
 
   async function load() {
     const { data } = await supabase
@@ -101,63 +101,44 @@ function MyComplaints() {
         <p className="pt-4 text-center text-[14px] text-muted-foreground">Обращений пока нет</p>
       )}
 
-      {items.map((c) => {
-        const open = openIdx === c.id;
-        return (
-          <div key={c.id} className="overflow-hidden rounded-xl bg-card">
-            <button
-              type="button"
-              onClick={() => setOpenIdx(open ? null : c.id)}
-              className="tg-press flex w-full items-center gap-3 p-3 text-left"
-            >
-              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT[c.status]}`} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-medium text-foreground">{c.description}</p>
-                <p className="text-[12px] text-muted-foreground">
-                  {STATUS_LABEL[c.status]} · {new Date(c.created_at).toLocaleDateString("ru-RU")}
-                </p>
-              </div>
-              <motion.span
-                animate={{ rotate: open ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
-                className="text-muted-foreground"
-              >
-                <ChevronDown className="h-4 w-4" />
-              </motion.span>
-            </button>
-            <AnimatePresence initial={false}>
-              {open && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                  className="overflow-hidden"
-                >
-                  <div className="space-y-2 px-3 pb-3 pt-1 text-[14px]">
-                    <div className="flex flex-wrap gap-2 text-[12px] text-muted-foreground">
-                      <span className="rounded-full bg-[#1C2C3C] px-2 py-0.5">
-                        {c.category === "problem" ? "Проблема" : "Вопрос"}
-                      </span>
-                      {c.phone && (
-                        <span className="rounded-full bg-[#1C2C3C] px-2 py-0.5">📞 {c.phone}</span>
-                      )}
-                    </div>
-                    <p className="whitespace-pre-wrap text-foreground/90">{c.description}</p>
-                    {c.video_url && <VideoPlayer path={c.video_url} />}
-                    <ComplaintChat
-                      complaintId={c.id}
-                      asAdmin={false}
-                      closed={c.status === "resolved" || c.status === "rejected"}
-                      onClosed={load}
-                    />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+      {items.map((c) => (
+        <button
+          key={c.id}
+          type="button"
+          onClick={() => setChatId(c.id)}
+          className="tg-press flex w-full items-center gap-3 rounded-xl bg-card p-3 text-left"
+        >
+          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT[c.status]}`} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[15px] font-medium text-foreground">{c.description}</p>
+            <p className="text-[12px] text-muted-foreground">
+              {STATUS_LABEL[c.status]} · {new Date(c.created_at).toLocaleDateString("ru-RU")}
+            </p>
           </div>
-        );
-      })}
+          <MessageCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </button>
+      ))}
+
+      {items.map((c) => (
+        <ComplaintChatModal
+          key={`m-${c.id}`}
+          open={chatId === c.id}
+          onClose={() => setChatId(null)}
+          title={c.category === "problem" ? "Проблема" : "Вопрос"}
+          subtitle={`${STATUS_LABEL[c.status]} · ${new Date(c.created_at).toLocaleDateString("ru-RU")}`}
+          complaintId={c.id}
+          asAdmin={false}
+          closed={c.status === "resolved" || c.status === "rejected"}
+          onClosed={load}
+          beforeChat={
+            <div className="space-y-2 rounded-xl bg-card p-2 text-[13px]">
+              <p className="whitespace-pre-wrap text-foreground/90">{c.description}</p>
+              {c.phone && <p className="text-[12px] text-muted-foreground">📞 {c.phone}</p>}
+              {c.video_url && <VideoPlayer path={c.video_url} />}
+            </div>
+          }
+        />
+      ))}
 
       <AnimatePresence>
         {openForm && (
