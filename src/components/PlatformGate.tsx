@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Shield, Share, Plus, Ban } from "lucide-react";
 
-type Platform = "loading" | "pass" | "ios-install" | "android-block";
+type Platform = "loading" | "pass" | "ios-install" | "android-install";
 
 function detect(): Exclude<Platform, "loading"> {
   if (typeof window === "undefined") return "pass";
@@ -13,7 +13,7 @@ function detect(): Exclude<Platform, "loading"> {
     (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
     (navigator as any).standalone === true;
   if (isIOS) return standalone ? "pass" : "ios-install";
-  if (isAndroid) return "android-block";
+  if (isAndroid) return standalone ? "pass" : "android-install";
   return "pass";
 }
 
