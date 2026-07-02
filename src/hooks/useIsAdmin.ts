@@ -14,15 +14,16 @@ export function useIsAdmin() {
       return cached === null ? undefined : cached === "1";
     },
     queryFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData.session?.user;
+      if (!user) {
         if (typeof window !== "undefined") window.sessionStorage.setItem("ns_is_admin", "0");
         return false;
       }
       const { data } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", u.user.id)
+        .eq("user_id", user.id)
         .eq("role", "admin")
         .maybeSingle();
       const value = !!data;
