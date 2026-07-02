@@ -56,7 +56,6 @@ export function MobileShell({ title, children }: Props) {
         className="safe-bottom grid shrink-0 border-t border-border"
         style={{
           gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
-          marginBottom: 20,
           backgroundColor: "#17212B",
           borderTopColor: "#1C2C3C",
         }}
