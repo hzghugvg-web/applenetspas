@@ -11,7 +11,7 @@ import { Copy, RefreshCw, Clock, CalendarClock, Loader2, ChevronLeft, ChevronRig
 export const Route = createFileRoute("/_app/vpn")({ component: VpnPage });
 
 type Direction = { id: string; name: string; flag: string | null };
-type Profile = { cooldown_until: string | null; subscription_until: string | null; is_blocked: boolean };
+type Profile = { cooldown_until: string | null; subscription_from: string | null; subscription_until: string | null; is_blocked: boolean };
 
 function VpnPage() {
   const [directions, setDirections] = useState<Direction[]>([]);
@@ -50,7 +50,7 @@ function VpnPage() {
     if (u.user) {
       const { data: p } = await supabase
         .from("profiles")
-        .select("cooldown_until,subscription_until,is_blocked")
+        .select("cooldown_until,subscription_from,subscription_until,is_blocked")
         .eq("id", u.user.id)
         .maybeSingle();
       setProfile(p as any);
@@ -215,6 +215,28 @@ function VpnPage() {
               <button onClick={handleIssue} disabled={loading || onCooldown || hasActiveSubscription} className="flex items-center justify-center rounded-xl bg-secondary px-4 py-3 text-sm font-medium disabled:opacity-50">
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               </button>
+            </div>
+          </section>
+        )}
+
+        {hasActiveSubscription && profile && (
+          <section className="ns-fade space-y-2 rounded-2xl border border-border bg-card p-4">
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Активный VPN</div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Запущен</span>
+              <span className="font-medium">
+                {profile.subscription_from
+                  ? new Date(profile.subscription_from).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" })
+                  : "—"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Закончится</span>
+              <span className="font-medium">
+                {profile.subscription_until
+                  ? new Date(profile.subscription_until).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" })
+                  : "—"}
+              </span>
             </div>
           </section>
         )}
