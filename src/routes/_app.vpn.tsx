@@ -58,6 +58,13 @@ function VpnPage() {
       setProfile(p as any);
     }
   }
+  async function reloadIssued() {
+    try {
+      const res = await loadIssued({});
+      setLinks(res.links);
+      setLinkIdx((i) => (res.links.length ? Math.min(i, res.links.length - 1) : 0));
+    } catch { /* ignore */ }
+  }
   useEffect(() => { loadAll(); }, []); // eslint-disable-line
   useEffect(() => {
     const t = setInterval(() => { loadAll(); }, 8000);
@@ -67,19 +74,19 @@ function VpnPage() {
       .channel("vless_links_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "vless_links" }, () => loadAll())
       .subscribe();
+    const ch2 = supabase
+      .channel("issued_configs_changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "issued_configs" }, () => { reloadIssued(); loadAll(); })
+      .subscribe();
     return () => {
       clearInterval(t);
       document.removeEventListener("visibilitychange", onVis);
       supabase.removeChannel(ch);
+      supabase.removeChannel(ch2);
     };
   }, []); // eslint-disable-line
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await loadIssued({});
-        if (res.links.length) { setLinks(res.links); setLinkIdx(0); }
-      } catch { /* ignore */ }
-    })();
+    reloadIssued();
   }, []); // eslint-disable-line
 
   const cooldownMs = profile?.cooldown_until ? new Date(profile.cooldown_until).getTime() - now : 0;
