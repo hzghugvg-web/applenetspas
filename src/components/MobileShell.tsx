@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { Globe, User, Settings, MessageCircle } from "lucide-react";
 import { type ReactNode } from "react";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { motion } from "framer-motion";
 
 interface Props { title: string; children: ReactNode; }
 
@@ -31,13 +32,16 @@ export function MobileShell({ title, children }: Props) {
         </div>
       </header>
       <main className="min-h-0 flex-1 overflow-hidden">
-        <div
+        <motion.div
           key={pathname}
-          className="ns-scroll ns-page h-full px-4 pt-3"
-          style={{ paddingBottom: "4px" }}
+          initial={{ opacity: 0, y: 8, scale: 0.995 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          className="ns-scroll h-full px-4 pt-4"
+          style={{ paddingBottom: "12px", willChange: "transform, opacity" }}
         >
-          <div className="space-y-3">{children}</div>
-        </div>
+          <div className="space-y-3 pb-2">{children}</div>
+        </motion.div>
       </main>
       <nav
         className="mx-2 grid shrink-0 rounded-2xl glass"
@@ -57,9 +61,11 @@ export function MobileShell({ title, children }: Props) {
               }`}
             >
               {active && (
-                <span
+                <motion.span
+                  layoutId="ns-nav-indicator"
+                  transition={{ type: "spring", stiffness: 380, damping: 32 }}
                   className="absolute inset-1 rounded-xl"
-                  style={{ background: "var(--gradient-primary)", opacity: 0.2 }}
+                  style={{ background: "var(--gradient-primary)", opacity: 0.22 }}
                 />
               )}
               <Icon className="relative z-10 h-[22px] w-[22px]" strokeWidth={2} />

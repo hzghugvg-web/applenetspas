@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/MobileShell";
-import { FaqList } from "@/components/FaqList";
 import { motion } from "framer-motion";
 import { alertDialog as toast } from "@/lib/alert";
 import { translateAuthError } from "@/lib/errors";
@@ -38,35 +37,9 @@ const STATUS_DOT: Record<Complaint["status"], string> = {
 };
 
 function SupportPage() {
-  const [tab, setTab] = useState<"mine" | "faq">("mine");
-
   return (
     <MobileShell title="Поддержка">
-      <div className="grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
-        {([
-          ["mine", "Мои обращения"],
-          ["faq", "FAQ"],
-        ] as const).map(([k, l]) => (
-          <button
-            key={k}
-            onClick={() => setTab(k)}
-            className={`tg-press rounded-full py-1.5 text-[13px] font-medium transition-colors ${
-              tab === k ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-            }`}
-          >
-            {l}
-          </button>
-        ))}
-      </div>
-
-      <div className="relative pt-3">
-        <div className={tab === "mine" ? "ns-seg-panel ns-seg-active" : "ns-seg-panel ns-seg-hidden"}>
-          <MyComplaints />
-        </div>
-        <div className={tab === "faq" ? "ns-seg-panel ns-seg-active" : "ns-seg-panel ns-seg-hidden"}>
-          <FaqList />
-        </div>
-      </div>
+      <MyComplaints />
     </MobileShell>
   );
 }
