@@ -34,7 +34,7 @@ export function MobileShell({ title, children }: Props) {
         <div
           key={pathname}
           className="ns-scroll ns-page h-full px-4 pt-3"
-          style={{ paddingBottom: "8px" }}
+          style={{ paddingBottom: "4px" }}
         >
           <div className="space-y-3">{children}</div>
         </div>
@@ -43,7 +43,7 @@ export function MobileShell({ title, children }: Props) {
         className="mx-2 grid shrink-0 rounded-2xl glass"
         style={{
           gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
-          marginBottom: "max(3px, env(safe-area-inset-bottom))",
+          marginBottom: "4px",
         }}
       >
         {tabs.map(({ to, label, icon: Icon }) => {
