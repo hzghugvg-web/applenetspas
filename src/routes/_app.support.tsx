@@ -59,13 +59,14 @@ function SupportPage() {
         ))}
       </div>
 
-      <AnimatePresence mode="wait" initial={false}>
+      <AnimatePresence mode="popLayout" initial={false}>
         <motion.div
           key={tab}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          initial={{ opacity: 0, y: 10, scale: 0.985 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -6, scale: 0.99 }}
+          transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+          style={{ willChange: "transform, opacity" }}
         >
           {tab === "mine" ? <MyComplaints /> : <FaqList />}
         </motion.div>
@@ -240,8 +241,13 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
       >
         <div className="flex items-center justify-between">
           <h3 className="text-[17px] font-semibold">Новое обращение</h3>
-          <button onClick={onClose} className="tg-press text-muted-foreground">
-            <X className="h-5 w-5" />
+          <button
+            type="button"
+            aria-label="Закрыть"
+            onPointerDown={(e) => { e.stopPropagation(); onClose(); }}
+            className="tg-press -mr-1 grid h-10 w-10 place-items-center rounded-full text-muted-foreground hover:text-foreground"
+          >
+            <X className="pointer-events-none h-5 w-5" />
           </button>
         </div>
         <div className="grid grid-cols-2 gap-1 rounded-full bg-[#1C2C3C] p-1">
