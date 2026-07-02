@@ -11,7 +11,7 @@ import { Copy, RefreshCw, Clock, CalendarClock, Loader2, ChevronLeft, ChevronRig
 export const Route = createFileRoute("/_app/vpn")({ component: VpnPage });
 
 type Direction = { id: string; name: string; flag: string | null };
-type Profile = { cooldown_until: string | null; subscription_until: string | null; is_blocked: boolean };
+type Profile = { cooldown_until: string | null; subscription_from: string | null; subscription_until: string | null; is_blocked: boolean };
 
 function VpnPage() {
   const [directions, setDirections] = useState<Direction[]>([]);
@@ -50,7 +50,7 @@ function VpnPage() {
     if (u.user) {
       const { data: p } = await supabase
         .from("profiles")
-        .select("cooldown_until,subscription_until,is_blocked")
+        .select("cooldown_until,subscription_from,subscription_until,is_blocked")
         .eq("id", u.user.id)
         .maybeSingle();
       setProfile(p as any);
