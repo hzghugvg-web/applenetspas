@@ -123,22 +123,29 @@
 
 @utility tg-card {
   background-color: var(--card);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 16px;
-  animation: tg-card-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: tg-card-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 220ms ease;
 }
+.tg-card:active { transform: scale(0.985); }
 
 @keyframes tg-card-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  0%   { opacity: 0; transform: translateY(14px) scale(0.96); filter: blur(4px); }
+  60%  { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 
-/* Stagger children with .tg-card so they cascade in */
-.tg-stagger > * { animation: tg-card-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both; }
-.tg-stagger > *:nth-child(1) { animation-delay: 20ms; }
-.tg-stagger > *:nth-child(2) { animation-delay: 60ms; }
-.tg-stagger > *:nth-child(3) { animation-delay: 100ms; }
-.tg-stagger > *:nth-child(4) { animation-delay: 140ms; }
-.tg-stagger > *:nth-child(5) { animation-delay: 180ms; }
-.tg-stagger > *:nth-child(6) { animation-delay: 220ms; }
-.tg-stagger > *:nth-child(n+7) { animation-delay: 260ms; }
+/* Stagger children so they cascade in like Telegram */
+.tg-stagger > * {
+  animation: tg-card-in 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+.tg-stagger > *:nth-child(1) { animation-delay: 30ms; }
+.tg-stagger > *:nth-child(2) { animation-delay: 80ms; }
+.tg-stagger > *:nth-child(3) { animation-delay: 130ms; }
+.tg-stagger > *:nth-child(4) { animation-delay: 180ms; }
+.tg-stagger > *:nth-child(5) { animation-delay: 230ms; }
+.tg-stagger > *:nth-child(6) { animation-delay: 280ms; }
+.tg-stagger > *:nth-child(7) { animation-delay: 330ms; }
+.tg-stagger > *:nth-child(n+8) { animation-delay: 380ms; }
