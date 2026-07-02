@@ -6,8 +6,7 @@ import { issueVpnConfig, getMyIssuedLinks } from "@/lib/vpn.functions";
 import { MobileShell } from "@/components/MobileShell";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { Copy, QrCode, RefreshCw, Clock, CalendarClock, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
+import { Copy, RefreshCw, Clock, CalendarClock, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/_app/vpn")({ component: VpnPage });
 
@@ -21,7 +20,6 @@ function VpnPage() {
   const [links, setLinks] = useState<string[]>([]);
   const [linkIdx, setLinkIdx] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [qrOpen, setQrOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
   const issue = useServerFn(issueVpnConfig);
   const loadIssued = useServerFn(getMyIssuedLinks);
@@ -214,9 +212,6 @@ function VpnPage() {
               <button onClick={copyLink} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-secondary py-3 text-sm font-medium">
                 <Copy className="h-4 w-4" /> Копировать
               </button>
-              <button onClick={() => setQrOpen(true)} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-secondary py-3 text-sm font-medium">
-                <QrCode className="h-4 w-4" /> QR-код
-              </button>
               <button onClick={handleIssue} disabled={loading || onCooldown || hasActiveSubscription} className="flex items-center justify-center rounded-xl bg-secondary px-4 py-3 text-sm font-medium disabled:opacity-50">
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               </button>
@@ -224,17 +219,6 @@ function VpnPage() {
           </section>
         )}
       </div>
-
-      {qrOpen && currentLink && (
-        <div onClick={() => setQrOpen(false)} className="ns-fade fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6">
-          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-2xl bg-card p-6">
-            <div className="rounded-xl bg-white p-4">
-              <QRCodeSVG value={currentLink} size={256} className="mx-auto h-auto w-full" />
-            </div>
-            <button onClick={() => setQrOpen(false)} className="mt-4 h-12 w-full rounded-xl bg-secondary font-medium">Закрыть</button>
-          </div>
-        </div>
-      )}
     </MobileShell>
   );
 }

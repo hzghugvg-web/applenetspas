@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
-import { Shield, Share, Plus, Ban } from "lucide-react";
+import { Shield, Share, Plus, MoreVertical } from "lucide-react";
 
-type Platform = "loading" | "pass" | "ios-install" | "android-block";
+type Platform = "loading" | "pass" | "ios-install" | "android-install";
 
 function detect(): Exclude<Platform, "loading"> {
   if (typeof window === "undefined") return "pass";
@@ -13,7 +13,7 @@ function detect(): Exclude<Platform, "loading"> {
     (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
     (navigator as any).standalone === true;
   if (isIOS) return standalone ? "pass" : "ios-install";
-  if (isAndroid) return "android-block";
+  if (isAndroid) return standalone ? "pass" : "android-install";
   return "pass";
 }
 
@@ -86,12 +86,44 @@ export function PlatformGate({ children }: { children: ReactNode }) {
           </>
         ) : (
           <>
-            <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-destructive/15">
-              <Ban className="h-8 w-8 text-destructive" />
+            <div
+              className="mx-auto grid h-16 w-16 place-items-center rounded-2xl"
+              style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
+            >
+              <Shield className="h-8 w-8 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-semibold">Устройство не поддерживается</h1>
+            <h1 className="text-2xl font-semibold">Установите NetSpas</h1>
             <p className="text-sm text-muted-foreground">
-              NetSpas недоступен на Android-устройствах. Используйте iPhone или компьютер.
+              Для продолжения установите приложение на Android.
+            </p>
+            <div className="space-y-3 rounded-2xl border border-border bg-card p-4 text-left text-sm">
+              <div className="flex items-start gap-3">
+                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-secondary text-xs font-semibold">1</div>
+                <div className="flex-1">
+                  Откройте сайт в <span className="font-medium">Chrome</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-secondary text-xs font-semibold">2</div>
+                <div className="flex-1 flex items-center gap-2">
+                  Нажмите <MoreVertical className="h-4 w-4 text-primary" /> меню
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-secondary text-xs font-semibold">3</div>
+                <div className="flex-1 flex items-center gap-2">
+                  Выберите <Plus className="h-4 w-4 text-primary" /> «Добавить на главный экран»
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-secondary text-xs font-semibold">4</div>
+                <div className="flex-1">
+                  Откройте <span className="font-medium">NetSpas</span> с главного экрана
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Доступ через браузер закрыт.
             </p>
           </>
         )}
