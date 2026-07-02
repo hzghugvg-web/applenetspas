@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Globe, User, Settings, MessageCircle } from "lucide-react";
 import { type ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 interface Props { title: string; children: ReactNode; }
@@ -28,34 +28,18 @@ export function MobileShell({ title, children }: Props) {
     >
       <header className="safe-top tg-blur shrink-0">
         <div className="flex h-12 items-center justify-center px-4">
-          <AnimatePresence mode="wait">
-            <motion.h1
-              key={title}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              className="text-[17px] font-semibold tracking-tight"
-            >
-              {title}
-            </motion.h1>
-          </AnimatePresence>
+          <h1 key={title} className="ns-title text-[17px] font-semibold tracking-tight">
+            {title}
+          </h1>
         </div>
       </header>
       <main className="flex-1 overflow-hidden">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={pathname}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            className="ns-scroll h-full px-4 pt-3 pb-24"
-            style={{ willChange: "transform, opacity" }}
-          >
-            <div className="space-y-3">{children}</div>
-          </motion.div>
-        </AnimatePresence>
+        <div
+          key={pathname}
+          className="ns-scroll ns-page h-full px-4 pt-3 pb-24"
+        >
+          <div className="space-y-3">{children}</div>
+        </div>
       </main>
       <nav
         className="safe-bottom mx-3 mb-2 grid shrink-0 rounded-2xl glass"
