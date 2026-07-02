@@ -47,7 +47,7 @@ export function MobileShell({ title, children }: Props) {
         className="mx-2 grid shrink-0 rounded-2xl glass"
         style={{
           gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
-          marginBottom: "4px",
+          marginBottom: "72px",
         }}
       >
         {tabs.map(({ to, label, icon: Icon }) => {
