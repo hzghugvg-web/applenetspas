@@ -54,6 +54,7 @@ function ProfilePage() {
   }
 
   async function logout() {
+    sessionStorage.removeItem("ns_is_admin");
     await supabase.auth.signOut();
     navigate({ to: "/auth" });
   }
@@ -64,6 +65,7 @@ function ProfilePage() {
     if (!u.user) return;
     const { error } = await supabase.from("profiles").delete().eq("id", u.user.id);
     if (error) { toast.error(translateAuthError(error.message)); return; }
+    sessionStorage.removeItem("ns_is_admin");
     await supabase.auth.signOut();
     toast.success("Аккаунт удалён");
     navigate({ to: "/auth" });
