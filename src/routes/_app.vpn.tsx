@@ -218,6 +218,28 @@ function VpnPage() {
             </div>
           </section>
         )}
+
+        {hasActiveSubscription && profile && (
+          <section className="ns-fade space-y-2 rounded-2xl border border-border bg-card p-4">
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Активный VPN</div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Запущен</span>
+              <span className="font-medium">
+                {profile.subscription_from
+                  ? new Date(profile.subscription_from).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" })
+                  : "—"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Закончится</span>
+              <span className="font-medium">
+                {profile.subscription_until
+                  ? new Date(profile.subscription_until).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" })
+                  : "—"}
+              </span>
+            </div>
+          </section>
+        )}
       </div>
     </MobileShell>
   );
