@@ -15,7 +15,7 @@ type UserRow = { id: string; email: string; is_blocked: boolean; cooldown_until:
 type IssuedConfig = { id: string; vless_url: string; issued_at: string; direction_id: string | null };
 
 function AdminPage() {
-  const [tab, setTab] = useState<"dirs" | "links" | "users" | "complaints">("dirs");
+  const [tab, setTab] = useState<"catalog" | "users" | "complaints">("catalog");
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -32,76 +32,33 @@ function AdminPage() {
 
   return (
     <MobileShell title="Админ-панель">
-      <div className="mb-4 grid grid-cols-4 gap-1 rounded-xl bg-muted p-1">
+      <div className="mb-4 grid grid-cols-3 gap-1 rounded-2xl bg-muted p-1">
         {([
-          ["dirs", "Направления"],
-          ["links", "Ссылки"],
+          ["catalog", "Каталог"],
           ["users", "Пользователи"],
           ["complaints", "Обращения"],
         ] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`rounded-lg py-2 text-xs font-medium transition-colors ${tab === k ? "bg-card text-foreground" : "text-muted-foreground"}`}>
+            className={`tg-press rounded-xl py-2 text-xs font-medium transition-colors ${tab === k ? "bg-card-solid text-foreground shadow" : "text-muted-foreground"}`}
+            style={tab === k ? { background: "var(--card-solid)" } : undefined}>
             {l}
           </button>
         ))}
       </div>
-      {tab === "dirs" && <DirectionsTab />}
-      {tab === "links" && <LinksTab />}
+      {tab === "catalog" && <CatalogTab />}
       {tab === "users" && <UsersTab />}
       {tab === "complaints" && <ComplaintsTab />}
     </MobileShell>
   );
 }
 
-function DirectionsTab() {
-  const [list, setList] = useState<Direction[]>([]);
-  const [name, setName] = useState(""); const [flag, setFlag] = useState("");
-  async function load() {
-    const { data } = await supabase.from("directions").select("*").order("name");
-    setList((data ?? []) as Direction[]);
-  }
-  useEffect(() => { load(); }, []);
-  async function add() {
-    if (!name) return;
-    const { error } = await supabase.from("directions").insert({ name, flag: flag || null });
-    if (error) toast.error(translateAuthError(error.message));
-    else { setName(""); setFlag(""); load(); toast.success("Добавлено"); }
-  }
-  async function toggle(d: Direction) {
-    await supabase.from("directions").update({ is_active: !d.is_active }).eq("id", d.id); load();
-  }
-  async function del(id: string) {
-    if (!confirm("Удалить направление?")) return;
-    await supabase.from("directions").delete().eq("id", id); load();
-  }
-  return (
-    <div className="space-y-3">
-      <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
-        <div className="text-sm font-medium">Добавить направление</div>
-        <div className="flex gap-2">
-          <input value={flag} onChange={(e) => setFlag(e.target.value)} placeholder="🇳🇱" className="h-11 w-16 rounded-xl border border-border bg-input px-3 text-center outline-none focus:border-primary" />
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Название" className="h-11 flex-1 rounded-xl border border-border bg-input px-3 outline-none focus:border-primary" />
-          <button onClick={add} className="grid h-11 w-11 place-items-center rounded-xl text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
-            <Plus className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
-      {list.map((d) => (
-        <div key={d.id} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
-          <span className="text-xl">{d.flag}</span>
-          <span className="flex-1 text-sm font-medium">{d.name}</span>
-          <button onClick={() => toggle(d)} className="rounded-lg bg-secondary px-2 py-1 text-xs">{d.is_active ? "Вкл" : "Выкл"}</button>
-          <button onClick={() => del(d.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></button>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function LinksTab() {
+function CatalogTab() {
   const [dirs, setDirs] = useState<Direction[]>([]);
   const [links, setLinks] = useState<VlessLink[]>([]);
-  const [dir, setDir] = useState<string>(""); const [url, setUrl] = useState("");
+  const [name, setName] = useState(""); const [flag, setFlag] = useState("");
+  const [openDir, setOpenDir] = useState<string | null>(null);
+  const [urlDraft, setUrlDraft] = useState<Record<string, string>>({});
+
   async function load() {
     const [{ data: ds }, { data: ls }] = await Promise.all([
       supabase.from("directions").select("*").order("name"),
@@ -109,42 +66,88 @@ function LinksTab() {
     ]);
     setDirs((ds ?? []) as Direction[]);
     setLinks((ls ?? []) as VlessLink[]);
-    if (!dir && ds?.length) setDir(ds[0].id);
   }
   useEffect(() => { load(); }, []);
-  async function add() {
-    if (!dir || !url) return;
-    const { error } = await supabase.from("vless_links").insert({ direction_id: dir, url });
+
+  async function addDir() {
+    if (!name) return;
+    const { error } = await supabase.from("directions").insert({ name, flag: flag || null });
     if (error) toast.error(translateAuthError(error.message));
-    else { setUrl(""); load(); toast.success("Добавлено"); }
+    else { setName(""); setFlag(""); load(); toast.success("Направление добавлено"); }
   }
-  async function del(id: string) {
+  async function toggleDir(d: Direction) {
+    await supabase.from("directions").update({ is_active: !d.is_active }).eq("id", d.id); load();
+  }
+  async function delDir(id: string) {
+    if (!confirm("Удалить направление вместе со ссылками?")) return;
+    await supabase.from("directions").delete().eq("id", id); load();
+  }
+  async function addLink(dirId: string) {
+    const url = (urlDraft[dirId] ?? "").trim();
+    if (!url) return;
+    const { error } = await supabase.from("vless_links").insert({ direction_id: dirId, url });
+    if (error) toast.error(translateAuthError(error.message));
+    else { setUrlDraft((s) => ({ ...s, [dirId]: "" })); load(); toast.success("Ссылка добавлена"); }
+  }
+  async function delLink(id: string) {
     if (!confirm("Удалить ссылку?")) return;
     await supabase.from("vless_links").delete().eq("id", id); load();
   }
+
   return (
     <div className="space-y-3">
-      <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
-        <div className="text-sm font-medium">Добавить VLESS-ссылку</div>
-        <select value={dir} onChange={(e) => setDir(e.target.value)} className="h-11 w-full rounded-xl border border-border bg-input px-3 outline-none focus:border-primary">
-          {dirs.map((d) => <option key={d.id} value={d.id}>{d.flag} {d.name}</option>)}
-        </select>
-        <textarea value={url} onChange={(e) => setUrl(e.target.value)} placeholder="vless://..." rows={3}
-          className="w-full rounded-xl border border-border bg-input px-3 py-2 text-xs outline-none focus:border-primary" />
-        <button onClick={add} className="h-11 w-full rounded-xl font-medium text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>Добавить</button>
+      <div className="space-y-2 rounded-2xl border border-border p-4" style={{ background: "var(--card-solid)" }}>
+        <div className="text-sm font-medium">Новое направление</div>
+        <div className="flex gap-2">
+          <input value={flag} onChange={(e) => setFlag(e.target.value)} placeholder="🇳🇱" className="h-11 w-16 rounded-xl border border-border bg-input px-3 text-center outline-none focus:border-primary" />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Название" className="h-11 flex-1 rounded-xl border border-border bg-input px-3 outline-none focus:border-primary" />
+          <button onClick={addDir} className="grid h-11 w-11 place-items-center rounded-xl text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
+            <Plus className="h-5 w-5" />
+          </button>
+        </div>
       </div>
-      {links.map((l) => {
-        const d = dirs.find((x) => x.id === l.direction_id);
+
+      {dirs.map((d) => {
+        const dirLinks = links.filter((l) => l.direction_id === d.id);
+        const open = openDir === d.id;
         return (
-          <div key={l.id} className="space-y-2 rounded-xl border border-border bg-card p-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">{d?.flag} {d?.name ?? "—"}</span>
-              <button onClick={() => del(l.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></button>
+          <div key={d.id} className="overflow-hidden rounded-2xl border border-border" style={{ background: "var(--card-solid)" }}>
+            <div className="flex items-center gap-3 p-3">
+              <span className="text-xl">{d.flag}</span>
+              <button onClick={() => setOpenDir(open ? null : d.id)} className="flex-1 text-left">
+                <div className="text-sm font-medium">{d.name}</div>
+                <div className="text-[11px] text-muted-foreground">{dirLinks.length} ссылок · {d.is_active ? "активно" : "выключено"}</div>
+              </button>
+              <button onClick={() => toggleDir(d)} className="tg-press rounded-lg bg-secondary px-2 py-1 text-xs">{d.is_active ? "Вкл" : "Выкл"}</button>
+              <button onClick={() => delDir(d.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></button>
             </div>
-            <div className="break-all text-xs text-muted-foreground">{l.url}</div>
+            {open && (
+              <div className="space-y-2 border-t border-border p-3">
+                <div className="flex gap-2">
+                  <textarea
+                    value={urlDraft[d.id] ?? ""}
+                    onChange={(e) => setUrlDraft((s) => ({ ...s, [d.id]: e.target.value }))}
+                    placeholder="vless://..."
+                    rows={2}
+                    className="flex-1 rounded-xl border border-border bg-input px-3 py-2 text-xs outline-none focus:border-primary"
+                  />
+                  <button onClick={() => addLink(d.id)} className="grid w-11 shrink-0 place-items-center rounded-xl text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
+                    <Plus className="h-5 w-5" />
+                  </button>
+                </div>
+                {dirLinks.length === 0 && <p className="text-center text-[11px] text-muted-foreground">Ссылок пока нет</p>}
+                {dirLinks.map((l) => (
+                  <div key={l.id} className="flex items-start gap-2 rounded-xl bg-muted p-2">
+                    <div className="min-w-0 flex-1 break-all text-[11px] text-muted-foreground">{l.url}</div>
+                    <button onClick={() => delLink(l.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       })}
+      {!dirs.length && <p className="text-center text-sm text-muted-foreground">Направлений пока нет</p>}
     </div>
   );
 }

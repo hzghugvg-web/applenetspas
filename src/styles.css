@@ -31,32 +31,35 @@
 }
 
 :root {
-  /* Telegram iOS dark palette */
-  --radius: 0.75rem;
-  --background: #17212B;
-  --foreground: #FFFFFF;
-  --card: #182533;
-  --card-foreground: #FFFFFF;
-  --popover: #182533;
-  --popover-foreground: #FFFFFF;
-  --primary: #2AABEE;
+  /* NetSpas — smooth midnight-violet dark theme */
+  --radius: 1rem;
+  --background: #0B0D14;
+  --foreground: #F5F7FB;
+  --card: #14172099;
+  --card-solid: #141720;
+  --card-foreground: #F5F7FB;
+  --popover: #141720;
+  --popover-foreground: #F5F7FB;
+  --primary: #7C6BFF;
   --primary-foreground: #FFFFFF;
-  --primary-glow: #2AABEE;
-  --secondary: #1F2C38;
-  --secondary-foreground: #FFFFFF;
-  --muted: #1F2C38;
-  --muted-foreground: #8E99A5;
-  --accent: #2AABEE;
-  --accent-foreground: #FFFFFF;
-  --destructive: #E53935;
+  --primary-glow: #B79BFF;
+  --secondary: #1A1E2B;
+  --secondary-foreground: #F5F7FB;
+  --muted: #171B26;
+  --muted-foreground: #8A93A6;
+  --accent: #5EE7DF;
+  --accent-foreground: #0B0D14;
+  --destructive: #FF5C7A;
   --destructive-foreground: #FFFFFF;
-  --border: #1C2C3C;
-  --input: #1F2C38;
-  --ring: #2AABEE;
-  --gradient-primary: linear-gradient(135deg, #2AABEE, #229ED9);
-  --shadow-elegant: none;
-  --nav-blur: saturate(180%) blur(20px);
-  --nav-bg: rgba(15, 15, 15, 0.85);
+  --border: #232838;
+  --input: #171B26;
+  --ring: #7C6BFF;
+  --gradient-primary: linear-gradient(135deg, #7C6BFF 0%, #5EE7DF 100%);
+  --gradient-surface: linear-gradient(180deg, rgba(124,107,255,0.08) 0%, rgba(94,231,223,0.02) 100%);
+  --shadow-elegant: 0 10px 40px -12px rgba(124, 107, 255, 0.35);
+  --shadow-card: 0 8px 24px -12px rgba(0,0,0,0.6);
+  --nav-blur: saturate(180%) blur(24px);
+  --nav-bg: rgba(11, 13, 20, 0.75);
 }
 
 .dark { color-scheme: dark; }
@@ -122,19 +125,31 @@
 .tg-press:active { transform: scale(0.97); opacity: 0.85; }
 
 @utility tg-card {
-  background-color: var(--card);
-  border-radius: 14px;
+  background: var(--card-solid);
+  border: 1px solid var(--border);
+  border-radius: 18px;
   padding: 16px;
-  animation: tg-card-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 220ms ease;
+  box-shadow: var(--shadow-card);
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), background-color 200ms ease, border-color 200ms ease;
 }
 .tg-card:active { transform: scale(0.985); }
 
 @keyframes tg-card-in {
-  0%   { opacity: 0; transform: translateY(14px) scale(0.96); filter: blur(4px); }
-  60%  { opacity: 1; filter: blur(0); }
-  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* framer-motion drives page + card stagger; keep .tg-stagger as a no-op alias */
 .tg-stagger { display: contents; }
+
+@utility glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+  backdrop-filter: saturate(160%) blur(14px);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+@utility gradient-text {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
