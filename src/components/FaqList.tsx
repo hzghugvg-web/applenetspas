@@ -24,7 +24,7 @@ export function FaqList() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Поиск по вопросам…"
-          className="h-10 w-full rounded-xl border border-border bg-[#1C2C3C] pl-9 pr-3 text-[15px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
+          className="h-10 w-full rounded-xl border border-border bg-input pl-9 pr-3 text-[15px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
         />
       </div>
 
