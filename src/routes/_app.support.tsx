@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/MobileShell";
 import { FaqList } from "@/components/FaqList";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { alertDialog as toast } from "@/lib/alert";
 import { translateAuthError } from "@/lib/errors";
 import { Plus, Upload, X, Loader2, MessageCircle } from "lucide-react";
@@ -42,7 +42,7 @@ function SupportPage() {
 
   return (
     <MobileShell title="Поддержка">
-      <div className="grid grid-cols-2 gap-1 rounded-full bg-[#1C2C3C] p-1">
+      <div className="grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
         {([
           ["mine", "Мои обращения"],
           ["faq", "FAQ"],
@@ -59,8 +59,13 @@ function SupportPage() {
         ))}
       </div>
 
-      <div key={tab} className="ns-segment-content">
-        {tab === "mine" ? <MyComplaints /> : <FaqList />}
+      <div className="relative pt-3">
+        <div className={tab === "mine" ? "ns-seg-panel ns-seg-active" : "ns-seg-panel ns-seg-hidden"}>
+          <MyComplaints />
+        </div>
+        <div className={tab === "faq" ? "ns-seg-panel ns-seg-active" : "ns-seg-panel ns-seg-hidden"}>
+          <FaqList />
+        </div>
       </div>
     </MobileShell>
   );
@@ -81,7 +86,7 @@ function MyComplaints() {
   useEffect(() => { load(); }, []);
 
   return (
-    <div className="space-y-3 pt-3">
+    <div className="space-y-3">
       <button
         onClick={() => setOpenForm(true)}
         className="tg-press flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-[15px] font-medium text-primary-foreground"
@@ -132,14 +137,12 @@ function MyComplaints() {
         />
       ))}
 
-      <AnimatePresence>
-        {openForm && (
-          <ComplaintForm
-            onClose={() => setOpenForm(false)}
-            onSaved={() => { setOpenForm(false); load(); }}
-          />
-        )}
-      </AnimatePresence>
+      {openForm && (
+        <ComplaintForm
+          onClose={() => setOpenForm(false)}
+          onSaved={() => { setOpenForm(false); load(); }}
+        />
+      )}
     </div>
   );
 }
@@ -241,7 +244,7 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
             <X className="pointer-events-none h-5 w-5" />
           </button>
         </div>
-        <div className="grid grid-cols-2 gap-1 rounded-full bg-[#1C2C3C] p-1">
+        <div className="grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
           {([
             ["question", "Вопрос"],
             ["problem", "Проблема"],
@@ -263,7 +266,7 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
           onChange={(e) => setDesc(e.target.value)}
           placeholder={category === "problem" ? "Опишите проблему…" : "Ваш вопрос…"}
           rows={4}
-          className="w-full rounded-xl border border-border bg-[#1C2C3C] p-3 text-[15px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
+          className="w-full rounded-xl border border-border bg-input p-3 text-[15px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
         />
         <input
           value={phone}
@@ -271,7 +274,7 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
           type="tel"
           inputMode="tel"
           placeholder="Телефон (необязательно)"
-          className="w-full rounded-xl border border-border bg-[#1C2C3C] p-3 text-[15px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
+          className="w-full rounded-xl border border-border bg-input p-3 text-[15px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
         />
         <input
           ref={inputRef}
@@ -282,7 +285,7 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
         />
         <button
           onClick={() => inputRef.current?.click()}
-          className="tg-press flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-[#1C2C3C] py-3 text-[14px] text-muted-foreground"
+          className="tg-press flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted py-3 text-[14px] text-muted-foreground"
         >
           <Upload className="h-4 w-4" />
           {file
@@ -292,7 +295,7 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
               : "Прикрепить видео (необязательно)"}
         </button>
         {uploading && (
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#1C2C3C]">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
             <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
           </div>
         )}
