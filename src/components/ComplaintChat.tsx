@@ -143,7 +143,7 @@ export function ComplaintChat({ complaintId, asAdmin, closed, onClosed }: Props)
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
-      <div className="ns-scroll min-h-0 flex-1 space-y-1.5 overflow-y-auto rounded-xl bg-[#0F171F] p-2">
+      <div className="ns-scroll min-h-0 flex-1 space-y-1.5 overflow-y-auto rounded-xl bg-muted p-2">
         {msgs.length === 0 && (
           <p className="py-4 text-center text-[12px] text-muted-foreground">Сообщений пока нет</p>
         )}
@@ -162,7 +162,7 @@ export function ComplaintChat({ complaintId, asAdmin, closed, onClosed }: Props)
                   className={`max-w-[80%] rounded-2xl px-3 py-1.5 text-[14px] ${
                     mine
                       ? "rounded-br-md bg-primary text-primary-foreground"
-                      : "rounded-bl-md bg-[#1C2C3C] text-foreground"
+                      : "rounded-bl-md bg-card-solid text-foreground"
                   }`}
                 >
                   <p
@@ -211,7 +211,7 @@ export function ComplaintChat({ complaintId, asAdmin, closed, onClosed }: Props)
               }}
               rows={1}
               placeholder="Сообщение…"
-              className="max-h-24 min-h-[38px] flex-1 resize-none rounded-full border border-border bg-[#1C2C3C] px-3 py-2 text-[14px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
+              className="max-h-24 min-h-[38px] flex-1 resize-none rounded-full border border-border bg-input px-3 py-2 text-[14px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
             />
             <button
               onClick={send}
