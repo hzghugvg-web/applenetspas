@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Globe, User, Settings, MessageCircle } from "lucide-react";
-import { type ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { Children, type ReactNode } from "react";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 interface Props { title: string; children: ReactNode; }
@@ -16,6 +16,18 @@ export function MobileShell({ title, children }: Props) {
     { to: "/profile", label: "Профиль", icon: User },
     ...(isAdmin === true ? [{ to: "/admin", label: "Админ", icon: Settings }] : []),
   ];
+
+  const iosSpring = { type: "spring" as const, stiffness: 320, damping: 32, mass: 0.9 };
+  const pageContainer: Variants = {
+    initial: { opacity: 0 },
+    animate: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.04, when: "beforeChildren" } },
+    exit: { opacity: 0, transition: { duration: 0.18, ease: [0.4, 0, 1, 1] as [number, number, number, number] } },
+  };
+  const cardVariants: Variants = {
+    initial: { opacity: 0, y: 18, scale: 0.97 },
+    animate: { opacity: 1, y: 0, scale: 1, transition: iosSpring },
+    exit: { opacity: 0, y: -8, scale: 0.98, transition: { duration: 0.15, ease: [0.4, 0, 1, 1] as [number, number, number, number] } },
+  };
 
   return (
     <div
@@ -42,13 +54,24 @@ export function MobileShell({ title, children }: Props) {
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={pathname}
-            initial={{ opacity: 0, x: 24, scale: 0.985, filter: "blur(6px)" }}
-            animate={{ opacity: 1, x: 0, scale: 1, filter: "blur(0px)" }}
-            exit={{ opacity: 0, x: -24, scale: 0.985, filter: "blur(6px)" }}
-            transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+            variants={pageContainer}
+            initial="initial"
+            animate="animate"
+            exit="exit"
             className="ns-scroll h-full px-4 pt-4 pb-20"
+            style={{ willChange: "transform, opacity" }}
           >
-            <div className="tg-stagger space-y-3">{children}</div>
+            <div className="space-y-3">
+              {Children.map(children, (child, i) => (
+                <motion.div
+                  key={i}
+                  variants={cardVariants}
+                  style={{ willChange: "transform, opacity" }}
+                >
+                  {child}
+                </motion.div>
+              ))}
+            </div>
           </motion.div>
         </AnimatePresence>
       </main>

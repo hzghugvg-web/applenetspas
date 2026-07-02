@@ -136,16 +136,5 @@
   100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 
-/* Stagger children so they cascade in like Telegram */
-.tg-stagger > * {
-  animation: tg-card-in 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: transform, opacity;
-}
-.tg-stagger > *:nth-child(1) { animation-delay: 30ms; }
-.tg-stagger > *:nth-child(2) { animation-delay: 80ms; }
-.tg-stagger > *:nth-child(3) { animation-delay: 130ms; }
-.tg-stagger > *:nth-child(4) { animation-delay: 180ms; }
-.tg-stagger > *:nth-child(5) { animation-delay: 230ms; }
-.tg-stagger > *:nth-child(6) { animation-delay: 280ms; }
-.tg-stagger > *:nth-child(7) { animation-delay: 330ms; }
-.tg-stagger > *:nth-child(n+8) { animation-delay: 380ms; }
+/* framer-motion drives page + card stagger; keep .tg-stagger as a no-op alias */
+.tg-stagger { display: contents; }
