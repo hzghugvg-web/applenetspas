@@ -108,8 +108,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="ru">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=localStorage.getItem('ns_theme')==='light'?'light':'dark';document.documentElement.dataset.theme=t;document.documentElement.classList.toggle('dark',t==='dark')}catch(e){}",
+          }}
+        />
         <HeadContent />
       </head>
       <body>
@@ -122,6 +128,12 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    const saved = localStorage.getItem("ns_theme") === "light" ? "light" : "dark";
+    document.documentElement.dataset.theme = saved;
+    document.documentElement.classList.toggle("dark", saved === "dark");
+  }, []);
 
   useEffect(() => {
     let startX = 0, startY = 0, edge = false;

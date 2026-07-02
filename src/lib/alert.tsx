@@ -57,8 +57,7 @@ export function AlertHost() {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: "spring", stiffness: 380, damping: 28 }}
-            className="w-full max-w-[280px] overflow-hidden rounded-2xl"
-            style={{ background: "#1C2C3C" }}
+            className="w-full max-w-[280px] overflow-hidden rounded-2xl border border-border bg-card-solid shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-5 pt-4 pb-3 text-center">
@@ -69,7 +68,7 @@ export function AlertHost() {
                 </div>
               )}
             </div>
-            <div className="h-px w-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+            <div className="h-px w-full bg-border" />
             <button
               onClick={close}
               className="h-11 w-full text-[17px] font-medium text-primary tg-press"

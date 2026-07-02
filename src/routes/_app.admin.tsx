@@ -11,7 +11,7 @@ import { ComplaintChatModal } from "@/components/ComplaintChat";
 export const Route = createFileRoute("/_app/admin")({ component: AdminPage });
 
 type Direction = { id: string; name: string; flag: string | null; is_active: boolean };
-type VlessLink = { id: string; url: string; direction_id: string; is_active: boolean };
+type VlessLink = { id: string; url: string; direction_id: string; is_active: boolean; available_from: string | null; expires_at: string | null };
 type UserRow = { id: string; email: string; is_blocked: boolean; cooldown_until: string | null; subscription_from: string | null; subscription_until: string | null };
 type IssuedConfig = { id: string; vless_url: string; issued_at: string; direction_id: string | null };
 
@@ -52,8 +52,11 @@ function CatalogTab() {
   const [name, setName] = useState(""); const [flag, setFlag] = useState("");
   const [openDir, setOpenDir] = useState<string | null>(null);
   const [urlDraft, setUrlDraft] = useState<Record<string, string>>({});
+  const [fromDraft, setFromDraft] = useState<Record<string, string>>({});
+  const [untilDraft, setUntilDraft] = useState<Record<string, string>>({});
 
   async function load() {
+    await supabase.rpc("cleanup_expired_vless_links");
     const [{ data: ds }, { data: ls }] = await Promise.all([
       supabase.from("directions").select("*").order("name"),
       supabase.from("vless_links").select("*").order("created_at", { ascending: false }),
@@ -79,9 +82,26 @@ function CatalogTab() {
   async function addLink(dirId: string) {
     const url = (urlDraft[dirId] ?? "").trim();
     if (!url) return;
-    const { error } = await supabase.from("vless_links").insert({ direction_id: dirId, url });
+    const from = fromDraft[dirId] ? new Date(fromDraft[dirId]).toISOString() : null;
+    const until = untilDraft[dirId] ? new Date(untilDraft[dirId]).toISOString() : null;
+    if (from && until && new Date(until).getTime() <= new Date(from).getTime()) {
+      toast.error("Дата окончания должна быть позже даты запуска");
+      return;
+    }
+    const { error } = await supabase.from("vless_links").insert({
+      direction_id: dirId,
+      url,
+      available_from: from,
+      expires_at: until,
+    });
     if (error) toast.error(translateAuthError(error.message));
-    else { setUrlDraft((s) => ({ ...s, [dirId]: "" })); load(); toast.success("Ссылка добавлена"); }
+    else {
+      setUrlDraft((s) => ({ ...s, [dirId]: "" }));
+      setFromDraft((s) => ({ ...s, [dirId]: "" }));
+      setUntilDraft((s) => ({ ...s, [dirId]: "" }));
+      load();
+      toast.success("Ссылка добавлена");
+    }
   }
   async function delLink(id: string) {
     if (!confirm("Удалить ссылку?")) return;
@@ -117,22 +137,47 @@ function CatalogTab() {
             </div>
             {open && (
               <div className="space-y-2 border-t border-border p-3">
-                <div className="flex gap-2">
+                <div className="space-y-2">
                   <textarea
                     value={urlDraft[d.id] ?? ""}
                     onChange={(e) => setUrlDraft((s) => ({ ...s, [d.id]: e.target.value }))}
                     placeholder="vless://..."
                     rows={2}
-                    className="flex-1 rounded-xl border border-border bg-input px-3 py-2 text-xs outline-none focus:border-primary"
+                    className="w-full rounded-xl border border-border bg-input px-3 py-2 text-xs outline-none focus:border-primary"
                   />
-                  <button onClick={() => addLink(d.id)} className="grid w-11 shrink-0 place-items-center rounded-xl text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
-                    <Plus className="h-5 w-5" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="space-y-1">
+                      <span className="text-[10px] text-muted-foreground">Дата запуска VPN</span>
+                      <input
+                        type="datetime-local"
+                        value={fromDraft[d.id] ?? ""}
+                        onChange={(e) => setFromDraft((s) => ({ ...s, [d.id]: e.target.value }))}
+                        className="h-10 w-full rounded-xl border border-border bg-input px-2 text-[11px] outline-none focus:border-primary"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-[10px] text-muted-foreground">Дата окончания VPN</span>
+                      <input
+                        type="datetime-local"
+                        value={untilDraft[d.id] ?? ""}
+                        onChange={(e) => setUntilDraft((s) => ({ ...s, [d.id]: e.target.value }))}
+                        className="h-10 w-full rounded-xl border border-border bg-input px-2 text-[11px] outline-none focus:border-primary"
+                      />
+                    </label>
+                  </div>
+                  <button onClick={() => addLink(d.id)} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
+                    <Plus className="h-5 w-5" /> Добавить ссылку
                   </button>
                 </div>
                 {dirLinks.length === 0 && <p className="text-center text-[11px] text-muted-foreground">Ссылок пока нет</p>}
                 {dirLinks.map((l) => (
                   <div key={l.id} className="flex items-start gap-2 rounded-xl bg-muted p-2">
-                    <div className="min-w-0 flex-1 break-all text-[11px] text-muted-foreground">{l.url}</div>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="break-all text-[11px] text-muted-foreground">{l.url}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        Старт: {l.available_from ? new Date(l.available_from).toLocaleString("ru-RU") : "сразу"} · Конец: {l.expires_at ? new Date(l.expires_at).toLocaleString("ru-RU") : "не задан"}
+                      </div>
+                    </div>
                     <button onClick={() => delLink(l.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 ))}
@@ -231,7 +276,7 @@ function UserDetails({ user, onChanged }: { user: UserRow; onChanged: () => void
   }
 
   return (
-    <div className="mt-2 space-y-3 rounded-lg bg-[#1C2C3C] p-3">
+    <div className="mt-2 space-y-3 rounded-lg bg-muted p-3">
       <div className="space-y-1">
         <div className="text-[11px] text-muted-foreground">Дата начала VPN</div>
         <input type="datetime-local" value={from} onChange={(e) => setFrom(e.target.value)}
@@ -311,7 +356,7 @@ function ComplaintsTab() {
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-1 overflow-x-auto rounded-full bg-[#1C2C3C] p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-full bg-muted p-1">
         {([
           ["all", "Все"],
           ["new", "Новые"],
@@ -413,13 +458,13 @@ function AdminComplaintCard({
         beforeChat={
           <div className="space-y-2 rounded-xl bg-card p-2 text-[13px]">
             {c.phone && (
-              <a href={`tel:${c.phone}`} className="inline-block rounded-full bg-[#1C2C3C] px-2 py-0.5 text-[12px] text-primary">
+              <a href={`tel:${c.phone}`} className="inline-block rounded-full bg-muted px-2 py-0.5 text-[12px] text-primary">
                 📞 {c.phone}
               </a>
             )}
             <p className="whitespace-pre-wrap text-foreground/90">{c.description}</p>
             {videoUrl && <video src={videoUrl} controls playsInline className="w-full rounded-lg bg-black" />}
-            <div className="space-y-2 rounded-lg bg-[#1C2C3C] p-2">
+            <div className="space-y-2 rounded-lg bg-muted p-2">
               <p className="text-[11px] text-muted-foreground">Выдать конфигурацию (сбросит кулдаун):</p>
               <div className="flex gap-2">
                 <select

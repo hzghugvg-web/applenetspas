@@ -12,7 +12,7 @@ import { QRCodeSVG } from "qrcode.react";
 export const Route = createFileRoute("/_app/vpn")({ component: VpnPage });
 
 type Direction = { id: string; name: string; flag: string | null };
-type Profile = { cooldown_until: string | null; subscription_until: string | null; device_count: number; is_blocked: boolean };
+type Profile = { cooldown_until: string | null; subscription_until: string | null; is_blocked: boolean };
 
 function VpnPage() {
   const [directions, setDirections] = useState<Direction[]>([]);
@@ -29,15 +29,20 @@ function VpnPage() {
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
 
   async function loadAll() {
-    const [{ data: dirs }, { data: u }] = await Promise.all([
+    await supabase.rpc("cleanup_expired_vless_links");
+    const [{ data: availableLinks }, { data: u }] = await Promise.all([
       supabase
-        .from("directions")
-        .select("id,name,flag,vless_links!inner(id)")
+        .from("vless_links")
+        .select("direction_id")
         .eq("is_active", true)
-        .eq("vless_links.is_active", true)
-        .order("name"),
+        .or(`available_from.is.null,available_from.lte.${new Date().toISOString()}`)
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
       supabase.auth.getUser(),
     ]);
+    const dirIds = Array.from(new Set((availableLinks ?? []).map((l: any) => l.direction_id).filter(Boolean)));
+    const { data: dirs } = dirIds.length
+      ? await supabase.from("directions").select("id,name,flag").eq("is_active", true).in("id", dirIds).order("name")
+      : { data: [] as Direction[] };
     const unique = Array.from(
       new Map((dirs ?? []).map((d: any) => [d.id, { id: d.id, name: d.name, flag: d.flag }])).values()
     );
@@ -47,7 +52,7 @@ function VpnPage() {
     if (u.user) {
       const { data: p } = await supabase
         .from("profiles")
-        .select("cooldown_until,subscription_until,device_count,is_blocked")
+        .select("cooldown_until,subscription_until,is_blocked")
         .eq("id", u.user.id)
         .maybeSingle();
       setProfile(p as any);
@@ -78,7 +83,9 @@ function VpnPage() {
   }, []); // eslint-disable-line
 
   const cooldownMs = profile?.cooldown_until ? new Date(profile.cooldown_until).getTime() - now : 0;
+  const subscriptionMs = profile?.subscription_until ? new Date(profile.subscription_until).getTime() - now : 0;
   const onCooldown = cooldownMs > 0;
+  const hasActiveSubscription = subscriptionMs > 0;
 
   async function handleIssue() {
     if (!selected) return;
@@ -94,7 +101,7 @@ function VpnPage() {
         localStorage.setItem(key!, "1");
         toast.success(
           "Вот и ваш первый ключ! 🎉",
-          "Уважаемый пользователь, пожалуйста, не передавайте ключ никому — он привязан к вашему аккаунту.\n\nЕсли VPN не работает сразу — это нормально: он ищет подходящий сервер. Подождите 3–5 минут, и соединение установится.\n\nОбратите внимание: VPN-серверы не наши, мы бесплатно раздаём готовые конфигурации. Подробнее — в разделе «Обращения» → вкладка FAQ, там собраны ответы на частые вопросы.\n\nПриятного пользования и стабильного интернета! 💙"
+          "Уважаемый пользователь, пожалуйста, не передавайте ключ никому — он привязан к вашему аккаунту.\n\nЕсли VPN не работает сразу — это нормально: он ищет подходящий сервер. Подождите 3–5 минут, и соединение установится.\n\nОбратите внимание: VPN-серверы не наши, мы бесплатно раздаём готовые конфигурации. Подробнее — в разделе «Настройки» → FAQ или «Поддержка» → FAQ, там собраны ответы на частые вопросы.\n\nПриятного пользования и стабильного интернета! 💙"
         );
       } else {
         toast.success("Конфигурация выдана");
@@ -123,9 +130,15 @@ function VpnPage() {
     <MobileShell title="VPN">
       <div className="space-y-4">
         <section className="rounded-2xl border border-border bg-card p-4">
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex min-h-5 items-center justify-between text-sm">
             <div className="flex items-center gap-2 text-muted-foreground"><CalendarClock className="h-4 w-4" /> Подписка до</div>
-            <div className="font-medium">{profile?.subscription_until ? new Date(profile.subscription_until).toLocaleDateString("ru-RU") : "—"}</div>
+            <div className="font-medium">
+              {profile === null
+                ? <span className="inline-block h-4 w-20 animate-pulse rounded bg-muted" />
+                : profile.subscription_until
+                  ? new Date(profile.subscription_until).toLocaleDateString("ru-RU")
+                  : "—"}
+            </div>
           </div>
           {onCooldown && (
             <div className="mt-3 flex items-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm">
@@ -154,11 +167,11 @@ function VpnPage() {
 
         <button
           onClick={handleIssue}
-          disabled={loading || onCooldown || profile?.is_blocked || !selected}
+          disabled={loading || onCooldown || hasActiveSubscription || profile?.is_blocked || !selected}
           className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl font-semibold text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-50"
           style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
         >
-          {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (onCooldown ? "Кулдаун активен" : "Получить конфигурацию")}
+          {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (hasActiveSubscription ? "VPN уже активен" : onCooldown ? "Кулдаун активен" : "Получить конфигурацию")}
         </button>
 
         {currentLink && (
@@ -197,7 +210,7 @@ function VpnPage() {
               <button onClick={() => setQrOpen(true)} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-secondary py-3 text-sm font-medium">
                 <QrCode className="h-4 w-4" /> QR-код
               </button>
-              <button onClick={handleIssue} disabled={loading || onCooldown} className="flex items-center justify-center rounded-xl bg-secondary px-4 py-3 text-sm font-medium disabled:opacity-50">
+              <button onClick={handleIssue} disabled={loading || onCooldown || hasActiveSubscription} className="flex items-center justify-center rounded-xl bg-secondary px-4 py-3 text-sm font-medium disabled:opacity-50">
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               </button>
             </div>

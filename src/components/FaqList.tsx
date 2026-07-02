@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { Search, HelpCircle, ChevronDown } from "lucide-react";
 import { FAQ } from "@/lib/faq";
 
@@ -25,7 +24,7 @@ export function FaqList() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Поиск по вопросам…"
-          className="h-10 w-full rounded-xl border border-border bg-[#1C2C3C] pl-9 pr-3 text-[15px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
+          className="h-10 w-full rounded-xl border border-border bg-input pl-9 pr-3 text-[15px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
         />
       </div>
 
@@ -46,30 +45,21 @@ export function FaqList() {
                 <HelpCircle className="h-4 w-4" strokeWidth={2} />
               </span>
               <span className="flex-1 text-[16px] font-medium text-foreground">{q}</span>
-              <motion.span
-                animate={{ rotate: open ? 180 : 0 }}
-                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                className="text-muted-foreground"
+              <span
+                className={`text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : "rotate-0"}`}
               >
                 <ChevronDown className="h-4 w-4" />
-              </motion.span>
+              </span>
             </button>
-            <AnimatePresence initial={false}>
-              {open && (
-                <motion.div
-                  key="content"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                  className="overflow-hidden"
-                >
-                  <p className="px-3 pb-3 pt-2 pl-14 text-[14px] leading-relaxed text-muted-foreground">
-                    {a}
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div
+              className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-200 ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+            >
+              <div className="min-h-0 overflow-hidden">
+                <p className="px-3 pb-3 pt-2 pl-14 text-[14px] leading-relaxed text-muted-foreground">
+                  {a}
+                </p>
+              </div>
+            </div>
           </div>
         );
       })}
