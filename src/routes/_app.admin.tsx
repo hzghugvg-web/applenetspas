@@ -276,7 +276,7 @@ function UserDetails({ user, onChanged }: { user: UserRow; onChanged: () => void
   }
 
   return (
-    <div className="mt-2 space-y-3 rounded-lg bg-[#1C2C3C] p-3">
+    <div className="mt-2 space-y-3 rounded-lg bg-muted p-3">
       <div className="space-y-1">
         <div className="text-[11px] text-muted-foreground">Дата начала VPN</div>
         <input type="datetime-local" value={from} onChange={(e) => setFrom(e.target.value)}
@@ -356,7 +356,7 @@ function ComplaintsTab() {
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-1 overflow-x-auto rounded-full bg-[#1C2C3C] p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-full bg-muted p-1">
         {([
           ["all", "Все"],
           ["new", "Новые"],
@@ -458,13 +458,13 @@ function AdminComplaintCard({
         beforeChat={
           <div className="space-y-2 rounded-xl bg-card p-2 text-[13px]">
             {c.phone && (
-              <a href={`tel:${c.phone}`} className="inline-block rounded-full bg-[#1C2C3C] px-2 py-0.5 text-[12px] text-primary">
+              <a href={`tel:${c.phone}`} className="inline-block rounded-full bg-muted px-2 py-0.5 text-[12px] text-primary">
                 📞 {c.phone}
               </a>
             )}
             <p className="whitespace-pre-wrap text-foreground/90">{c.description}</p>
             {videoUrl && <video src={videoUrl} controls playsInline className="w-full rounded-lg bg-black" />}
-            <div className="space-y-2 rounded-lg bg-[#1C2C3C] p-2">
+            <div className="space-y-2 rounded-lg bg-muted p-2">
               <p className="text-[11px] text-muted-foreground">Выдать конфигурацию (сбросит кулдаун):</p>
               <div className="flex gap-2">
                 <select
