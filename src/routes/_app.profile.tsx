@@ -23,8 +23,8 @@ function ProfilePage() {
     setTheme(saved);
     document.documentElement.dataset.theme = saved;
     document.documentElement.classList.toggle("dark", saved === "dark");
-    supabase.auth.getUser().then(({ data }) => {
-      setEmail(data.user?.email ?? "");
+    supabase.auth.getSession().then(({ data }) => {
+      setEmail(data.session?.user.email ?? "");
       setEmailLoading(false);
     });
   }, []);
