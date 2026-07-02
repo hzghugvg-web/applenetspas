@@ -42,11 +42,11 @@ export function MobileShell({ title, children }: Props) {
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={pathname}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="ns-scroll h-full px-4 pt-4 pb-24"
+            initial={{ opacity: 0, x: 24, scale: 0.985, filter: "blur(6px)" }}
+            animate={{ opacity: 1, x: 0, scale: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0, x: -24, scale: 0.985, filter: "blur(6px)" }}
+            transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+            className="ns-scroll h-full px-4 pt-4 pb-20"
           >
             <div className="tg-stagger space-y-3">{children}</div>
           </motion.div>
@@ -66,16 +66,16 @@ export function MobileShell({ title, children }: Props) {
             <Link
               key={to}
               to={to}
-              className={`tg-press relative flex h-[50px] flex-col items-center justify-center gap-0.5 text-[10px] ${
+              className={`tg-press relative flex h-[42px] flex-col items-center justify-center gap-0.5 text-[9px] ${
                 active ? "text-primary" : "text-muted-foreground"
               }`}
             >
-              <Icon className="h-6 w-6" strokeWidth={1.8} />
+              <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
               <span className="tracking-tight">{label}</span>
               {active && (
                 <motion.span
                   layoutId="tab-dot"
-                  className="absolute bottom-1 h-1 w-1 rounded-full bg-primary"
+                  className="absolute bottom-0.5 h-1 w-1 rounded-full bg-primary"
                   transition={{ type: "spring", stiffness: 500, damping: 32 }}
                 />
               )}
