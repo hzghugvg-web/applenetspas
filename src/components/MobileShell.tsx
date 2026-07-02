@@ -36,15 +36,16 @@ export function MobileShell({ title, children }: Props) {
       <main className="flex-1 overflow-hidden">
         <div
           key={pathname}
-          className="ns-scroll ns-page h-full px-4 pt-3 pb-24"
+          className="ns-scroll ns-page h-full px-4 pt-3 pb-20"
         >
           <div className="space-y-3">{children}</div>
         </div>
       </main>
       <nav
-        className="safe-bottom mx-3 mb-2 grid shrink-0 rounded-2xl glass"
+        className="mx-3 grid shrink-0 rounded-2xl glass"
         style={{
           gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
+          marginBottom: "max(8px, env(safe-area-inset-bottom))",
         }}
       >
         {tabs.map(({ to, label, icon: Icon }) => {
@@ -53,7 +54,7 @@ export function MobileShell({ title, children }: Props) {
             <Link
               key={to}
               to={to}
-              className={`tg-press relative flex h-[54px] flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors ${
+              className={`tg-press relative flex h-[48px] flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors ${
                 active ? "text-foreground" : "text-muted-foreground"
               }`}
             >
@@ -65,7 +66,7 @@ export function MobileShell({ title, children }: Props) {
                   transition={{ type: "spring", stiffness: 420, damping: 34 }}
                 />
               )}
-              <Icon className="relative z-10 h-[20px] w-[20px]" strokeWidth={2} />
+              <Icon className="relative z-10 h-[19px] w-[19px]" strokeWidth={2} />
               <span className="relative z-10 tracking-tight">{label}</span>
             </Link>
           );
