@@ -226,7 +226,7 @@ export const getMyIssuedLinks = createServerFn({ method: "GET" })
           // skip
         }
       }
-      if (all.length >= 2) break;
+      if (all.length >= 1) break;
     }
-    return { links: all.slice(0, 2) };
+    return { links: all.slice(0, 1) };
   });

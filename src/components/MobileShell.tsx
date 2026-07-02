@@ -66,16 +66,16 @@ export function MobileShell({ title, children }: Props) {
             <Link
               key={to}
               to={to}
-              className={`tg-press relative flex h-[50px] flex-col items-center justify-center gap-0.5 text-[10px] ${
+              className={`tg-press relative flex h-[42px] flex-col items-center justify-center gap-0.5 text-[9px] ${
                 active ? "text-primary" : "text-muted-foreground"
               }`}
             >
-              <Icon className="h-6 w-6" strokeWidth={1.8} />
+              <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
               <span className="tracking-tight">{label}</span>
               {active && (
                 <motion.span
                   layoutId="tab-dot"
-                  className="absolute bottom-1 h-1 w-1 rounded-full bg-primary"
+                  className="absolute bottom-0.5 h-1 w-1 rounded-full bg-primary"
                   transition={{ type: "spring", stiffness: 500, damping: 32 }}
                 />
               )}
