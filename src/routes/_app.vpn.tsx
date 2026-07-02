@@ -29,15 +29,20 @@ function VpnPage() {
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
 
   async function loadAll() {
-    const [{ data: dirs }, { data: u }] = await Promise.all([
+    await supabase.rpc("cleanup_expired_vless_links");
+    const [{ data: availableLinks }, { data: u }] = await Promise.all([
       supabase
-        .from("directions")
-        .select("id,name,flag,vless_links!inner(id)")
+        .from("vless_links")
+        .select("direction_id")
         .eq("is_active", true)
-        .eq("vless_links.is_active", true)
-        .order("name"),
+        .or(`available_from.is.null,available_from.lte.${new Date().toISOString()}`)
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
       supabase.auth.getUser(),
     ]);
+    const dirIds = Array.from(new Set((availableLinks ?? []).map((l: any) => l.direction_id).filter(Boolean)));
+    const { data: dirs } = dirIds.length
+      ? await supabase.from("directions").select("id,name,flag").eq("is_active", true).in("id", dirIds).order("name")
+      : { data: [] as Direction[] };
     const unique = Array.from(
       new Map((dirs ?? []).map((d: any) => [d.id, { id: d.id, name: d.name, flag: d.flag }])).values()
     );
@@ -94,7 +99,7 @@ function VpnPage() {
         localStorage.setItem(key!, "1");
         toast.success(
           "Вот и ваш первый ключ! 🎉",
-          "Уважаемый пользователь, пожалуйста, не передавайте ключ никому — он привязан к вашему аккаунту.\n\nЕсли VPN не работает сразу — это нормально: он ищет подходящий сервер. Подождите 3–5 минут, и соединение установится.\n\nОбратите внимание: VPN-серверы не наши, мы бесплатно раздаём готовые конфигурации. Подробнее — в разделе «Обращения» → вкладка FAQ, там собраны ответы на частые вопросы.\n\nПриятного пользования и стабильного интернета! 💙"
+          "Уважаемый пользователь, пожалуйста, не передавайте ключ никому — он привязан к вашему аккаунту.\n\nЕсли VPN не работает сразу — это нормально: он ищет подходящий сервер. Подождите 3–5 минут, и соединение установится.\n\nОбратите внимание: VPN-серверы не наши, мы бесплатно раздаём готовые конфигурации. Подробнее — в разделе «Настройки» → FAQ или «Поддержка» → FAQ, там собраны ответы на частые вопросы.\n\nПриятного пользования и стабильного интернета! 💙"
         );
       } else {
         toast.success("Конфигурация выдана");

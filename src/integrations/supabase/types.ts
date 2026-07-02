@@ -308,22 +308,28 @@ export type Database = {
       }
       vless_links: {
         Row: {
+          available_from: string | null
           created_at: string
           direction_id: string
+          expires_at: string | null
           id: string
           is_active: boolean
           url: string
         }
         Insert: {
+          available_from?: string | null
           created_at?: string
           direction_id: string
+          expires_at?: string | null
           id?: string
           is_active?: boolean
           url: string
         }
         Update: {
+          available_from?: string | null
           created_at?: string
           direction_id?: string
+          expires_at?: string | null
           id?: string
           is_active?: boolean
           url?: string
@@ -373,6 +379,7 @@ export type Database = {
         Returns: undefined
       }
       bootstrap_user: { Args: never; Returns: undefined }
+      cleanup_expired_vless_links: { Args: never; Returns: number }
       close_own_complaint: { Args: { _id: string }; Returns: undefined }
       has_role: {
         Args: {
