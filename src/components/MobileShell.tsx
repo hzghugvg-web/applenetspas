@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Globe, User, Settings, MessageCircle } from "lucide-react";
 import { Children, type ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 interface Props { title: string; children: ReactNode; }
@@ -18,15 +18,15 @@ export function MobileShell({ title, children }: Props) {
   ];
 
   const iosSpring = { type: "spring" as const, stiffness: 320, damping: 32, mass: 0.9 };
-  const pageContainer = {
+  const pageContainer: Variants = {
     initial: { opacity: 0 },
     animate: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.04, when: "beforeChildren" } },
-    exit: { opacity: 0, transition: { duration: 0.18, ease: [0.4, 0, 1, 1] } },
+    exit: { opacity: 0, transition: { duration: 0.18, ease: [0.4, 0, 1, 1] as [number, number, number, number] } },
   };
-  const cardVariants = {
+  const cardVariants: Variants = {
     initial: { opacity: 0, y: 18, scale: 0.97 },
     animate: { opacity: 1, y: 0, scale: 1, transition: iosSpring },
-    exit: { opacity: 0, y: -8, scale: 0.98, transition: { duration: 0.15, ease: [0.4, 0, 1, 1] } },
+    exit: { opacity: 0, y: -8, scale: 0.98, transition: { duration: 0.15, ease: [0.4, 0, 1, 1] as [number, number, number, number] } },
   };
 
   return (
