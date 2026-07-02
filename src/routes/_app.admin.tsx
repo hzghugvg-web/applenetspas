@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/MobileShell";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
 import { Plus, Trash2, RotateCcw, Ban, CheckCircle2, MessageCircle } from "lucide-react";
@@ -16,19 +17,12 @@ type IssuedConfig = { id: string; vless_url: string; issued_at: string; directio
 
 function AdminPage() {
   const [tab, setTab] = useState<"catalog" | "users" | "complaints">("catalog");
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const { data: isAdmin, isLoading } = useIsAdmin();
 
-  useEffect(() => {
-    (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) { setIsAdmin(false); return; }
-      const { data } = await supabase.from("user_roles").select("role").eq("user_id", u.user.id).eq("role", "admin").maybeSingle();
-      setIsAdmin(!!data);
-    })();
-  }, []);
-
-  if (isAdmin === false) return <MobileShell title="Админ"><div className="text-center text-muted-foreground">Нет доступа</div></MobileShell>;
-  if (isAdmin === null) return <MobileShell title="Админ"><div className="text-center text-muted-foreground">Загрузка...</div></MobileShell>;
+  if (isLoading || isAdmin === undefined)
+    return <MobileShell title="Админ"><div className="text-center text-muted-foreground">Загрузка…</div></MobileShell>;
+  if (!isAdmin)
+    return <MobileShell title="Админ"><div className="text-center text-muted-foreground">Нет доступа</div></MobileShell>;
 
   return (
     <MobileShell title="Админ-панель">
