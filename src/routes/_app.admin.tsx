@@ -50,13 +50,14 @@ function AdminPage() {
 function BroadcastTab() {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
+  const [link, setLink] = useState("");
   const [sending, setSending] = useState(false);
-  const [list, setList] = useState<{ id: string; message: string; title: string | null; created_at: string }[]>([]);
+  const [list, setList] = useState<{ id: string; message: string; title: string | null; link: string | null; created_at: string }[]>([]);
 
   async function load() {
     const { data } = await (supabase as any)
       .from("broadcasts")
-      .select("id,message,title,created_at")
+      .select("id,message,title,link,created_at")
       .order("created_at", { ascending: false })
       .limit(30);
     setList((data ?? []) as any);
@@ -70,6 +71,7 @@ function BroadcastTab() {
     const { error } = await (supabase as any).rpc("admin_send_broadcast", {
       _message: message.trim(),
       _title: title.trim() || null,
+      _link: link.trim() || null,
     });
     setSending(false);
     if (error) toast.error(translateAuthError(error.message));
@@ -77,6 +79,7 @@ function BroadcastTab() {
       toast.success("Отправлено");
       setMessage("");
       setTitle("");
+      setLink("");
       load();
       const { reloadBroadcasts } = await import("@/components/BroadcastBanner");
       reloadBroadcasts();
@@ -109,6 +112,12 @@ function BroadcastTab() {
           rows={4}
           className="w-full rounded-xl border border-border bg-input px-3 py-2 text-sm outline-none focus:border-primary"
         />
+        <input
+          value={link}
+          onChange={(e) => setLink(e.target.value)}
+          placeholder="Ссылка (необязательно) — покажется отдельной кнопкой «Копировать»"
+          className="h-11 w-full rounded-xl border border-border bg-input px-3 text-sm outline-none focus:border-primary"
+        />
         <button onClick={send} disabled={sending || !message.trim()} className="tg-btn w-full">
           <Send className="h-4 w-4" /> {sending ? "Отправка..." : "Отправить всем"}
         </button>
@@ -122,6 +131,11 @@ function BroadcastTab() {
             <div className="text-[10px] text-muted-foreground">{new Date(b.created_at).toLocaleString("ru-RU")}</div>
             {b.title && <div className="mt-1 text-[13px] font-semibold">{b.title}</div>}
             <div className="mt-1 whitespace-pre-wrap break-words text-[13px]">{b.message}</div>
+            {b.link && (
+              <div className="mt-1 break-all rounded-lg bg-muted px-2 py-1 text-[11px] text-muted-foreground">
+                🔗 {b.link}
+              </div>
+            )}
           </div>
           <button onClick={() => del(b.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></button>
         </div>
