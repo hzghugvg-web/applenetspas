@@ -82,8 +82,7 @@ export function BroadcastBanner() {
           href={p}
           target="_blank"
           rel="noopener noreferrer"
-          className="underline break-all"
-          style={{ color: "hsl(var(--primary))" }}
+          className="text-primary underline break-all"
         >
           {p}
         </a>
