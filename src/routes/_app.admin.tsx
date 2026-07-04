@@ -69,7 +69,13 @@ function BroadcastTab() {
     const { error } = await (supabase as any).rpc("admin_send_broadcast", { _message: message.trim() });
     setSending(false);
     if (error) toast.error(translateAuthError(error.message));
-    else { toast.success("Отправлено"); setMessage(""); load(); }
+    else {
+      toast.success("Отправлено");
+      setMessage("");
+      load();
+      const { reloadBroadcasts } = await import("@/components/BroadcastBanner");
+      reloadBroadcasts();
+    }
   }
 
   async function del(id: string) {
