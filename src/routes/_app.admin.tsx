@@ -66,6 +66,7 @@ function BroadcastTab() {
   async function send() {
     if (!message.trim()) return;
     setSending(true);
+    await supabase.auth.refreshSession();
     const { error } = await (supabase as any).rpc("admin_send_broadcast", {
       _message: message.trim(),
       _title: title.trim() || null,
