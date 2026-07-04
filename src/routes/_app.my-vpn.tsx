@@ -71,8 +71,15 @@ function MyVpnPage() {
   }
 
   async function copy(text: string) {
-    try { await navigator.clipboard.writeText(text); toast.success("Скопировано"); }
-    catch { toast.error("Не удалось скопировать"); }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(
+        "Ссылка успешно скопирована",
+        "Вставьте её в браузер. Если это конфиг — вставьте в клиент (Happ, V2rayTun и т.д.)",
+      );
+    } catch {
+      toast.error("Не удалось скопировать");
+    }
   }
 
   return (

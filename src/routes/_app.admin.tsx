@@ -49,14 +49,15 @@ function AdminPage() {
 }
 
 function BroadcastTab() {
+  const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
-  const [list, setList] = useState<{ id: string; message: string; created_at: string }[]>([]);
+  const [list, setList] = useState<{ id: string; message: string; title: string | null; created_at: string }[]>([]);
 
   async function load() {
     const { data } = await (supabase as any)
       .from("broadcasts")
-      .select("id,message,created_at")
+      .select("id,message,title,created_at")
       .order("created_at", { ascending: false })
       .limit(30);
     setList((data ?? []) as any);
@@ -66,12 +67,16 @@ function BroadcastTab() {
   async function send() {
     if (!message.trim()) return;
     setSending(true);
-    const { error } = await (supabase as any).rpc("admin_send_broadcast", { _message: message.trim() });
+    const { error } = await (supabase as any).rpc("admin_send_broadcast", {
+      _message: message.trim(),
+      _title: title.trim() || null,
+    });
     setSending(false);
     if (error) toast.error(translateAuthError(error.message));
     else {
       toast.success("Отправлено");
       setMessage("");
+      setTitle("");
       load();
       const { reloadBroadcasts } = await import("@/components/BroadcastBanner");
       reloadBroadcasts();
@@ -91,10 +96,16 @@ function BroadcastTab() {
         <div className="flex items-center gap-2 text-sm font-medium">
           <Megaphone className="h-4 w-4 text-primary" /> Новое сообщение всем
         </div>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Заголовок (необязательно)"
+          className="h-11 w-full rounded-xl border border-border bg-input px-3 text-sm outline-none focus:border-primary"
+        />
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="Напишите объявление — пользователи увидят его в виде баннера сверху и подтвердят прочтение."
+          placeholder="Напишите объявление — можно вставлять ссылки. Пользователи увидят его в виде баннера сверху и подтвердят прочтение."
           rows={4}
           className="w-full rounded-xl border border-border bg-input px-3 py-2 text-sm outline-none focus:border-primary"
         />
@@ -109,7 +120,8 @@ function BroadcastTab() {
         <div key={b.id} className="flex items-start gap-2 rounded-2xl border border-border bg-card p-3">
           <div className="min-w-0 flex-1">
             <div className="text-[10px] text-muted-foreground">{new Date(b.created_at).toLocaleString("ru-RU")}</div>
-            <div className="mt-1 whitespace-pre-wrap text-[13px]">{b.message}</div>
+            {b.title && <div className="mt-1 text-[13px] font-semibold">{b.title}</div>}
+            <div className="mt-1 whitespace-pre-wrap break-words text-[13px]">{b.message}</div>
           </div>
           <button onClick={() => del(b.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></button>
         </div>
