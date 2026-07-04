@@ -71,26 +71,32 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          email: string | null
           id: string
           link: string | null
           message: string
           title: string | null
+          website: string | null
         }
         Insert: {
           created_at?: string
           created_by: string
+          email?: string | null
           id?: string
           link?: string | null
           message: string
           title?: string | null
+          website?: string | null
         }
         Update: {
           created_at?: string
           created_by?: string
+          email?: string | null
           id?: string
           link?: string | null
           message?: string
           title?: string | null
+          website?: string | null
         }
         Relationships: []
       }
@@ -423,12 +429,33 @@ export type Database = {
             Args: { _link?: string; _message: string; _title?: string }
             Returns: string
           }
+        | {
+            Args: {
+              _email?: string
+              _link?: string
+              _message: string
+              _title?: string
+              _website?: string
+            }
+            Returns: string
+          }
       admin_set_subscription_dates: {
         Args: { _from: string; _target: string; _until: string }
         Returns: undefined
       }
       admin_toggle_block: {
         Args: { _block: boolean; _target: string }
+        Returns: undefined
+      }
+      admin_update_broadcast: {
+        Args: {
+          _email?: string
+          _id: string
+          _link?: string
+          _message: string
+          _title?: string
+          _website?: string
+        }
         Returns: undefined
       }
       admin_update_complaint: {

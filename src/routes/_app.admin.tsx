@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { Plus, Trash2, RotateCcw, Ban, CheckCircle2, MessageCircle, Megaphone, Send } from "lucide-react";
+import { Plus, Trash2, RotateCcw, Ban, CheckCircle2, MessageCircle, Megaphone, Send, Pencil, X } from "lucide-react";
 import { ComplaintChatModal } from "@/components/ComplaintChat";
 
 export const Route = createFileRoute("/_app/admin")({ component: AdminPage });
@@ -47,39 +47,70 @@ function AdminPage() {
   );
 }
 
+type BroadcastRow = {
+  id: string;
+  message: string;
+  title: string | null;
+  link: string | null;
+  email: string | null;
+  website: string | null;
+  created_at: string;
+};
+
 function BroadcastTab() {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [link, setLink] = useState("");
-  const [sending, setSending] = useState(false);
-  const [list, setList] = useState<{ id: string; message: string; title: string | null; link: string | null; created_at: string }[]>([]);
+  const [email, setEmail] = useState("");
+  const [website, setWebsite] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [list, setList] = useState<BroadcastRow[]>([]);
 
   async function load() {
     const { data } = await (supabase as any)
       .from("broadcasts")
-      .select("id,message,title,link,created_at")
+      .select("id,message,title,link,email,website,created_at")
       .order("created_at", { ascending: false })
       .limit(30);
-    setList((data ?? []) as any);
+    setList((data ?? []) as BroadcastRow[]);
   }
   useEffect(() => { load(); }, []);
 
-  async function send() {
+  function resetForm() {
+    setTitle(""); setMessage(""); setLink(""); setEmail(""); setWebsite("");
+    setEditingId(null);
+  }
+
+  function startEdit(b: BroadcastRow) {
+    setEditingId(b.id);
+    setTitle(b.title ?? "");
+    setMessage(b.message ?? "");
+    setLink(b.link ?? "");
+    setEmail(b.email ?? "");
+    setWebsite(b.website ?? "");
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function submit() {
     if (!message.trim()) return;
-    setSending(true);
+    setSaving(true);
     await supabase.auth.refreshSession();
-    const { error } = await (supabase as any).rpc("admin_send_broadcast", {
+    const payload = {
       _message: message.trim(),
       _title: title.trim() || null,
       _link: link.trim() || null,
-    });
-    setSending(false);
+      _email: email.trim() || null,
+      _website: website.trim() || null,
+    };
+    const { error } = editingId
+      ? await (supabase as any).rpc("admin_update_broadcast", { _id: editingId, ...payload })
+      : await (supabase as any).rpc("admin_send_broadcast", payload);
+    setSaving(false);
     if (error) toast.error(translateAuthError(error.message));
     else {
-      toast.success("Отправлено");
-      setMessage("");
-      setTitle("");
-      setLink("");
+      toast.success(editingId ? "Сообщение обновлено" : "Отправлено");
+      resetForm();
       load();
       const { reloadBroadcasts } = await import("@/components/BroadcastBanner");
       reloadBroadcasts();
@@ -90,14 +121,20 @@ function BroadcastTab() {
     if (!confirm("Удалить сообщение?")) return;
     const { error } = await (supabase as any).rpc("admin_delete_broadcast", { _id: id });
     if (error) toast.error(translateAuthError(error.message));
-    else { load(); }
+    else { if (editingId === id) resetForm(); load(); }
   }
 
   return (
     <div className="space-y-3">
       <section className="space-y-2 rounded-2xl border border-border p-4" style={{ background: "var(--card-solid)" }}>
         <div className="flex items-center gap-2 text-sm font-medium">
-          <Megaphone className="h-4 w-4 text-primary" /> Новое сообщение всем
+          <Megaphone className="h-4 w-4 text-primary" />
+          {editingId ? "Редактировать сообщение" : "Новое сообщение всем"}
+          {editingId && (
+            <button onClick={resetForm} className="ml-auto text-muted-foreground" aria-label="Отменить">
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
         <input
           value={title}
@@ -115,11 +152,24 @@ function BroadcastTab() {
         <input
           value={link}
           onChange={(e) => setLink(e.target.value)}
-          placeholder="Ссылка (необязательно) — покажется отдельной кнопкой «Копировать»"
+          placeholder="Ссылка (необязательно) — кнопка «Копировать ссылку»"
           className="h-11 w-full rounded-xl border border-border bg-input px-3 text-sm outline-none focus:border-primary"
         />
-        <button onClick={send} disabled={sending || !message.trim()} className="tg-btn w-full">
-          <Send className="h-4 w-4" /> {sending ? "Отправка..." : "Отправить всем"}
+        <input
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
+          placeholder="Сайт (необязательно) — например netspas.1c-umi.ru"
+          className="h-11 w-full rounded-xl border border-border bg-input px-3 text-sm outline-none focus:border-primary"
+        />
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Почта (необязательно) — например netspas@internet.ru"
+          className="h-11 w-full rounded-xl border border-border bg-input px-3 text-sm outline-none focus:border-primary"
+        />
+        <button onClick={submit} disabled={saving || !message.trim()} className="tg-btn w-full">
+          <Send className="h-4 w-4" />
+          {saving ? "Сохранение..." : editingId ? "Сохранить изменения" : "Отправить всем"}
         </button>
       </section>
 
@@ -132,12 +182,23 @@ function BroadcastTab() {
             {b.title && <div className="mt-1 text-[13px] font-semibold">{b.title}</div>}
             <div className="mt-1 whitespace-pre-wrap break-words text-[13px]">{b.message}</div>
             {b.link && (
-              <div className="mt-1 break-all rounded-lg bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-                🔗 {b.link}
-              </div>
+              <div className="mt-1 break-all rounded-lg bg-muted px-2 py-1 text-[11px] text-muted-foreground">🔗 {b.link}</div>
+            )}
+            {b.website && (
+              <div className="mt-1 break-all rounded-lg bg-muted px-2 py-1 text-[11px] text-muted-foreground">🌐 {b.website}</div>
+            )}
+            {b.email && (
+              <div className="mt-1 break-all rounded-lg bg-muted px-2 py-1 text-[11px] text-muted-foreground">✉️ {b.email}</div>
             )}
           </div>
-          <button onClick={() => del(b.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></button>
+          <div className="flex flex-col gap-2">
+            <button onClick={() => startEdit(b)} className="text-primary" aria-label="Редактировать">
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button onClick={() => del(b.id)} className="text-destructive" aria-label="Удалить">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       ))}
     </div>
