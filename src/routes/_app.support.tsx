@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { MobileShell } from "@/components/MobileShell";
 import { motion } from "framer-motion";
 import { alertDialog as toast } from "@/lib/alert";
 import { translateAuthError } from "@/lib/errors";
@@ -39,9 +38,9 @@ const STATUS_DOT: Record<Complaint["status"], string> = {
 
 function SupportPage() {
   return (
-    <MobileShell title="Поддержка">
+    <>
       <MyComplaints />
-    </MobileShell>
+    </>
   );
 }
 
