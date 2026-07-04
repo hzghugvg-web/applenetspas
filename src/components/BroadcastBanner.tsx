@@ -87,7 +87,7 @@ export function BroadcastBanner() {
       await navigator.clipboard.writeText(url);
       alertDialog.success(
         "Ссылка успешно скопирована",
-        "Вставьте её в браузер. Если это конфиг — вставьте в клиент (Happ, V2rayTun и т.д.)",
+        "Вставьте её в браузер.",
       );
     } catch {
       alertDialog.error("Не удалось скопировать");
@@ -218,6 +218,10 @@ export function BroadcastBanner() {
                       href={/^https?:\/\//.test(opened.website) ? opened.website : `https://${opened.website}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        copyWebsite(opened.website!);
+                      }}
                       className="tg-press flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium"
                       style={{ background: "var(--gradient-primary)", color: "var(--primary-foreground)" }}
                     >
