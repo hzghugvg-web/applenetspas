@@ -1,10 +1,18 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Megaphone, Copy, BookOpen } from "lucide-react";
+import { Megaphone, Copy, BookOpen, Globe, Mail } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { alertDialog } from "@/lib/alert";
 
-type Broadcast = { id: string; message: string; title: string | null; link: string | null; created_at: string };
+type Broadcast = {
+  id: string;
+  message: string;
+  title: string | null;
+  link: string | null;
+  email: string | null;
+  website: string | null;
+  created_at: string;
+};
 
 // Module-level cache keeps the banner state alive across route unmounts,
 // so switching tabs doesn't flash the banner away.
@@ -31,7 +39,7 @@ export function BroadcastBanner() {
     if (!user) { setCache([]); return; }
     const { data: bs } = await (supabase as any)
       .from("broadcasts")
-      .select("id,message,title,link,created_at")
+      .select("id,message,title,link,email,website,created_at")
       .order("created_at", { ascending: false })
       .limit(20);
     if (!bs?.length) { setCache([]); return; }
@@ -74,7 +82,7 @@ export function BroadcastBanner() {
 
   const current = unread[0];
 
-  async function copyLink(url: string) {
+  async function copyValue(url: string) {
     try {
       await navigator.clipboard.writeText(url);
       alertDialog.success(
@@ -131,7 +139,7 @@ export function BroadcastBanner() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                  Новое сообщение
+                  Рекомендуем прочитать
                 </div>
                 <div className="truncate text-[13px] font-medium text-foreground">
                   {current.title?.trim() || "Сообщение от администратора"}
@@ -185,11 +193,27 @@ export function BroadcastBanner() {
                 </div>
                 {opened.link && (
                   <button
-                    onClick={() => copyLink(opened.link!)}
+                    onClick={() => copyValue(opened.link!)}
                     className="tg-press mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium"
                     style={{ background: "var(--gradient-primary)", color: "var(--primary-foreground)" }}
                   >
                     <Copy className="h-4 w-4" /> Копировать ссылку
+                  </button>
+                )}
+                {opened.website && (
+                  <button
+                    onClick={() => copyValue(opened.website!)}
+                    className="tg-press mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-muted px-3 py-2.5 text-[13px] font-medium text-foreground"
+                  >
+                    <Globe className="h-4 w-4" /> Копировать сайт · {opened.website}
+                  </button>
+                )}
+                {opened.email && (
+                  <button
+                    onClick={() => copyValue(opened.email!)}
+                    className="tg-press mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-muted px-3 py-2.5 text-[13px] font-medium text-foreground"
+                  >
+                    <Mail className="h-4 w-4" /> Копировать почту · {opened.email}
                   </button>
                 )}
               </div>
