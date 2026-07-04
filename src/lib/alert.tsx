@@ -2,20 +2,35 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 type AlertKind = "success" | "error" | "info";
-type AlertPayload = { id: number; kind: AlertKind; title: string; message?: string };
+type AlertPayload = {
+  id: number;
+  kind: AlertKind;
+  title: string;
+  message?: string;
+  actionLabel?: string;
+  onAction?: () => void;
+};
 
 let listeners: Array<(p: AlertPayload) => void> = [];
 let counter = 0;
 
-function emit(kind: AlertKind, title: string, message?: string) {
-  const p: AlertPayload = { id: ++counter, kind, title, message };
+function emit(
+  kind: AlertKind,
+  title: string,
+  message?: string,
+  opts?: { actionLabel?: string; onAction?: () => void },
+) {
+  const p: AlertPayload = { id: ++counter, kind, title, message, ...opts };
   listeners.forEach((l) => l(p));
 }
 
 export const alertDialog = {
-  success: (title: string, message?: string) => emit("success", title, message),
-  error: (title: string, message?: string) => emit("error", title, message),
-  info: (title: string, message?: string) => emit("info", title, message),
+  success: (title: string, message?: string, opts?: { actionLabel?: string; onAction?: () => void }) =>
+    emit("success", title, message, opts),
+  error: (title: string, message?: string, opts?: { actionLabel?: string; onAction?: () => void }) =>
+    emit("error", title, message, opts),
+  info: (title: string, message?: string, opts?: { actionLabel?: string; onAction?: () => void }) =>
+    emit("info", title, message, opts),
 };
 
 export function AlertHost() {
@@ -69,12 +84,29 @@ export function AlertHost() {
               )}
             </div>
             <div className="h-px w-full bg-border" />
-            <button
-              onClick={close}
-              className="h-11 w-full text-[17px] font-medium text-primary tg-press"
-            >
-              ОК
-            </button>
+            {current.actionLabel && current.onAction ? (
+              <div className="flex">
+                <button
+                  onClick={close}
+                  className="h-11 flex-1 border-r border-border text-[15px] font-medium text-muted-foreground tg-press"
+                >
+                  Позже
+                </button>
+                <button
+                  onClick={() => { current.onAction?.(); close(); }}
+                  className="h-11 flex-1 text-[15px] font-semibold text-primary tg-press"
+                >
+                  {current.actionLabel}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={close}
+                className="h-11 w-full text-[17px] font-medium text-primary tg-press"
+              >
+                ОК
+              </button>
+            )}
           </motion.div>
         </motion.div>
       )}
