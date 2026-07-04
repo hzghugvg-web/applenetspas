@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Megaphone, Check, Copy } from "lucide-react";
+import { Megaphone, Copy, BookOpen } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { alertDialog } from "@/lib/alert";
 
@@ -23,6 +23,7 @@ export function reloadBroadcasts() {
 export function BroadcastBanner() {
   const [unread, setUnread] = useState<Broadcast[]>(cachedUnread);
   const [dismissing, setDismissing] = useState<string | null>(null);
+  const [opened, setOpened] = useState<Broadcast | null>(null);
 
   async function load() {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -106,59 +107,115 @@ export function BroadcastBanner() {
   }
 
   return (
-    <AnimatePresence mode="wait">
-      {current && (
-        <motion.div
-          key={current.id}
-          initial={{ opacity: 0, y: -8, height: 0 }}
-          animate={{ opacity: dismissing === current.id ? 0 : 1, y: 0, height: "auto" }}
-          exit={{ opacity: 0, y: -8, height: 0 }}
-          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-          className="mx-2 mt-2 overflow-hidden"
-        >
-          <div
-            className="flex items-start gap-3 rounded-2xl p-3 glass"
-            style={{ boxShadow: "var(--shadow-elegant)" }}
+    <>
+      <AnimatePresence mode="wait">
+        {current && (
+          <motion.div
+            key={current.id}
+            initial={{ opacity: 0, y: -8, height: 0 }}
+            animate={{ opacity: dismissing === current.id ? 0 : 1, y: 0, height: "auto" }}
+            exit={{ opacity: 0, y: -8, height: 0 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className="mx-2 mt-2 overflow-hidden"
           >
-            <div
-              className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full"
-              style={{ background: "var(--gradient-primary)" }}
-            >
-              <Megaphone className="h-4 w-4" style={{ color: "var(--primary-foreground)" }} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                {current.title?.trim() || "Сообщение от администратора"}
-              </div>
-              <div className="mt-0.5 max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-[13px] leading-snug text-foreground">
-                {renderMessage(current.message)}
-              </div>
-              {current.link && (
-                <button
-                  onClick={() => copyLink(current.link!)}
-                  className="tg-press mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-[12px] font-medium"
-                  style={{ background: "var(--gradient-primary)", color: "var(--primary-foreground)" }}
-                >
-                  <Copy className="h-3.5 w-3.5" /> Копировать ссылку
-                </button>
-              )}
-            </div>
             <button
-              onClick={() => ack(current)}
-              className="tg-press grid h-9 w-9 shrink-0 place-items-center rounded-xl text-primary-foreground"
-              style={{ background: "var(--gradient-primary)" }}
-              aria-label="Прочитал"
+              onClick={() => setOpened(current)}
+              className="tg-press flex w-full items-center gap-3 rounded-2xl p-3 glass text-left"
+              style={{ boxShadow: "var(--shadow-elegant)" }}
             >
-              <Check className="h-4 w-4" />
+              <div
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full"
+                style={{ background: "var(--gradient-primary)" }}
+              >
+                <Megaphone className="h-4 w-4" style={{ color: "var(--primary-foreground)" }} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  Новое сообщение
+                </div>
+                <div className="truncate text-[13px] font-medium text-foreground">
+                  {current.title?.trim() || "Сообщение от администратора"}
+                </div>
+              </div>
+              <span
+                className="shrink-0 rounded-xl px-3 py-1.5 text-[12px] font-medium"
+                style={{ background: "var(--gradient-primary)", color: "var(--primary-foreground)" }}
+              >
+                Прочитать
+              </span>
             </button>
-          </div>
-          {unread.length > 1 && (
-            <div className="mt-1 text-center text-[10px] text-muted-foreground">
-              Ещё {unread.length - 1} {unread.length - 1 === 1 ? "сообщение" : "сообщений"}
-            </div>
-          )}
-        </motion.div>
-      )}
-    </AnimatePresence>
+            {unread.length > 1 && (
+              <div className="mt-1 text-center text-[10px] text-muted-foreground">
+                Ещё {unread.length - 1} {unread.length - 1 === 1 ? "сообщение" : "сообщений"}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {opened && (
+          <motion.div
+            key="bcast-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center px-6"
+            style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+            onClick={() => setOpened(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 28 }}
+              className="flex max-h-[80vh] w-full max-w-[340px] flex-col overflow-hidden rounded-2xl border border-border bg-card-solid shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-2 px-5 pt-4 pb-2">
+                <BookOpen className="h-4 w-4 text-primary" />
+                <div className="text-[13px] font-semibold text-primary">
+                  {opened.title?.trim() || "Сообщение от администратора"}
+                </div>
+              </div>
+              <div className="ns-scroll flex-1 overflow-y-auto px-5 pb-3">
+                <div className="whitespace-pre-wrap break-words text-[14px] leading-relaxed text-foreground">
+                  {renderMessage(opened.message)}
+                </div>
+                {opened.link && (
+                  <button
+                    onClick={() => copyLink(opened.link!)}
+                    className="tg-press mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium"
+                    style={{ background: "var(--gradient-primary)", color: "var(--primary-foreground)" }}
+                  >
+                    <Copy className="h-4 w-4" /> Копировать ссылку
+                  </button>
+                )}
+              </div>
+              <div className="h-px w-full bg-border" />
+              <div className="flex">
+                <button
+                  onClick={() => setOpened(null)}
+                  className="h-11 flex-1 border-r border-border text-[15px] font-medium text-muted-foreground tg-press"
+                >
+                  Закрыть
+                </button>
+                <button
+                  onClick={() => {
+                    const b = opened;
+                    setOpened(null);
+                    ack(b);
+                  }}
+                  className="h-11 flex-1 text-[15px] font-semibold text-primary tg-press"
+                >
+                  Прочитано
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
