@@ -82,12 +82,24 @@ export function BroadcastBanner() {
 
   const current = unread[0];
 
-  async function copyValue(url: string) {
+  async function copyLinkValue(url: string) {
     try {
       await navigator.clipboard.writeText(url);
       alertDialog.success(
         "Ссылка успешно скопирована",
         "Вставьте её в браузер. Если это конфиг — вставьте в клиент (Happ, V2rayTun и т.д.)",
+      );
+    } catch {
+      alertDialog.error("Не удалось скопировать");
+    }
+  }
+
+  async function copyWebsite(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      alertDialog.success(
+        "Сайт успешно скопирован!",
+        "Откройте браузер, вставьте адрес и переходите на сайт.",
       );
     } catch {
       alertDialog.error("Не удалось скопировать");
@@ -193,7 +205,7 @@ export function BroadcastBanner() {
                 </div>
                 {opened.link && (
                   <button
-                    onClick={() => copyValue(opened.link!)}
+                    onClick={() => copyLinkValue(opened.link!)}
                     className="tg-press mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium"
                     style={{ background: "var(--gradient-primary)", color: "var(--primary-foreground)" }}
                   >
@@ -201,20 +213,32 @@ export function BroadcastBanner() {
                   </button>
                 )}
                 {opened.website && (
-                  <button
-                    onClick={() => copyValue(opened.website!)}
-                    className="tg-press mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-muted px-3 py-2.5 text-[13px] font-medium text-foreground"
-                  >
-                    <Globe className="h-4 w-4" /> Копировать сайт · {opened.website}
-                  </button>
+                  <div className="mt-2 grid grid-cols-[1fr_auto] gap-2">
+                    <a
+                      href={/^https?:\/\//.test(opened.website) ? opened.website : `https://${opened.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="tg-press flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium"
+                      style={{ background: "var(--gradient-primary)", color: "var(--primary-foreground)" }}
+                    >
+                      <Globe className="h-4 w-4" /> Открыть сайт
+                    </a>
+                    <button
+                      onClick={() => copyWebsite(opened.website!)}
+                      className="tg-press flex items-center justify-center rounded-xl border border-border bg-muted px-3 text-[13px] font-medium text-foreground"
+                      aria-label="Копировать сайт"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
                 )}
                 {opened.email && (
-                  <button
-                    onClick={() => copyValue(opened.email!)}
+                  <a
+                    href={`mailto:${opened.email}`}
                     className="tg-press mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-muted px-3 py-2.5 text-[13px] font-medium text-foreground"
                   >
-                    <Mail className="h-4 w-4" /> Копировать почту · {opened.email}
-                  </button>
+                    <Mail className="h-4 w-4" /> Написать · {opened.email}
+                  </a>
                 )}
               </div>
               <div className="h-px w-full bg-border" />
