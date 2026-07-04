@@ -5,7 +5,7 @@ import { MobileShell } from "@/components/MobileShell";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { Plus, Trash2, RotateCcw, Ban, CheckCircle2, MessageCircle } from "lucide-react";
+import { Plus, Trash2, RotateCcw, Ban, CheckCircle2, MessageCircle, Megaphone, Send } from "lucide-react";
 import { ComplaintChatModal } from "@/components/ComplaintChat";
 
 export const Route = createFileRoute("/_app/admin")({ component: AdminPage });
@@ -16,7 +16,7 @@ type UserRow = { id: string; email: string; is_blocked: boolean; cooldown_until:
 type IssuedConfig = { id: string; vless_url: string; issued_at: string; direction_id: string | null };
 
 function AdminPage() {
-  const [tab, setTab] = useState<"catalog" | "users" | "complaints">("catalog");
+  const [tab, setTab] = useState<"catalog" | "users" | "complaints" | "broadcast">("catalog");
   const { data: isAdmin, isLoading } = useIsAdmin();
 
   if (isLoading || isAdmin === undefined)
@@ -26,11 +26,12 @@ function AdminPage() {
 
   return (
     <MobileShell title="Админ-панель">
-      <div className="mb-4 grid grid-cols-3 gap-1 rounded-2xl bg-muted p-1">
+      <div className="mb-4 grid grid-cols-4 gap-1 rounded-2xl bg-muted p-1">
         {([
           ["catalog", "Каталог"],
           ["users", "Пользователи"],
           ["complaints", "Обращения"],
+          ["broadcast", "Рассылка"],
         ] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)}
             className={`tg-press rounded-xl py-2 text-xs font-medium transition-colors ${tab === k ? "bg-card-solid text-foreground shadow" : "text-muted-foreground"}`}
@@ -42,7 +43,72 @@ function AdminPage() {
       {tab === "catalog" && <CatalogTab />}
       {tab === "users" && <UsersTab />}
       {tab === "complaints" && <ComplaintsTab />}
+      {tab === "broadcast" && <BroadcastTab />}
     </MobileShell>
+  );
+}
+
+function BroadcastTab() {
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [list, setList] = useState<{ id: string; message: string; created_at: string }[]>([]);
+
+  async function load() {
+    const { data } = await (supabase as any)
+      .from("broadcasts")
+      .select("id,message,created_at")
+      .order("created_at", { ascending: false })
+      .limit(30);
+    setList((data ?? []) as any);
+  }
+  useEffect(() => { load(); }, []);
+
+  async function send() {
+    if (!message.trim()) return;
+    setSending(true);
+    const { error } = await (supabase as any).rpc("admin_send_broadcast", { _message: message.trim() });
+    setSending(false);
+    if (error) toast.error(translateAuthError(error.message));
+    else { toast.success("Отправлено"); setMessage(""); load(); }
+  }
+
+  async function del(id: string) {
+    if (!confirm("Удалить сообщение?")) return;
+    const { error } = await (supabase as any).rpc("admin_delete_broadcast", { _id: id });
+    if (error) toast.error(translateAuthError(error.message));
+    else { load(); }
+  }
+
+  return (
+    <div className="space-y-3">
+      <section className="space-y-2 rounded-2xl border border-border p-4" style={{ background: "var(--card-solid)" }}>
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Megaphone className="h-4 w-4 text-primary" /> Новое сообщение всем
+        </div>
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Напишите объявление — пользователи увидят его в виде баннера сверху и подтвердят прочтение."
+          rows={4}
+          className="w-full rounded-xl border border-border bg-input px-3 py-2 text-sm outline-none focus:border-primary"
+        />
+        <button onClick={send} disabled={sending || !message.trim()} className="tg-btn w-full">
+          <Send className="h-4 w-4" /> {sending ? "Отправка..." : "Отправить всем"}
+        </button>
+      </section>
+
+      <div className="text-xs uppercase tracking-wider text-muted-foreground">История</div>
+      {list.length === 0 && <p className="text-center text-sm text-muted-foreground">Пока нет сообщений</p>}
+      {list.map((b) => (
+        <div key={b.id} className="flex items-start gap-2 rounded-2xl border border-border bg-card p-3">
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] text-muted-foreground">{new Date(b.created_at).toLocaleString("ru-RU")}</div>
+            <div className="mt-1 whitespace-pre-wrap text-[13px]">{b.message}</div>
+          </div>
+          <button onClick={() => del(b.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></button>
+        </div>
+      ))}
+    </div>
   );
 }
 

@@ -95,6 +95,37 @@
   --app-bg: radial-gradient(1100px 560px at 15% -10%, rgba(79,70,229,0.14), transparent 60%), radial-gradient(800px 480px at 100% 100%, rgba(6,182,212,0.12), transparent 60%), #F4F7FB;
 }
 
+:root[data-theme="neon"] {
+  color-scheme: dark;
+  --background: #05060B;
+  --foreground: #F0F5FF;
+  --card: #0B0F1CCC;
+  --card-solid: #0B0F1C;
+  --card-foreground: #F0F5FF;
+  --popover: #0B0F1C;
+  --popover-foreground: #F0F5FF;
+  --primary: #FF3DBE;
+  --primary-foreground: #05060B;
+  --primary-glow: #00E7FF;
+  --secondary: #0F1424;
+  --secondary-foreground: #F0F5FF;
+  --muted: #0D1120;
+  --muted-foreground: #7C88A8;
+  --accent: #00E7FF;
+  --accent-foreground: #05060B;
+  --destructive: #FF3D6B;
+  --destructive-foreground: #FFFFFF;
+  --border: #1B2138;
+  --input: #0D1120;
+  --ring: #FF3DBE;
+  --gradient-primary: linear-gradient(135deg, #FF3DBE 0%, #7A5CFF 45%, #00E7FF 100%);
+  --gradient-surface: linear-gradient(180deg, rgba(255,61,190,0.10) 0%, rgba(0,231,255,0.04) 100%);
+  --shadow-elegant: 0 12px 44px -14px rgba(255, 61, 190, 0.55), 0 8px 28px -18px rgba(0, 231, 255, 0.45);
+  --shadow-card: 0 10px 34px -18px rgba(0,0,0,0.85);
+  --nav-bg: rgba(5, 6, 11, 0.72);
+  --app-bg: radial-gradient(1100px 620px at 10% -10%, rgba(255,61,190,0.22), transparent 60%), radial-gradient(900px 520px at 100% 100%, rgba(0,231,255,0.18), transparent 60%), radial-gradient(700px 400px at 50% 50%, rgba(122,92,255,0.10), transparent 70%), #05060B;
+}
+
 .dark { color-scheme: dark; }
 
 @layer base {
@@ -156,6 +187,89 @@
   transition: transform 120ms ease-out, opacity 120ms ease-out;
 }
 .tg-press:active { transform: scale(0.97); opacity: 0.85; }
+
+/* Glossy pill primary button with gradient sheen and shimmer */
+@utility tg-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 20px;
+  border-radius: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--primary-foreground);
+  background: var(--gradient-primary);
+  box-shadow: var(--shadow-elegant), inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.18);
+  transition: transform 160ms cubic-bezier(.22,1,.36,1), box-shadow 220ms ease, filter 220ms ease, opacity 200ms ease;
+  will-change: transform;
+  overflow: hidden;
+  isolation: isolate;
+  border: 0;
+}
+.tg-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 45%);
+  pointer-events: none;
+  z-index: 0;
+}
+.tg-btn::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0;
+  left: -60%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%);
+  transform: skewX(-18deg);
+  pointer-events: none;
+  z-index: 1;
+  transition: left 700ms cubic-bezier(.22,1,.36,1);
+}
+.tg-btn > * { position: relative; z-index: 2; }
+.tg-btn:hover::after { left: 120%; }
+.tg-btn:active { transform: scale(0.97); filter: brightness(1.05); }
+.tg-btn:disabled { opacity: 0.55; filter: grayscale(0.2); box-shadow: var(--shadow-card); cursor: not-allowed; }
+.tg-btn:disabled::after { display: none; }
+
+@utility tg-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 16px;
+  border-radius: 14px;
+  font-weight: 500;
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--card-solid) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+  box-shadow: 0 4px 14px -10px rgba(0,0,0,0.5);
+  transition: transform 140ms ease, background-color 180ms ease, border-color 180ms ease;
+}
+.tg-btn-ghost:active { transform: scale(0.97); }
+.tg-btn-ghost:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
+.tg-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@utility tg-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 16px;
+  border-radius: 14px;
+  font-weight: 500;
+  color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--destructive) 40%, transparent);
+  transition: transform 140ms ease, background-color 180ms ease;
+}
+.tg-btn-danger:active { transform: scale(0.97); }
+.tg-btn-danger:hover { background: color-mix(in srgb, var(--destructive) 18%, transparent); }
 
 @utility tg-card {
   background: var(--card-solid);

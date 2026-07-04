@@ -5,7 +5,9 @@ import { MobileShell } from "@/components/MobileShell";
 import { FaqList } from "@/components/FaqList";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { LogOut, Trash2, KeyRound, Loader2, Moon, Sun, Mail } from "lucide-react";
+import { LogOut, Trash2, KeyRound, Loader2, Moon, Sun, Mail, Sparkles } from "lucide-react";
+
+type Theme = "dark" | "light" | "neon";
 
 export const Route = createFileRoute("/_app/profile")({ component: ProfilePage });
 
@@ -16,24 +18,25 @@ function ProfilePage() {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
-    const saved = localStorage.getItem("ns_theme") === "light" ? "light" : "dark";
+    const v = localStorage.getItem("ns_theme");
+    const saved: Theme = (v === "light" || v === "neon") ? v : "dark";
     setTheme(saved);
     document.documentElement.dataset.theme = saved;
-    document.documentElement.classList.toggle("dark", saved === "dark");
+    document.documentElement.classList.toggle("dark", saved !== "light");
     supabase.auth.getSession().then(({ data }) => {
       setEmail(data.session?.user.email ?? "");
       setEmailLoading(false);
     });
   }, []);
 
-  function changeTheme(next: "dark" | "light") {
+  function changeTheme(next: Theme) {
     setTheme(next);
     localStorage.setItem("ns_theme", next);
     document.documentElement.dataset.theme = next;
-    document.documentElement.classList.toggle("dark", next === "dark");
+    document.documentElement.classList.toggle("dark", next !== "light");
   }
 
   async function updatePassword() {
@@ -85,22 +88,27 @@ function ProfilePage() {
 
         <section className="space-y-3 rounded-2xl border border-border bg-card p-4">
           <div className="text-sm font-medium">Тема приложения</div>
-          <div className="grid grid-cols-2 gap-2 rounded-2xl bg-muted p-1">
-            <button
-              type="button"
-              onClick={() => changeTheme("dark")}
-              className={`tg-press flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-medium transition-colors ${theme === "dark" ? "bg-card-solid text-foreground" : "text-muted-foreground"}`}
-            >
-              <Moon className="h-4 w-4" /> Чёрная
-            </button>
-            <button
-              type="button"
-              onClick={() => changeTheme("light")}
-              className={`tg-press flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-medium transition-colors ${theme === "light" ? "bg-card-solid text-foreground" : "text-muted-foreground"}`}
-            >
-              <Sun className="h-4 w-4" /> Светлая
-            </button>
+          <div className="grid grid-cols-3 gap-2 rounded-2xl bg-muted p-1">
+            {([
+              { k: "dark", label: "Тёмная", icon: Moon },
+              { k: "light", label: "Светлая", icon: Sun },
+              { k: "neon", label: "Neon", icon: Sparkles },
+            ] as const).map(({ k, label, icon: Icon }) => {
+              const active = theme === k;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => changeTheme(k)}
+                  className={`tg-press relative flex h-11 flex-col items-center justify-center gap-0.5 rounded-xl text-[11px] font-medium transition-colors ${active ? "text-foreground" : "text-muted-foreground"}`}
+                  style={active ? { background: "var(--card-solid)", boxShadow: k === "neon" ? "0 0 0 1px color-mix(in srgb, var(--primary) 40%, transparent), 0 6px 20px -10px var(--primary)" : "0 2px 6px rgba(0,0,0,0.15)" } : undefined}
+                >
+                  <Icon className="h-4 w-4" /> {label}
+                </button>
+              );
+            })}
           </div>
+          <p className="text-[11px] text-muted-foreground">Neon — тёмная тема с розово-циановыми градиентами и свечением.</p>
         </section>
 
         <section className="space-y-2 rounded-2xl border border-border bg-card p-4">
@@ -111,15 +119,15 @@ function ProfilePage() {
           <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
             placeholder="Новый пароль (минимум 6 символов)" minLength={6} autoComplete="new-password"
             className="h-11 w-full rounded-xl border border-border bg-input px-3 outline-none focus:border-primary" />
-          <button onClick={updatePassword} disabled={loading} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-secondary font-medium disabled:opacity-60">
+          <button onClick={updatePassword} disabled={loading} className="tg-btn w-full">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Обновить пароль"}
           </button>
         </section>
 
-        <button onClick={logout} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-secondary font-medium">
+        <button onClick={logout} className="tg-btn-ghost w-full">
           <LogOut className="h-4 w-4" /> Выйти
         </button>
-        <button onClick={deleteAccount} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-destructive/40 bg-destructive/10 font-medium text-destructive">
+        <button onClick={deleteAccount} className="tg-btn-danger w-full">
           <Trash2 className="h-4 w-4" /> Удалить аккаунт
         </button>
 

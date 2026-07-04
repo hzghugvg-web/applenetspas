@@ -173,8 +173,7 @@ function VpnPage() {
         <button
           onClick={handleIssue}
           disabled={loading || onCooldown || hasActiveSubscription || profile?.is_blocked || !selected}
-          className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl font-semibold text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-50"
-          style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
+          className="tg-btn w-full h-14 text-[15px]"
         >
           {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (hasActiveSubscription ? "VPN уже активен" : onCooldown ? "Кулдаун активен" : "Получить конфигурацию")}
         </button>
@@ -209,10 +208,10 @@ function VpnPage() {
               Скопируйте ссылку или отсканируйте QR в Happ, v2rayTun, Streisand — работает в России, наш сервер не нужен.
             </p>
             <div className="flex gap-2">
-              <button onClick={copyLink} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-secondary py-3 text-sm font-medium">
+              <button onClick={copyLink} className="tg-btn-ghost flex-1">
                 <Copy className="h-4 w-4" /> Копировать
               </button>
-              <button onClick={handleIssue} disabled={loading || onCooldown || hasActiveSubscription} className="flex items-center justify-center rounded-xl bg-secondary px-4 py-3 text-sm font-medium disabled:opacity-50">
+              <button onClick={handleIssue} disabled={loading || onCooldown || hasActiveSubscription} className="tg-btn-ghost px-4">
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               </button>
             </div>
