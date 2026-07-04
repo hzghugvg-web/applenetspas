@@ -1,17 +1,14 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Globe, User, Settings, MessageCircle, ShieldCheck } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode } from "react";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useHasActiveVpn } from "@/hooks/useHasActiveVpn";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
-import { motion } from "framer-motion";
 
 interface Props { title: string; children: ReactNode; }
 
 export function MobileShell({ title, children }: Props) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const lastPathRef = useRef(pathname);
-  const [entering, setEntering] = useState(false);
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
   const showAdminTab = isAdmin === true || (pathname.startsWith("/admin") && adminLoading);
   const { data: activeVpn } = useHasActiveVpn();
@@ -25,18 +22,6 @@ export function MobileShell({ title, children }: Props) {
     ...(showAdminTab ? [{ to: "/admin", label: "Админ", icon: Settings }] : []),
   ];
 
-  useEffect(() => {
-    if (lastPathRef.current === pathname) return;
-    lastPathRef.current = pathname;
-    setEntering(false);
-    const frame = requestAnimationFrame(() => setEntering(true));
-    const timer = window.setTimeout(() => setEntering(false), 260);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.clearTimeout(timer);
-    };
-  }, [pathname]);
-
   return (
     <div
       onContextMenu={(e) => e.preventDefault()}
@@ -45,7 +30,7 @@ export function MobileShell({ title, children }: Props) {
     >
       <header className="safe-top tg-blur shrink-0">
         <div className="flex h-12 items-center justify-center px-4">
-          <h1 key={title} className="ns-title text-[17px] font-semibold tracking-tight">
+          <h1 className="text-[17px] font-semibold tracking-tight">
             {title}
           </h1>
         </div>
@@ -56,7 +41,7 @@ export function MobileShell({ title, children }: Props) {
           className="ns-scroll h-full px-4 pt-4"
           style={{ paddingBottom: "12px" }}
         >
-          <div className={`space-y-3 pb-2 ${entering ? "ns-fade" : ""}`}>{children}</div>
+          <div className="space-y-3 pb-2">{children}</div>
         </div>
       </main>
       <nav
@@ -77,9 +62,7 @@ export function MobileShell({ title, children }: Props) {
               }`}
             >
               {active && (
-                <motion.span
-                  layoutId="ns-nav-indicator"
-                  transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                <span
                   className="absolute inset-1 rounded-xl"
                   style={{ background: "var(--gradient-primary)", opacity: 0.22 }}
                 />
