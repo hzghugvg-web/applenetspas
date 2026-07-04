@@ -113,7 +113,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var t=localStorage.getItem('ns_theme')==='light'?'light':'dark';document.documentElement.dataset.theme=t;document.documentElement.classList.toggle('dark',t==='dark')}catch(e){}",
+              "try{var v=localStorage.getItem('ns_theme');var t=(v==='light'||v==='neon')?v:'dark';document.documentElement.dataset.theme=t;document.documentElement.classList.toggle('dark',t!=='light')}catch(e){}",
           }}
         />
         <HeadContent />
@@ -130,9 +130,10 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
-    const saved = localStorage.getItem("ns_theme") === "light" ? "light" : "dark";
+    const v = localStorage.getItem("ns_theme");
+    const saved = (v === "light" || v === "neon") ? v : "dark";
     document.documentElement.dataset.theme = saved;
-    document.documentElement.classList.toggle("dark", saved === "dark");
+    document.documentElement.classList.toggle("dark", saved !== "light");
   }, []);
 
   useEffect(() => {
