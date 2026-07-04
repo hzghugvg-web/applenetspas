@@ -14,6 +14,11 @@ function setCache(next: Broadcast[]) {
   listeners.forEach((l) => l(next));
 }
 
+let reloadImpl: (() => void) | null = null;
+export function reloadBroadcasts() {
+  reloadImpl?.();
+}
+
 export function BroadcastBanner() {
   const [unread, setUnread] = useState<Broadcast[]>(cachedUnread);
   const [dismissing, setDismissing] = useState<string | null>(null);
@@ -38,13 +43,19 @@ export function BroadcastBanner() {
 
   useEffect(() => {
     listeners.add(setUnread);
+    reloadImpl = load;
     load();
     const ch = supabase
       .channel("broadcasts_channel")
       .on("postgres_changes", { event: "*", schema: "public", table: "broadcasts" }, () => load())
       .subscribe();
     const t = setInterval(load, 30_000);
-    return () => { listeners.delete(setUnread); supabase.removeChannel(ch); clearInterval(t); };
+    return () => {
+      listeners.delete(setUnread);
+      if (reloadImpl === load) reloadImpl = null;
+      supabase.removeChannel(ch);
+      clearInterval(t);
+    };
   }, []);
 
   async function ack(b: Broadcast) {
