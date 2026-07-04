@@ -98,8 +98,8 @@ export function BroadcastBanner() {
     try {
       await navigator.clipboard.writeText(url);
       alertDialog.success(
-        "Сайт успешно скопирован!",
-        "Откройте браузер, вставьте адрес и переходите на сайт.",
+        "Сайт успешно скопирован",
+        "Вставьте её в браузер.",
       );
     } catch {
       alertDialog.error("Не удалось скопировать");
