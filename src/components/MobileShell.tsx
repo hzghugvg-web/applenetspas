@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Globe, User, Settings, MessageCircle, ShieldCheck } from "lucide-react";
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useHasActiveVpn } from "@/hooks/useHasActiveVpn";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
@@ -10,6 +10,8 @@ interface Props { title: string; children: ReactNode; }
 
 export function MobileShell({ title, children }: Props) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const lastPathRef = useRef(pathname);
+  const [entering, setEntering] = useState(false);
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
   const showAdminTab = isAdmin === true || (pathname.startsWith("/admin") && adminLoading);
   const { data: activeVpn } = useHasActiveVpn();
@@ -22,6 +24,18 @@ export function MobileShell({ title, children }: Props) {
     { to: "/profile", label: "Настройки", icon: User },
     ...(showAdminTab ? [{ to: "/admin", label: "Админ", icon: Settings }] : []),
   ];
+
+  useEffect(() => {
+    if (lastPathRef.current === pathname) return;
+    lastPathRef.current = pathname;
+    setEntering(false);
+    const frame = requestAnimationFrame(() => setEntering(true));
+    const timer = window.setTimeout(() => setEntering(false), 260);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [pathname]);
 
   return (
     <div
@@ -42,7 +56,7 @@ export function MobileShell({ title, children }: Props) {
           className="ns-scroll h-full px-4 pt-4"
           style={{ paddingBottom: "12px" }}
         >
-          <div className="space-y-3 pb-2">{children}</div>
+          <div className={`space-y-3 pb-2 ${entering ? "ns-fade" : ""}`}>{children}</div>
         </div>
       </main>
       <nav

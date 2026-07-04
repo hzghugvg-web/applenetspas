@@ -65,7 +65,7 @@ function MyComplaints() {
   const load = () => qc.invalidateQueries({ queryKey: ["complaints"] });
 
   return (
-    <div className="ns-fade space-y-3">
+    <div className="space-y-3">
       <button
         onClick={() => setOpenForm(true)}
         className="tg-press flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-[15px] font-medium text-primary-foreground"

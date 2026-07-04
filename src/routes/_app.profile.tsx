@@ -90,7 +90,7 @@ function ProfilePage() {
 
   return (
     <MobileShell title="Настройки">
-      <div className="ns-fade space-y-4">
+      <div className="space-y-4">
         <div className="grid grid-cols-2 gap-1 rounded-2xl bg-muted p-1">
           {([
             { k: "settings", label: "Настройки", icon: SettingsIcon },
