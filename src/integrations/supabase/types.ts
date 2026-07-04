@@ -41,6 +41,53 @@ export type Database = {
         }
         Relationships: []
       }
+      broadcast_reads: {
+        Row: {
+          broadcast_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          broadcast_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          broadcast_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_reads_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "broadcasts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      broadcasts: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          message: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          message: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          message?: string
+        }
+        Relationships: []
+      }
       complaint_messages: {
         Row: {
           body: string
@@ -349,6 +396,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_delete_broadcast: { Args: { _id: string }; Returns: undefined }
       admin_delete_issued_config: {
         Args: { _config_id: string }
         Returns: undefined
@@ -362,6 +410,7 @@ export type Database = {
         Args: { _target: string }
         Returns: undefined
       }
+      admin_send_broadcast: { Args: { _message: string }; Returns: string }
       admin_set_subscription_dates: {
         Args: { _from: string; _target: string; _until: string }
         Returns: undefined
