@@ -131,7 +131,7 @@ function VpnPage() {
 
   return (
     <MobileShell title="VPN">
-      <div className="space-y-4">
+      <div className="ns-fade space-y-4">
         {onCooldown && (
           <section className="rounded-2xl border border-border bg-card p-4">
             <div className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm">

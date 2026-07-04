@@ -42,7 +42,7 @@ export function MobileShell({ title, children }: Props) {
           className="ns-scroll h-full px-4 pt-4"
           style={{ paddingBottom: "12px" }}
         >
-          <div key={pathname} className="ns-fade space-y-3 pb-2">{children}</div>
+          <div className="space-y-3 pb-2">{children}</div>
         </div>
       </main>
       <nav

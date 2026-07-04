@@ -77,7 +77,7 @@ function MyVpnPage() {
 
   return (
     <MobileShell title="Мой VPN">
-      <div className="space-y-4">
+      <div className="ns-fade space-y-4">
         <section
           className="relative overflow-hidden rounded-2xl p-4"
           style={{
