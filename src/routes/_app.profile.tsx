@@ -5,7 +5,7 @@ import { MobileShell } from "@/components/MobileShell";
 import { FaqList } from "@/components/FaqList";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { LogOut, Trash2, KeyRound, Loader2, Moon, Sun, Mail, Sparkles } from "lucide-react";
+import { LogOut, Trash2, KeyRound, Loader2, Moon, Sun, Mail, Sparkles, HelpCircle, Settings as SettingsIcon, X } from "lucide-react";
 
 type Theme = "dark" | "light" | "neon";
 
@@ -19,6 +19,10 @@ function ProfilePage() {
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [theme, setTheme] = useState<Theme>("dark");
+  const [tab, setTab] = useState<"settings" | "faq">("settings");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const v = localStorage.getItem("ns_theme");
@@ -62,21 +66,59 @@ function ProfilePage() {
     navigate({ to: "/auth" });
   }
 
-  async function deleteAccount() {
-    if (!confirm("Удалить аккаунт? Действие необратимо.")) return;
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) return;
-    const { error } = await supabase.from("profiles").delete().eq("id", u.user.id);
-    if (error) { toast.error(translateAuthError(error.message)); return; }
-    sessionStorage.removeItem("ns_is_admin");
-    await supabase.auth.signOut();
-    toast.success("Аккаунт удалён");
-    navigate({ to: "/auth" });
+  async function confirmDeleteAccount() {
+    if (!confirmPassword) { toast.error("Введите пароль"); return; }
+    setDeleting(true);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user || !email) throw new Error("unauthorized");
+      const { error: signErr } = await supabase.auth.signInWithPassword({ email, password: confirmPassword });
+      if (signErr) { toast.error("Неверный пароль"); return; }
+      const { error } = await supabase.from("profiles").delete().eq("id", u.user.id);
+      if (error) { toast.error(translateAuthError(error.message)); return; }
+      sessionStorage.removeItem("ns_is_admin");
+      await supabase.auth.signOut();
+      setConfirmOpen(false);
+      toast.success("Аккаунт удалён");
+      navigate({ to: "/auth" });
+    } catch (e: any) {
+      toast.error(translateAuthError(e?.message));
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
     <MobileShell title="Настройки">
       <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-1 rounded-2xl bg-muted p-1">
+          {([
+            { k: "settings", label: "Настройки", icon: SettingsIcon },
+            { k: "faq", label: "FAQ", icon: HelpCircle },
+          ] as const).map(({ k, label, icon: Icon }) => {
+            const active = tab === k;
+            return (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setTab(k)}
+                className={`tg-press flex h-10 items-center justify-center gap-1.5 rounded-xl text-[13px] font-medium transition-colors ${active ? "text-foreground" : "text-muted-foreground"}`}
+                style={active ? { background: "var(--card-solid)", boxShadow: "0 2px 6px rgba(0,0,0,0.15)" } : undefined}
+              >
+                <Icon className="h-4 w-4" /> {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {tab === "faq" && (
+          <div key="faq" className="ns-fade">
+            <FaqList />
+          </div>
+        )}
+
+        {tab === "settings" && (
+          <div key="settings" className="ns-fade space-y-4">
         <section className="rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Mail className="h-4 w-4 text-primary" /> Текущий email
@@ -127,15 +169,65 @@ function ProfilePage() {
         <button onClick={logout} className="tg-btn-ghost w-full">
           <LogOut className="h-4 w-4" /> Выйти
         </button>
-        <button onClick={deleteAccount} className="tg-btn-danger w-full">
+        <button onClick={() => { setConfirmPassword(""); setConfirmOpen(true); }} className="tg-btn-danger w-full">
           <Trash2 className="h-4 w-4" /> Удалить аккаунт
         </button>
-
-        <section className="space-y-3 pt-1">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">FAQ</div>
-          <FaqList />
-        </section>
+          </div>
+        )}
       </div>
+
+      {confirmOpen && (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center px-6"
+          style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)" }}
+          onClick={() => !deleting && setConfirmOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-[320px] rounded-2xl border border-border p-5"
+            style={{ background: "var(--card-solid)", boxShadow: "var(--shadow-elegant)" }}
+          >
+            <div className="mb-1 flex items-start justify-between gap-3">
+              <div className="text-[16px] font-semibold text-destructive">Удалить аккаунт?</div>
+              <button
+                onClick={() => setConfirmOpen(false)}
+                disabled={deleting}
+                className="tg-press -m-1 grid h-7 w-7 place-items-center rounded-full text-muted-foreground"
+                aria-label="Закрыть"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-[13px] leading-snug text-muted-foreground">
+              Действие необратимо. Все ваши данные и конфигурации будут удалены. Для подтверждения введите текущий пароль.
+            </p>
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Текущий пароль"
+              className="mt-3 h-11 w-full rounded-xl border border-border bg-input px-3 outline-none focus:border-primary"
+            />
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setConfirmOpen(false)}
+                disabled={deleting}
+                className="tg-btn-ghost flex-1"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={confirmDeleteAccount}
+                disabled={deleting || !confirmPassword}
+                className="tg-btn-danger flex-1"
+              >
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Удалить"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </MobileShell>
   );
 }
