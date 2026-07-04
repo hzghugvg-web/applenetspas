@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Megaphone, Check } from "lucide-react";
+import { Megaphone, Check, Copy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { alertDialog } from "@/lib/alert";
 
-type Broadcast = { id: string; message: string; title: string | null; created_at: string };
+type Broadcast = { id: string; message: string; title: string | null; link: string | null; created_at: string };
 
 // Module-level cache keeps the banner state alive across route unmounts,
 // so switching tabs doesn't flash the banner away.
@@ -29,7 +30,7 @@ export function BroadcastBanner() {
     if (!user) { setCache([]); return; }
     const { data: bs } = await (supabase as any)
       .from("broadcasts")
-      .select("id,message,title,created_at")
+      .select("id,message,title,link,created_at")
       .order("created_at", { ascending: false })
       .limit(20);
     if (!bs?.length) { setCache([]); return; }
@@ -71,6 +72,18 @@ export function BroadcastBanner() {
   }
 
   const current = unread[0];
+
+  async function copyLink(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      alertDialog.success(
+        "Ссылка успешно скопирована",
+        "Вставьте её в браузер. Если это конфиг — вставьте в клиент (Happ, V2rayTun и т.д.)",
+      );
+    } catch {
+      alertDialog.error("Не удалось скопировать");
+    }
+  }
 
   // Render message with clickable URLs
   function renderMessage(text: string) {
@@ -120,6 +133,15 @@ export function BroadcastBanner() {
               <div className="mt-0.5 max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-[13px] leading-snug text-foreground">
                 {renderMessage(current.message)}
               </div>
+              {current.link && (
+                <button
+                  onClick={() => copyLink(current.link!)}
+                  className="tg-press mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-[12px] font-medium"
+                  style={{ background: "var(--gradient-primary)", color: "var(--primary-foreground)" }}
+                >
+                  <Copy className="h-3.5 w-3.5" /> Копировать ссылку
+                </button>
+              )}
             </div>
             <button
               onClick={() => ack(current)}
