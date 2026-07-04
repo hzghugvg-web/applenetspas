@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Megaphone, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-type Broadcast = { id: string; message: string; created_at: string };
+type Broadcast = { id: string; message: string; title: string | null; created_at: string };
 
 // Module-level cache keeps the banner state alive across route unmounts,
 // so switching tabs doesn't flash the banner away.
@@ -29,7 +29,7 @@ export function BroadcastBanner() {
     if (!user) { setCache([]); return; }
     const { data: bs } = await (supabase as any)
       .from("broadcasts")
-      .select("id,message,created_at")
+      .select("id,message,title,created_at")
       .order("created_at", { ascending: false })
       .limit(20);
     if (!bs?.length) { setCache([]); return; }
@@ -72,6 +72,27 @@ export function BroadcastBanner() {
 
   const current = unread[0];
 
+  // Render message with clickable URLs
+  function renderMessage(text: string) {
+    const parts = text.split(/(https?:\/\/[^\s]+)/g);
+    return parts.map((p, i) =>
+      /^https?:\/\//.test(p) ? (
+        <a
+          key={i}
+          href={p}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline break-all"
+          style={{ color: "hsl(var(--primary))" }}
+        >
+          {p}
+        </a>
+      ) : (
+        <span key={i}>{p}</span>
+      ),
+    );
+  }
+
   return (
     <AnimatePresence mode="wait">
       {current && (
@@ -95,10 +116,10 @@ export function BroadcastBanner() {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Сообщение от администратора
+                {current.title?.trim() || "Сообщение от администратора"}
               </div>
-              <div className="mt-0.5 whitespace-pre-wrap text-[13px] leading-snug text-foreground">
-                {current.message}
+              <div className="mt-0.5 max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-[13px] leading-snug text-foreground">
+                {renderMessage(current.message)}
               </div>
             </div>
             <button
