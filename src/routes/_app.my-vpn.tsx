@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/MobileShell";
 import { alertDialog as toast } from "@/lib/alert";
@@ -12,32 +13,45 @@ type Config = { id: string; vless_url: string; issued_at: string; direction_id: 
 type Direction = { id: string; name: string; flag: string | null };
 
 function MyVpnPage() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [configs, setConfigs] = useState<Config[]>([]);
-  const [dirs, setDirs] = useState<Record<string, Direction>>({});
+  const qc = useQueryClient();
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
 
-  async function load() {
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) return;
-    const [{ data: p }, { data: cs }] = await Promise.all([
-      supabase.from("profiles").select("subscription_from,subscription_until").eq("id", u.user.id).maybeSingle(),
-      supabase.from("issued_configs").select("id,vless_url,issued_at,direction_id").eq("user_id", u.user.id).order("issued_at", { ascending: false }),
-    ]);
-    setProfile(p as Profile | null);
-    const list = (cs ?? []) as Config[];
-    setConfigs(list);
-    const dirIds = Array.from(new Set(list.map((c) => c.direction_id).filter(Boolean))) as string[];
-    if (dirIds.length) {
-      const { data: ds } = await supabase.from("directions").select("id,name,flag").in("id", dirIds);
-      const map: Record<string, Direction> = {};
-      for (const d of (ds ?? []) as Direction[]) map[d.id] = d;
-      setDirs(map);
-    }
-  }
-  useEffect(() => { load(); }, []);
+  const { data } = useQuery({
+    queryKey: ["my-vpn"],
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return { profile: null as Profile | null, configs: [] as Config[], dirs: {} as Record<string, Direction> };
+      const [{ data: p }, { data: cs }] = await Promise.all([
+        supabase.from("profiles").select("subscription_from,subscription_until").eq("id", u.user.id).maybeSingle(),
+        supabase.from("issued_configs").select("id,vless_url,issued_at,direction_id").eq("user_id", u.user.id).order("issued_at", { ascending: false }),
+      ]);
+      const list = (cs ?? []) as Config[];
+      const dirIds = Array.from(new Set(list.map((c) => c.direction_id).filter(Boolean))) as string[];
+      let dirs: Record<string, Direction> = {};
+      if (dirIds.length) {
+        const { data: ds } = await supabase.from("directions").select("id,name,flag").in("id", dirIds);
+        for (const d of (ds ?? []) as Direction[]) dirs[d.id] = d;
+      }
+      return { profile: (p ?? null) as Profile | null, configs: list, dirs };
+    },
+  });
+  const profile = data?.profile ?? null;
+  const configs = data?.configs ?? [];
+  const dirs = data?.dirs ?? {};
+
+  useEffect(() => {
+    const ch = supabase
+      .channel("my_vpn_issued_changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "issued_configs" }, () => {
+        qc.invalidateQueries({ queryKey: ["my-vpn"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [qc]);
 
   const untilMs = profile?.subscription_until ? new Date(profile.subscription_until).getTime() - now : 0;
   const active = untilMs > 0;

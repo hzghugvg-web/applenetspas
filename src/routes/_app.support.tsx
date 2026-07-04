@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/MobileShell";
@@ -45,18 +46,23 @@ function SupportPage() {
 }
 
 function MyComplaints() {
-  const [items, setItems] = useState<Complaint[]>([]);
+  const qc = useQueryClient();
   const [openForm, setOpenForm] = useState(false);
   const [chatId, setChatId] = useState<string | null>(null);
 
-  async function load() {
-    const { data } = await supabase
-      .from("complaints")
-      .select("id,description,video_url,status,admin_reply,created_at,category,phone")
-      .order("created_at", { ascending: false });
-    setItems((data ?? []) as Complaint[]);
-  }
-  useEffect(() => { load(); }, []);
+  const { data: items = [] } = useQuery<Complaint[]>({
+    queryKey: ["complaints"],
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("complaints")
+        .select("id,description,video_url,status,admin_reply,created_at,category,phone")
+        .order("created_at", { ascending: false });
+      return (data ?? []) as Complaint[];
+    },
+  });
+  const load = () => qc.invalidateQueries({ queryKey: ["complaints"] });
 
   return (
     <div className="space-y-3">
