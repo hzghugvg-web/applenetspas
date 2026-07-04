@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { issueVpnConfig } from "@/lib/vpn.functions";
@@ -15,61 +16,70 @@ type Direction = { id: string; name: string; flag: string | null };
 type Profile = { cooldown_until: string | null; subscription_from: string | null; subscription_until: string | null; is_blocked: boolean };
 
 function VpnPage() {
-  const [directions, setDirections] = useState<Direction[]>([]);
+  const qc = useQueryClient();
   const [selected, setSelected] = useState<string | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
   const [now, setNow] = useState(Date.now());
   const issue = useServerFn(issueVpnConfig);
 
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
 
-  async function loadAll() {
-    await supabase.rpc("cleanup_expired_vless_links");
-    const [{ data: availableLinks }, { data: u }] = await Promise.all([
-      supabase
+  const { data: directions = [] } = useQuery<Direction[]>({
+    queryKey: ["vpn-directions"],
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      await supabase.rpc("cleanup_expired_vless_links");
+      const { data: availableLinks } = await supabase
         .from("vless_links")
         .select("direction_id")
         .eq("is_active", true)
         .or(`available_from.is.null,available_from.lte.${new Date().toISOString()}`)
-        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
-      supabase.auth.getUser(),
-    ]);
-    const dirIds = Array.from(new Set((availableLinks ?? []).map((l: any) => l.direction_id).filter(Boolean)));
-    const { data: dirs } = dirIds.length
-      ? await supabase.from("directions").select("id,name,flag").eq("is_active", true).in("id", dirIds).order("name")
-      : { data: [] as Direction[] };
-    const unique = Array.from(
-      new Map((dirs ?? []).map((d: any) => [d.id, { id: d.id, name: d.name, flag: d.flag }])).values()
-    );
-    setDirections(unique);
-    if (unique.length && !unique.find((d) => d.id === selected)) setSelected(unique[0].id);
-    if (!unique.length) setSelected(null);
-    if (u.user) {
-      const { data: p } = await supabase
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+      const dirIds = Array.from(new Set((availableLinks ?? []).map((l: any) => l.direction_id).filter(Boolean)));
+      if (!dirIds.length) return [];
+      const { data: dirs } = await supabase
+        .from("directions").select("id,name,flag").eq("is_active", true).in("id", dirIds).order("name");
+      return Array.from(new Map((dirs ?? []).map((d: any) => [d.id, { id: d.id, name: d.name, flag: d.flag }])).values());
+    },
+  });
+  const { data: profile = null } = useQuery<Profile | null>({
+    queryKey: ["profile"],
+    staleTime: 20_000,
+    refetchInterval: 20_000,
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return null;
+      const { data } = await supabase
         .from("profiles")
         .select("cooldown_until,subscription_from,subscription_until,is_blocked")
-        .eq("id", u.user.id)
-        .maybeSingle();
-      setProfile(p as any);
-    }
-  }
-  useEffect(() => { loadAll(); }, []); // eslint-disable-line
+        .eq("id", u.user.id).maybeSingle();
+      return (data ?? null) as Profile | null;
+    },
+  });
+
   useEffect(() => {
-    const t = setInterval(() => { loadAll(); }, 8000);
-    const onVis = () => { if (document.visibilityState === "visible") loadAll(); };
-    document.addEventListener("visibilitychange", onVis);
+    if (directions.length && !directions.find((d) => d.id === selected)) setSelected(directions[0].id);
+    if (!directions.length && selected) setSelected(null);
+  }, [directions, selected]);
+
+  function reloadAll() {
+    qc.invalidateQueries({ queryKey: ["vpn-directions"] });
+    qc.invalidateQueries({ queryKey: ["profile"] });
+    qc.invalidateQueries({ queryKey: ["has-active-vpn"] });
+    qc.invalidateQueries({ queryKey: ["my-vpn"] });
+  }
+
+  useEffect(() => {
     const ch = supabase
       .channel("vless_links_changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "vless_links" }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "vless_links" }, () => reloadAll())
       .subscribe();
     const ch2 = supabase
       .channel("issued_configs_changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "issued_configs" }, () => { loadAll(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "issued_configs" }, () => { reloadAll(); })
       .subscribe();
     return () => {
-      clearInterval(t);
-      document.removeEventListener("visibilitychange", onVis);
       supabase.removeChannel(ch);
       supabase.removeChannel(ch2);
     };
@@ -98,7 +108,7 @@ function VpnPage() {
       } else {
         toast.success("Конфигурация выдана");
       }
-      await loadAll();
+      reloadAll();
     } catch (e: any) {
       toast.error(translateAuthError(e?.message));
     } finally { setLoading(false); }
