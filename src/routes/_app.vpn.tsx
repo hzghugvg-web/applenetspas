@@ -2,11 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { issueVpnConfig, getMyIssuedLinks } from "@/lib/vpn.functions";
+import { issueVpnConfig } from "@/lib/vpn.functions";
 import { MobileShell } from "@/components/MobileShell";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { Copy, RefreshCw, Clock, CalendarClock, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Clock, Loader2, ShieldCheck } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app/vpn")({ component: VpnPage });
 
@@ -17,12 +18,9 @@ function VpnPage() {
   const [directions, setDirections] = useState<Direction[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [links, setLinks] = useState<string[]>([]);
-  const [linkIdx, setLinkIdx] = useState(0);
   const [loading, setLoading] = useState(false);
   const [now, setNow] = useState(Date.now());
   const issue = useServerFn(issueVpnConfig);
-  const loadIssued = useServerFn(getMyIssuedLinks);
 
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
 
@@ -56,13 +54,6 @@ function VpnPage() {
       setProfile(p as any);
     }
   }
-  async function reloadIssued() {
-    try {
-      const res = await loadIssued({});
-      setLinks(res.links);
-      setLinkIdx((i) => (res.links.length ? Math.min(i, res.links.length - 1) : 0));
-    } catch { /* ignore */ }
-  }
   useEffect(() => { loadAll(); }, []); // eslint-disable-line
   useEffect(() => {
     const t = setInterval(() => { loadAll(); }, 8000);
@@ -74,7 +65,7 @@ function VpnPage() {
       .subscribe();
     const ch2 = supabase
       .channel("issued_configs_changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "issued_configs" }, () => { reloadIssued(); loadAll(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "issued_configs" }, () => { loadAll(); })
       .subscribe();
     return () => {
       clearInterval(t);
@@ -82,9 +73,6 @@ function VpnPage() {
       supabase.removeChannel(ch);
       supabase.removeChannel(ch2);
     };
-  }, []); // eslint-disable-line
-  useEffect(() => {
-    reloadIssued();
   }, []); // eslint-disable-line
 
   const cooldownMs = profile?.cooldown_until ? new Date(profile.cooldown_until).getTime() - now : 0;
@@ -94,11 +82,10 @@ function VpnPage() {
 
   async function handleIssue() {
     if (!selected) return;
-    setLoading(true); setLinks([]); setLinkIdx(0);
+    setLoading(true);
     try {
       const res = await issue({ data: { directionId: selected } });
       if (!res.links.length) throw new Error("Не удалось получить конфигурацию");
-      setLinks(res.links);
       const { data: u } = await supabase.auth.getUser();
       const key = u.user ? `ns_first_key_shown_${u.user.id}` : null;
       const alreadyShown = key ? localStorage.getItem(key) : "1";
@@ -117,14 +104,6 @@ function VpnPage() {
     } finally { setLoading(false); }
   }
 
-  const currentLink = links[linkIdx] ?? null;
-
-  async function copyLink() {
-    if (!currentLink) return;
-    try { await navigator.clipboard.writeText(currentLink); toast.success("Скопировано"); }
-    catch { toast.error("Не удалось скопировать"); }
-  }
-
   function fmtCooldown(ms: number) {
     const s = Math.max(0, Math.floor(ms / 1000));
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
@@ -134,25 +113,15 @@ function VpnPage() {
   return (
     <MobileShell title="VPN">
       <div className="space-y-4">
-        <section className="rounded-2xl border border-border bg-card p-4">
-          <div className="flex min-h-5 items-center justify-between text-sm">
-            <div className="flex items-center gap-2 text-muted-foreground"><CalendarClock className="h-4 w-4" /> Подписка до</div>
-            <div className="font-medium">
-              {profile === null
-                ? <span className="inline-block h-4 w-20 animate-pulse rounded bg-muted" />
-                : profile.subscription_until
-                  ? new Date(profile.subscription_until).toLocaleDateString("ru-RU")
-                  : "—"}
-            </div>
-          </div>
-          {onCooldown && (
-            <div className="mt-3 flex items-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm">
+        {onCooldown && (
+          <section className="rounded-2xl border border-border bg-card p-4">
+            <div className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm">
               <Clock className="h-4 w-4 text-primary" />
               <span className="text-muted-foreground">До следующей выдачи:</span>
               <span className="ml-auto font-medium">{fmtCooldown(cooldownMs)}</span>
             </div>
-          )}
-        </section>
+          </section>
+        )}
 
         <section className="space-y-2">
           <div className="text-xs uppercase tracking-wider text-muted-foreground">Направление</div>
@@ -178,66 +147,24 @@ function VpnPage() {
           {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (hasActiveSubscription ? "VPN уже активен" : onCooldown ? "Кулдаун активен" : "Получить конфигурацию")}
         </button>
 
-        {currentLink && (
-          <section className="ns-fade space-y-2 rounded-2xl border border-border bg-card p-4">
-            <div className="flex items-center justify-between">
-              <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                Ваш конфиг {links.length > 1 ? `${linkIdx + 1}/${links.length}` : ""}
+        {hasActiveSubscription && (
+          <Link
+            to="/my-vpn"
+            className="ns-fade flex items-center gap-3 rounded-2xl border border-border bg-card p-4"
+          >
+            <div
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              <ShieldCheck className="h-5 w-5" style={{ color: "var(--primary-foreground)" }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium">VPN активен</div>
+              <div className="text-[12px] text-muted-foreground">
+                Ссылка и срок — во вкладке «Мой VPN»
               </div>
-              {links.length > 1 && (
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setLinkIdx((i) => (i - 1 + links.length) % links.length)}
-                    className="grid h-7 w-7 place-items-center rounded-full bg-secondary"
-                    aria-label="Предыдущий"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => setLinkIdx((i) => (i + 1) % links.length)}
-                    className="grid h-7 w-7 place-items-center rounded-full bg-secondary"
-                    aria-label="Следующий"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
             </div>
-            <div className="break-all rounded-xl bg-muted p-3 text-xs">{currentLink}</div>
-            <p className="text-[11px] text-muted-foreground">
-              Скопируйте ссылку или отсканируйте QR в Happ, v2rayTun, Streisand — работает в России, наш сервер не нужен.
-            </p>
-            <div className="flex gap-2">
-              <button onClick={copyLink} className="tg-btn-ghost flex-1">
-                <Copy className="h-4 w-4" /> Копировать
-              </button>
-              <button onClick={handleIssue} disabled={loading || onCooldown || hasActiveSubscription} className="tg-btn-ghost px-4">
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              </button>
-            </div>
-          </section>
-        )}
-
-        {hasActiveSubscription && profile && (
-          <section className="ns-fade space-y-2 rounded-2xl border border-border bg-card p-4">
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">Активный VPN</div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Запущен</span>
-              <span className="font-medium">
-                {profile.subscription_from
-                  ? new Date(profile.subscription_from).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" })
-                  : "—"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Закончится</span>
-              <span className="font-medium">
-                {profile.subscription_until
-                  ? new Date(profile.subscription_until).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" })
-                  : "—"}
-              </span>
-            </div>
-          </section>
+          </Link>
         )}
       </div>
     </MobileShell>
