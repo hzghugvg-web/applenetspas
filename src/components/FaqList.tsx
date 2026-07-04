@@ -2,6 +2,31 @@ import { useMemo, useState } from "react";
 import { Search, HelpCircle, ChevronDown } from "lucide-react";
 import { FAQ } from "@/lib/faq";
 
+function renderAnswer(text: string) {
+  // Split on emails and URLs (with or without protocol), keep them as tokens
+  const regex = /([\w.+-]+@[\w-]+\.[\w.-]+|https?:\/\/[^\s]+|(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?)/gi;
+  const parts = text.split(regex);
+  return parts.map((part, i) => {
+    if (!part) return null;
+    if (/^[\w.+-]+@[\w-]+\.[\w.-]+$/.test(part)) {
+      return (
+        <a key={i} href={`mailto:${part}`} className="text-primary underline break-all">
+          {part}
+        </a>
+      );
+    }
+    if (/^https?:\/\//i.test(part) || /^(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?$/i.test(part)) {
+      const href = /^https?:\/\//i.test(part) ? part : `https://${part}`;
+      return (
+        <a key={i} href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline break-all">
+          {part}
+        </a>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
 export function FaqList() {
   const [query, setQuery] = useState("");
   const [openIdx, setOpenIdx] = useState<number | null>(null);
@@ -56,7 +81,7 @@ export function FaqList() {
             >
               <div className="min-h-0 overflow-hidden">
                 <p className="px-3 pb-3 pt-2 pl-14 text-[14px] leading-relaxed text-muted-foreground">
-                  {a}
+                  {renderAnswer(a)}
                 </p>
               </div>
             </div>
