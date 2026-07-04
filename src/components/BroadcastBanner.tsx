@@ -5,36 +5,46 @@ import { motion, AnimatePresence } from "framer-motion";
 
 type Broadcast = { id: string; message: string; created_at: string };
 
+// Module-level cache keeps the banner state alive across route unmounts,
+// so switching tabs doesn't flash the banner away.
+let cachedUnread: Broadcast[] = [];
+const listeners = new Set<(v: Broadcast[]) => void>();
+function setCache(next: Broadcast[]) {
+  cachedUnread = next;
+  listeners.forEach((l) => l(next));
+}
+
 export function BroadcastBanner() {
-  const [unread, setUnread] = useState<Broadcast[]>([]);
+  const [unread, setUnread] = useState<Broadcast[]>(cachedUnread);
   const [dismissing, setDismissing] = useState<string | null>(null);
 
   async function load() {
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData.session?.user;
-    if (!user) { setUnread([]); return; }
+    if (!user) { setCache([]); return; }
     const { data: bs } = await (supabase as any)
       .from("broadcasts")
       .select("id,message,created_at")
       .order("created_at", { ascending: false })
       .limit(20);
-    if (!bs?.length) { setUnread([]); return; }
+    if (!bs?.length) { setCache([]); return; }
     const { data: reads } = await (supabase as any)
       .from("broadcast_reads")
       .select("broadcast_id")
       .eq("user_id", user.id);
     const readIds = new Set((reads ?? []).map((r: any) => r.broadcast_id));
-    setUnread((bs as Broadcast[]).filter((b) => !readIds.has(b.id)));
+    setCache((bs as Broadcast[]).filter((b) => !readIds.has(b.id)));
   }
 
   useEffect(() => {
+    listeners.add(setUnread);
     load();
     const ch = supabase
       .channel("broadcasts_channel")
       .on("postgres_changes", { event: "*", schema: "public", table: "broadcasts" }, () => load())
       .subscribe();
     const t = setInterval(load, 30_000);
-    return () => { supabase.removeChannel(ch); clearInterval(t); };
+    return () => { listeners.delete(setUnread); supabase.removeChannel(ch); clearInterval(t); };
   }, []);
 
   async function ack(b: Broadcast) {
@@ -44,7 +54,7 @@ export function BroadcastBanner() {
     if (!user) return;
     await (supabase as any).from("broadcast_reads").insert({ broadcast_id: b.id, user_id: user.id });
     setTimeout(() => {
-      setUnread((u) => u.filter((x) => x.id !== b.id));
+      setCache(cachedUnread.filter((x) => x.id !== b.id));
       setDismissing(null);
     }, 220);
   }
