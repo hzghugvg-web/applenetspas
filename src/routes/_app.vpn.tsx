@@ -8,7 +8,7 @@ import { MobileShell } from "@/components/MobileShell";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
 import { Clock, Loader2, ShieldCheck } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app/vpn")({ component: VpnPage });
 
@@ -17,6 +17,7 @@ type Profile = { cooldown_until: string | null; subscription_from: string | null
 
 function VpnPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -104,9 +105,17 @@ function VpnPage() {
         toast.success(
           "Ваш ключ готов 🎉",
           "Уважаемый пользователь, пожалуйста, не передавайте ключ никому — он привязан к вашему аккаунту.\n\nЕсли VPN не работает сразу — это нормально: он ищет подходящий сервер. Подождите 3–5 минут, и соединение установится.\n\nОбратите внимание: VPN-серверы не наши, мы бесплатно раздаём готовые конфигурации. Подробнее — в разделе «Настройки» → FAQ, там собраны ответы на частые вопросы.\n\nПриятного пользования и стабильного интернета! 💙"
+          ,
+          {
+            actionLabel: "Перейти в Мой VPN",
+            onAction: () => navigate({ to: "/my-vpn" }),
+          }
         );
       } else {
-        toast.success("Конфигурация выдана");
+        toast.success("Конфигурация выдана", undefined, {
+          actionLabel: "Перейти в Мой VPN",
+          onAction: () => navigate({ to: "/my-vpn" }),
+        });
       }
       reloadAll();
     } catch (e: any) {

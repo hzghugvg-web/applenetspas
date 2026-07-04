@@ -38,16 +38,12 @@ export function MobileShell({ title, children }: Props) {
       </header>
       <BroadcastBanner />
       <main className="min-h-0 flex-1 overflow-hidden">
-        <motion.div
-          key={pathname}
-          initial={{ opacity: 0, y: 8, scale: 0.995 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        <div
           className="ns-scroll h-full px-4 pt-4"
-          style={{ paddingBottom: "12px", willChange: "transform, opacity" }}
+          style={{ paddingBottom: "12px" }}
         >
           <div className="space-y-3 pb-2">{children}</div>
-        </motion.div>
+        </div>
       </main>
       <nav
         className="mx-2 grid shrink-0 rounded-2xl glass"
