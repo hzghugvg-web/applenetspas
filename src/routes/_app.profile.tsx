@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MobileShell } from "@/components/MobileShell";
 import { FaqList } from "@/components/FaqList";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
@@ -89,7 +88,7 @@ function ProfilePage() {
   }
 
   return (
-    <MobileShell title="Настройки">
+    <>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-1 rounded-2xl bg-muted p-1">
           {([
@@ -228,6 +227,6 @@ function ProfilePage() {
           </div>
         </div>
       )}
-    </MobileShell>
+    </>
   );
 }

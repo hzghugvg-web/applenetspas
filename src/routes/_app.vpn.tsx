@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { issueVpnConfig } from "@/lib/vpn.functions";
-import { MobileShell } from "@/components/MobileShell";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
 import { Clock, Loader2, ShieldCheck } from "lucide-react";
@@ -130,7 +129,7 @@ function VpnPage() {
   }
 
   return (
-    <MobileShell title="VPN">
+    <>
       <div className="space-y-4">
         {onCooldown && (
           <section className="rounded-2xl border border-border bg-card p-4">
@@ -186,6 +185,6 @@ function VpnPage() {
           </Link>
         )}
       </div>
-    </MobileShell>
+    </>
   );
 }

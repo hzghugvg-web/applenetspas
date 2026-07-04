@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { MobileShell } from "@/components/MobileShell";
 import { alertDialog as toast } from "@/lib/alert";
 import { CalendarClock, Clock, Copy, ShieldCheck, Hourglass } from "lucide-react";
 
@@ -83,7 +82,7 @@ function MyVpnPage() {
   }
 
   return (
-    <MobileShell title="Мой VPN">
+    <>
       <div className="space-y-4">
         <section
           className="relative overflow-hidden rounded-2xl p-4"
@@ -156,6 +155,6 @@ function MyVpnPage() {
           })}
         </section>
       </div>
-    </MobileShell>
+    </>
   );
 }

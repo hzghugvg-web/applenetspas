@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MobileShell } from "@/components/MobileShell";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
@@ -20,12 +19,12 @@ function AdminPage() {
   const { data: isAdmin, isLoading } = useIsAdmin();
 
   if (isLoading || isAdmin === undefined)
-    return <MobileShell title="Админ"><div className="text-center text-muted-foreground">Загрузка…</div></MobileShell>;
+    return <><div className="text-center text-muted-foreground">Загрузка…</div></>;
   if (!isAdmin)
-    return <MobileShell title="Админ"><div className="text-center text-muted-foreground">Нет доступа</div></MobileShell>;
+    return <><div className="text-center text-muted-foreground">Нет доступа</div></>;
 
   return (
-    <MobileShell title="Админ-панель">
+    <>
       <div className="mb-4 grid grid-cols-4 gap-1 rounded-2xl bg-muted p-1">
         {([
           ["catalog", "Каталог"],
@@ -44,7 +43,7 @@ function AdminPage() {
       {tab === "users" && <UsersTab />}
       {tab === "complaints" && <ComplaintsTab />}
       {tab === "broadcast" && <BroadcastTab />}
-    </MobileShell>
+    </>
   );
 }
 
@@ -67,6 +66,7 @@ function BroadcastTab() {
   async function send() {
     if (!message.trim()) return;
     setSending(true);
+    await supabase.auth.refreshSession();
     const { error } = await (supabase as any).rpc("admin_send_broadcast", {
       _message: message.trim(),
       _title: title.trim() || null,
