@@ -72,6 +72,7 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
+          link: string | null
           message: string
           title: string | null
         }
@@ -79,6 +80,7 @@ export type Database = {
           created_at?: string
           created_by: string
           id?: string
+          link?: string | null
           message: string
           title?: string | null
         }
@@ -86,6 +88,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
+          link?: string | null
           message?: string
           title?: string | null
         }
@@ -416,6 +419,10 @@ export type Database = {
       admin_send_broadcast:
         | { Args: { _message: string }; Returns: string }
         | { Args: { _message: string; _title?: string }; Returns: string }
+        | {
+            Args: { _link?: string; _message: string; _title?: string }
+            Returns: string
+          }
       admin_set_subscription_dates: {
         Args: { _from: string; _target: string; _until: string }
         Returns: undefined
