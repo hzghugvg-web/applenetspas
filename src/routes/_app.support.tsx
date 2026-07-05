@@ -194,19 +194,29 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
     }
   }
 
+  const [closing, setClosing] = useState(false);
+  function requestClose() {
+    if (closing) return;
+    setClosing(true);
+    // Keep backdrop mounted for ~280ms so tap-through / ghost-click
+    // can't reach the complaint cards behind the modal.
+    setTimeout(onClose, 280);
+  }
+
   const node = (
     <motion.div
       initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      animate={{ opacity: closing ? 0 : 1 }}
+      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
       className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
+      style={{ pointerEvents: "auto", touchAction: "none" }}
+      onPointerDown={(e) => { e.preventDefault(); requestClose(); }}
     >
       <motion.div
         initial={{ y: 40, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 40, opacity: 0 }}
+        animate={{ y: closing ? 40 : 0, opacity: closing ? 0 : 1 }}
         transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
         className="absolute inset-x-0 bottom-0 mx-auto flex max-h-[92dvh] w-full max-w-md flex-col gap-3 overflow-y-auto overscroll-contain rounded-t-2xl bg-card p-4"
         style={{ paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}
@@ -216,7 +226,7 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
           <button
             type="button"
             aria-label="Закрыть"
-            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); requestClose(); }}
             className="tg-press -mr-1 grid h-10 w-10 place-items-center rounded-full text-muted-foreground hover:text-foreground"
           >
             <X className="pointer-events-none h-5 w-5" />
