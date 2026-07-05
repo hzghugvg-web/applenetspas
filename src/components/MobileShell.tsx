@@ -58,9 +58,11 @@ export function MobileShell({ title, children }: Props) {
             <Link
               key={to}
               to={to}
+              preload="render"
               className={`tg-press relative flex h-[62px] flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors ${
                 active ? "text-foreground" : "text-muted-foreground"
               }`}
+              style={{ touchAction: "manipulation" }}
             >
               {active && (
                 <motion.span
