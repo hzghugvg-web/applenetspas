@@ -55,6 +55,7 @@ type BroadcastRow = {
   email: string | null;
   website: string | null;
   created_at: string;
+  delivery_style?: "top" | "imessage";
 };
 
 function BroadcastTab() {
@@ -63,6 +64,7 @@ function BroadcastTab() {
   const [link, setLink] = useState("");
   const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
+  const [deliveryStyle, setDeliveryStyle] = useState<"top" | "imessage">("imessage");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [list, setList] = useState<BroadcastRow[]>([]);
@@ -70,7 +72,7 @@ function BroadcastTab() {
   async function load() {
     const { data } = await (supabase as any)
       .from("broadcasts")
-      .select("id,message,title,link,email,website,created_at")
+      .select("id,message,title,link,email,website,created_at,delivery_style")
       .order("created_at", { ascending: false })
       .limit(30);
     setList((data ?? []) as BroadcastRow[]);
@@ -79,6 +81,7 @@ function BroadcastTab() {
 
   function resetForm() {
     setTitle(""); setMessage(""); setLink(""); setEmail(""); setWebsite("");
+    setDeliveryStyle("imessage");
     setEditingId(null);
   }
 
@@ -89,6 +92,7 @@ function BroadcastTab() {
     setLink(b.link ?? "");
     setEmail(b.email ?? "");
     setWebsite(b.website ?? "");
+    setDeliveryStyle((b.delivery_style ?? "imessage") as "top" | "imessage");
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -102,6 +106,7 @@ function BroadcastTab() {
       _link: link.trim() || null,
       _email: email.trim() || null,
       _website: website.trim() || null,
+      _delivery_style: deliveryStyle,
     };
     const { error } = editingId
       ? await (supabase as any).rpc("admin_update_broadcast", { _id: editingId, ...payload })
