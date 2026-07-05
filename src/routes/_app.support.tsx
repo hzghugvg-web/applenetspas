@@ -207,15 +207,15 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: closing ? 0 : 1 }}
-      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
       className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
       style={{ pointerEvents: "auto", touchAction: "none" }}
       onPointerDown={(e) => { e.preventDefault(); requestClose(); }}
     >
       <motion.div
-        initial={{ y: 40, opacity: 0 }}
-        animate={{ y: closing ? 40 : 0, opacity: closing ? 0 : 1 }}
-        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        initial={{ y: 60, opacity: 0 }}
+        animate={{ y: closing ? 60 : 0, opacity: closing ? 0 : 1 }}
+        transition={{ type: "spring", stiffness: 280, damping: 30, mass: 0.9 }}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
         className="absolute inset-x-0 bottom-0 mx-auto flex max-h-[92dvh] w-full max-w-md flex-col gap-3 overflow-y-auto overscroll-contain rounded-t-2xl bg-card p-4"
