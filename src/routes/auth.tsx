@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { translateAuthError } from "@/lib/errors";
 import { bootstrapUser } from "@/lib/bootstrap";
 import { alertDialog as toast } from "@/lib/alert";
-import { getFastSession } from "@/lib/fast-auth";
+import { hasStoredSupabaseSession } from "@/lib/fast-auth";
 import { Shield, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
@@ -19,10 +19,7 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    void getFastSession(250).then(({ hasSession }) => {
-      if (!cancelled && hasSession) void navigate({ to: "/vpn", replace: true });
-    });
+    if (hasStoredSupabaseSession()) void navigate({ to: "/vpn", replace: true });
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
@@ -32,7 +29,6 @@ function AuthPage() {
       }
     });
     return () => {
-      cancelled = true;
       sub.subscription.unsubscribe();
     };
   }, [navigate]);

@@ -41,8 +41,12 @@ export function installNetworkResilience() {
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     const method = (init?.method ?? (typeof input !== "string" && !(input instanceof URL) ? input.method : "GET")).toUpperCase();
-    const isSupabase = SUPABASE_HOST && url.includes(SUPABASE_HOST);
+    const isSupabase = Boolean(SUPABASE_HOST && url.includes(SUPABASE_HOST));
     const shouldRetry = isSupabase && (method === "GET" || method === "HEAD");
+
+    if (!isSupabase) {
+      return orig(input, init);
+    }
 
     // Slow-network timer
     const slowTimer = window.setTimeout(() => setSlow(true), SLOW_MS);

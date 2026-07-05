@@ -15,7 +15,7 @@ export function SlowNetworkBanner() {
 
   if (!slow || dismissed) return null;
   return (
-    <div className="mx-2 mt-2 animate-fade-in">
+    <div className="relative z-50 mx-2 mt-2 animate-fade-in">
       <div
         className="flex items-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-200"
       >
@@ -26,11 +26,7 @@ export function SlowNetworkBanner() {
         <button
           type="button"
           data-allow-touch="true"
-          onPointerDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            close();
-          }}
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
