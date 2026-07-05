@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Globe, User, Settings, MessageCircle, ShieldCheck } from "lucide-react";
 import { type ReactNode } from "react";
+import { motion } from "framer-motion";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useHasActiveVpn } from "@/hooks/useHasActiveVpn";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
@@ -62,7 +63,9 @@ export function MobileShell({ title, children }: Props) {
               }`}
             >
               {active && (
-                <span
+                <motion.span
+                  layoutId="ns-nav-indicator"
+                  transition={{ type: "spring", stiffness: 500, damping: 40, mass: 0.6 }}
                   className="absolute inset-1 rounded-xl"
                   style={{ background: "var(--gradient-primary)", opacity: 0.22 }}
                 />
