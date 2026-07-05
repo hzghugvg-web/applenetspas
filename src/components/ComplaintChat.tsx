@@ -153,9 +153,9 @@ export function ComplaintChat({ complaintId, asAdmin, closed, onClosed }: Props)
             return (
               <motion.div
                 key={m.id}
-                initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                initial={{ opacity: 0, y: 8, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.18 }}
+                transition={{ type: "spring", stiffness: 320, damping: 28, mass: 0.7 }}
                 className={`flex ${mine ? "justify-end" : "justify-start"}`}
               >
                 <div
@@ -261,15 +261,15 @@ export function ComplaintChatModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
           className="fixed inset-x-0 top-0 z-[60] bg-background"
           style={{ height: "100dvh" }}
         >
           <motion.div
-            initial={{ y: 20, opacity: 0 }}
+            initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 20, opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ y: 40, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 260, damping: 30, mass: 0.9 }}
             className="flex h-full w-full flex-col"
           >
             <header
