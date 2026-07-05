@@ -8,7 +8,6 @@ import { getFastSession } from "@/lib/fast-auth";
 import { Shield, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
-  ssr: false,
   beforeLoad: async () => {
     const { hasSession } = await getFastSession(450);
     if (hasSession) throw redirect({ to: "/vpn" });
