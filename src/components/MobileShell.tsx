@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useHasActiveVpn } from "@/hooks/useHasActiveVpn";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
+import { SlowNetworkBanner } from "@/components/SlowNetworkBanner";
 
 interface Props { title: string; children: ReactNode; }
 type TabTo = "/vpn" | "/my-vpn" | "/support" | "/profile" | "/admin";
@@ -48,6 +49,7 @@ export function MobileShell({ title, children }: Props) {
         </div>
       </header>
       <BroadcastBanner />
+      <SlowNetworkBanner />
       <main className="min-h-0 flex-1 overflow-hidden">
         <div
           className="ns-scroll h-full px-4 pt-4"
