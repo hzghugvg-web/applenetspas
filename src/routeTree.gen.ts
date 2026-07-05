@@ -19,6 +19,7 @@ import { Route as AppMyVpnRouteImport } from './routes/_app.my-vpn'
 import { Route as AppFaqRouteImport } from './routes/_app.faq'
 import { Route as AppAdminRouteImport } from './routes/_app.admin'
 import { Route as ApiPublicSubTokenRouteImport } from './routes/api/public/sub.$token'
+import { Route as ApiPublicSbSplatRouteImport } from './routes/api/public/sb.$'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -69,6 +70,11 @@ const ApiPublicSubTokenRoute = ApiPublicSubTokenRouteImport.update({
   path: '/api/public/sub/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSbSplatRoute = ApiPublicSbSplatRouteImport.update({
+  id: '/api/public/sb/$',
+  path: '/api/public/sb/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AppProfileRoute
   '/support': typeof AppSupportRoute
   '/vpn': typeof AppVpnRoute
+  '/api/public/sb/$': typeof ApiPublicSbSplatRoute
   '/api/public/sub/$token': typeof ApiPublicSubTokenRoute
 }
 export interface FileRoutesByTo {
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/profile': typeof AppProfileRoute
   '/support': typeof AppSupportRoute
   '/vpn': typeof AppVpnRoute
+  '/api/public/sb/$': typeof ApiPublicSbSplatRoute
   '/api/public/sub/$token': typeof ApiPublicSubTokenRoute
 }
 export interface FileRoutesById {
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/_app/profile': typeof AppProfileRoute
   '/_app/support': typeof AppSupportRoute
   '/_app/vpn': typeof AppVpnRoute
+  '/api/public/sb/$': typeof ApiPublicSbSplatRoute
   '/api/public/sub/$token': typeof ApiPublicSubTokenRoute
 }
 export interface FileRouteTypes {
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/support'
     | '/vpn'
+    | '/api/public/sb/$'
     | '/api/public/sub/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/support'
     | '/vpn'
+    | '/api/public/sb/$'
     | '/api/public/sub/$token'
   id:
     | '__root__'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/_app/profile'
     | '/_app/support'
     | '/_app/vpn'
+    | '/api/public/sb/$'
     | '/api/public/sub/$token'
   fileRoutesById: FileRoutesById
 }
@@ -146,6 +158,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicSbSplatRoute: typeof ApiPublicSbSplatRoute
   ApiPublicSubTokenRoute: typeof ApiPublicSubTokenRoute
 }
 
@@ -221,6 +234,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSubTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/sb/$': {
+      id: '/api/public/sb/$'
+      path: '/api/public/sb/$'
+      fullPath: '/api/public/sb/$'
+      preLoaderRoute: typeof ApiPublicSbSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -248,18 +268,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicSbSplatRoute: ApiPublicSbSplatRoute,
   ApiPublicSubTokenRoute: ApiPublicSubTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
