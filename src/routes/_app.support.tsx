@@ -216,7 +216,7 @@ function ComplaintForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
           <button
             type="button"
             aria-label="Закрыть"
-            onPointerDown={(e) => { e.stopPropagation(); onClose(); }}
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
             className="tg-press -mr-1 grid h-10 w-10 place-items-center rounded-full text-muted-foreground hover:text-foreground"
           >
             <X className="pointer-events-none h-5 w-5" />
