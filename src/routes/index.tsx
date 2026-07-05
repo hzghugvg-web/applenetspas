@@ -4,7 +4,6 @@ import { Loader2, Shield } from "lucide-react";
 import { getFastSession, hasStoredSupabaseSession } from "@/lib/fast-auth";
 
 export const Route = createFileRoute("/")({
-  ssr: false,
   component: IndexRoute,
 });
 
