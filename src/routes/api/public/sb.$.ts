@@ -27,6 +27,10 @@ const HOP_BY_HOP = new Set([
   "host",
   "content-length",
   "accept-encoding",
+  // Node/undici fetch on the server auto-decompresses the upstream body but
+  // leaves this header in place. Forwarding it makes the browser try to
+  // decode an already-plain body → net::ERR_CONTENT_DECODING_FAILED.
+  "content-encoding",
 ]);
 
 function buildTargetUrl(request: Request, splat: string | undefined): string {
