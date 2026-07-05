@@ -24,8 +24,8 @@ function AuthPage() {
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
         sessionStorage.removeItem("ns_is_admin");
-        await bootstrapUser();
         navigate({ to: "/vpn" });
+        void bootstrapUser();
       }
     });
     return () => {

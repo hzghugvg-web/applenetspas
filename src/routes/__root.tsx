@@ -13,6 +13,9 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { PlatformGate } from "@/components/PlatformGate";
 import { AlertHost } from "@/lib/alert";
+import { installNetworkResilience } from "@/lib/network-resilience";
+
+installNetworkResilience();
 
 function NotFoundComponent() {
   return (
@@ -131,7 +134,6 @@ function RootComponent() {
 
   useEffect(() => {
     import("@/lib/theme").then((m) => m.initThemeFromStorage());
-    import("@/lib/network-resilience").then((m) => m.installNetworkResilience());
   }, []);
 
   useEffect(() => {
