@@ -244,9 +244,37 @@
 }
 
 @utility tg-press {
-  transition: transform 120ms ease-out, opacity 120ms ease-out;
+  transition:
+    transform 220ms cubic-bezier(.22,1,.36,1),
+    opacity 220ms cubic-bezier(.22,1,.36,1),
+    background-color 220ms cubic-bezier(.22,1,.36,1),
+    color 220ms cubic-bezier(.22,1,.36,1),
+    border-color 220ms cubic-bezier(.22,1,.36,1),
+    box-shadow 260ms cubic-bezier(.22,1,.36,1);
+  will-change: transform;
 }
-.tg-press:active { transform: scale(0.97); opacity: 0.85; }
+.tg-press:active {
+  transform: scale(0.965);
+  opacity: 0.9;
+  transition-duration: 100ms;
+}
+
+/* Smooth theme/color transitions everywhere so mode + palette swaps feel liquid */
+html, body {
+  transition:
+    background-color 320ms cubic-bezier(.22,1,.36,1),
+    color 320ms cubic-bezier(.22,1,.36,1);
+}
+
+/* Reduced motion: honor the OS setting */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 /* Glossy pill primary button with gradient sheen and shimmer */
 @utility tg-btn {

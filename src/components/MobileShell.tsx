@@ -85,7 +85,7 @@ export function MobileShell({ title, children }: Props) {
               {active && (
                 <motion.span
                   layoutId="ns-nav-indicator"
-                  transition={{ type: "spring", stiffness: 500, damping: 40, mass: 0.6 }}
+                  transition={{ type: "spring", stiffness: 320, damping: 32, mass: 0.9 }}
                   className="absolute inset-1 rounded-xl"
                   style={{ background: "var(--gradient-primary)", opacity: 0.22 }}
                 />
