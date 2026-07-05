@@ -1,27 +1,13 @@
-import { supabase } from "@/integrations/supabase/client";
-import { installNetworkResilience } from "@/lib/network-resilience";
-
 type FastSessionResult = {
   hasSession: boolean;
-  source: "client" | "storage";
+  source: "storage";
 };
 
 export async function getFastSession(timeoutMs = 650): Promise<FastSessionResult> {
-  if (typeof window === "undefined") return { hasSession: false, source: "storage" };
-  installNetworkResilience();
-
-  const clientSession = supabase.auth.getSession().then(({ data }) => ({
-    hasSession: Boolean(data.session),
-    source: "client" as const,
-  }));
-
-  const storageFallback = new Promise<FastSessionResult>((resolve) => {
-    window.setTimeout(() => {
-      resolve({ hasSession: hasStoredSupabaseSession(), source: "storage" });
-    }, timeoutMs);
-  });
-
-  return Promise.race([clientSession, storageFallback]);
+  if (timeoutMs > 0 && typeof window !== "undefined") {
+    await new Promise((resolve) => window.setTimeout(resolve, Math.min(timeoutMs, 50)));
+  }
+  return { hasSession: hasStoredSupabaseSession(), source: "storage" };
 }
 
 export function hasStoredSupabaseSession(): boolean {
