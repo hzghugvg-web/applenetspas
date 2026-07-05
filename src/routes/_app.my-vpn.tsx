@@ -76,8 +76,8 @@ function MyVpnPage() {
     try {
       await navigator.clipboard.writeText(text);
       toast.success(
-        "Ссылка успешно скопирована",
-        "Вставьте её в браузер. Если это конфиг — вставьте в клиент (Happ, V2rayTun и т.д.)",
+        "Конфигурация скопирована",
+        "Вставьте её в VPN-клиент: Happ, V2rayTun, Streisand и т.д.",
       );
     } catch {
       toast.error("Не удалось скопировать");
@@ -96,7 +96,7 @@ function MyVpnPage() {
         >
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider" style={{ color: "var(--primary-foreground)", opacity: 0.8 }}>
             <ShieldCheck className="h-3.5 w-3.5" />
-            {active ? "Подписка активна" : "Подписка не активна"}
+            {active ? "VPN активен" : "VPN не активен"}
           </div>
           <div className="mt-2 text-2xl font-semibold" style={{ color: "var(--primary-foreground)" }}>
             {active ? fmtRemain(untilMs) : "—"}
