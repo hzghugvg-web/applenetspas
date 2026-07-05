@@ -43,12 +43,11 @@ function extractLinks(body: string, brand: string): string[] {
           if (uri) out.push(uri);
         });
       });
-      if (out.length) {
-        return out.map((line, i) => {
+      const vlessOnly = out.filter((line) => /^vless:\/\//i.test(line));
+      if (vlessOnly.length) {
+        return vlessOnly.map((line, i) => {
           const tag = i === 0 ? brand : brand + "-" + (i + 1);
-          return line.toLowerCase().startsWith("vmess://")
-            ? rewriteVmess(line, tag)
-            : rewriteFragment(line, tag);
+          return rewriteFragment(line, tag);
         });
       }
     } catch {
@@ -60,12 +59,10 @@ function extractLinks(body: string, brand: string): string[] {
   const lines = source
     .split(/\r?\n/)
     .map((l) => l.trim())
-    .filter((l) => /^(vless|vmess|trojan|ss):\/\//i.test(l));
+    .filter((l) => /^vless:\/\//i.test(l));
   return lines.map((line, i) => {
     const tag = i === 0 ? brand : brand + "-" + (i + 1);
-    return line.toLowerCase().startsWith("vmess://")
-      ? rewriteVmess(line, tag)
-      : rewriteFragment(line, tag);
+    return rewriteFragment(line, tag);
   });
 }
 
