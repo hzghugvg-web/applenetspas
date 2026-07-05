@@ -60,6 +60,22 @@ export const Route = createFileRoute("/api/public/sub/$token")({
 
 function rewriteSubscription(body: string, brand: string): string {
   const trimmed = body.trim();
+  // Xray/V2Ray JSON config (array or single object) — convert outbounds to vless://
+  if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      const arr = Array.isArray(parsed) ? parsed : [parsed];
+      const links: string[] = [];
+      let idx = 0;
+      for (const cfg of arr) {
+        const link = xrayJsonToVless(cfg, brand, ++idx, arr.length);
+        if (link) links.push(link);
+      }
+      if (links.length) return links.join("\n");
+    } catch {
+      // fall through
+    }
+  }
   // Try base64-decoded subscription list
   const decoded = tryBase64Decode(trimmed);
   if (decoded && /^(vless|vmess|trojan|ss):\/\//im.test(decoded)) {
@@ -71,6 +87,62 @@ function rewriteSubscription(body: string, brand: string): string {
     return rewriteLines(trimmed, brand);
   }
   return body;
+}
+
+function xrayJsonToVless(cfg: unknown, brand: string, i: number, total: number): string | null {
+  try {
+    const c = cfg as {
+      outbounds?: Array<{
+        protocol?: string;
+        settings?: { vnext?: Array<{ address?: string; port?: number; users?: Array<{ id?: string; encryption?: string; flow?: string }> }> };
+        streamSettings?: {
+          network?: string;
+          security?: string;
+          realitySettings?: { serverName?: string; publicKey?: string; shortId?: string; spiderX?: string; fingerprint?: string };
+          tlsSettings?: { serverName?: string; fingerprint?: string; alpn?: string[] };
+          wsSettings?: { path?: string; headers?: { Host?: string } };
+          grpcSettings?: { serviceName?: string };
+        };
+      }>;
+      remarks?: string;
+    };
+    const ob = (c.outbounds ?? []).find((o) => o?.protocol === "vless");
+    if (!ob) return null;
+    const vnext = ob.settings?.vnext?.[0];
+    const user = vnext?.users?.[0];
+    if (!vnext?.address || !vnext?.port || !user?.id) return null;
+    const stream = ob.streamSettings ?? {};
+    const params = new URLSearchParams();
+    params.set("encryption", user.encryption || "none");
+    const network = stream.network || "tcp";
+    params.set("type", network);
+    const security = stream.security || "none";
+    params.set("security", security);
+    if (user.flow) params.set("flow", user.flow);
+    if (security === "reality" && stream.realitySettings) {
+      const r = stream.realitySettings;
+      if (r.serverName) params.set("sni", r.serverName);
+      if (r.fingerprint) params.set("fp", r.fingerprint);
+      if (r.publicKey) params.set("pbk", r.publicKey);
+      if (r.shortId) params.set("sid", r.shortId);
+      if (r.spiderX) params.set("spx", r.spiderX);
+    } else if (security === "tls" && stream.tlsSettings) {
+      const t = stream.tlsSettings;
+      if (t.serverName) params.set("sni", t.serverName);
+      if (t.fingerprint) params.set("fp", t.fingerprint);
+      if (t.alpn?.length) params.set("alpn", t.alpn.join(","));
+    }
+    if (network === "ws" && stream.wsSettings) {
+      if (stream.wsSettings.path) params.set("path", stream.wsSettings.path);
+      if (stream.wsSettings.headers?.Host) params.set("host", stream.wsSettings.headers.Host);
+    } else if (network === "grpc" && stream.grpcSettings?.serviceName) {
+      params.set("serviceName", stream.grpcSettings.serviceName);
+    }
+    const remarks = c.remarks || (total > 1 ? `${brand}-${i}` : brand);
+    return `vless://${user.id}@${vnext.address}:${vnext.port}?${params.toString()}#${encodeURIComponent(remarks)}`;
+  } catch {
+    return null;
+  }
 }
 
 function tryBase64Decode(s: string): string | null {
