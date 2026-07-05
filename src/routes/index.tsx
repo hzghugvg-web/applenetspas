@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Loader2, Shield } from "lucide-react";
-import { getFastSession } from "@/lib/fast-auth";
+import { getFastSession, hasStoredSupabaseSession } from "@/lib/fast-auth";
 
 export const Route = createFileRoute("/")({
   ssr: false,
@@ -13,6 +13,11 @@ function IndexRoute() {
 
   useEffect(() => {
     let cancelled = false;
+
+    const storedSession = hasStoredSupabaseSession();
+    window.setTimeout(() => {
+      if (!cancelled) void navigate({ to: storedSession ? "/vpn" : "/auth", replace: true });
+    }, 120);
 
     void getFastSession(450).then(({ hasSession }) => {
       if (cancelled) return;

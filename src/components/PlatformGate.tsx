@@ -18,7 +18,7 @@ function detect(): Exclude<Platform, "loading"> {
 }
 
 export function PlatformGate({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<Platform>("loading");
+  const [state, setState] = useState<Platform>("pass");
 
   useEffect(() => {
     setState(detect());
