@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import { WifiOff, X } from "lucide-react";
-import { subscribeSlow } from "@/lib/network-resilience";
+import { dismissSlowHint, subscribeSlow } from "@/lib/network-resilience";
 
 export function SlowNetworkBanner() {
   const [slow, setSlow] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => subscribeSlow(setSlow), []);
+
+  function close() {
+    setDismissed(true);
+    dismissSlowHint();
+  }
 
   if (!slow || dismissed) return null;
   return (
@@ -19,11 +24,23 @@ export function SlowNetworkBanner() {
           Медленная загрузка. Если что-то не открывается — включите VPN.
         </div>
         <button
-          onClick={() => setDismissed(true)}
-          className="tg-press -mr-1 grid h-6 w-6 place-items-center rounded-full text-amber-200/80"
+          type="button"
+          data-allow-touch="true"
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            close();
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            close();
+          }}
+          className="tg-press -mr-1 grid h-8 w-8 shrink-0 place-items-center rounded-full text-amber-200/80"
           aria-label="Закрыть"
+          style={{ touchAction: "manipulation" }}
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-4 w-4" />
         </button>
       </div>
     </div>

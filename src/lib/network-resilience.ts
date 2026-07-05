@@ -5,19 +5,31 @@ const SUPABASE_HOST = (import.meta.env.VITE_SUPABASE_URL || "").replace(/^https?
 const RETRIES = 3;
 const BASE_DELAY = 350; // ms
 const SLOW_MS = 5500;
+const DISMISS_KEY = "ns_slow_network_dismissed_until";
+const DISMISS_MS = 30 * 60 * 1000;
 
 type Listener = (slow: boolean) => void;
 const listeners = new Set<Listener>();
 let slow = false;
 function setSlow(v: boolean) {
-  if (slow === v) return;
-  slow = v;
-  listeners.forEach((l) => l(v));
+  const next = v && !isSlowHintDismissed();
+  if (slow === next) return;
+  slow = next;
+  listeners.forEach((l) => l(next));
 }
 export function subscribeSlow(l: Listener): () => void {
   listeners.add(l);
-  l(slow);
+  l(slow && !isSlowHintDismissed());
   return () => listeners.delete(l);
+}
+
+export function dismissSlowHint() {
+  try {
+    window.sessionStorage.setItem(DISMISS_KEY, String(Date.now() + DISMISS_MS));
+  } catch {
+    // sessionStorage can be unavailable in private modes; local state still hides it.
+  }
+  setSlow(false);
 }
 
 let installed = false;
@@ -70,6 +82,12 @@ export function installNetworkResilience() {
 }
 
 function wait(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
+
+function isSlowHintDismissed() {
+  if (typeof window === "undefined") return false;
+  const until = Number(window.sessionStorage.getItem(DISMISS_KEY) || 0);
+  return Number.isFinite(until) && until > Date.now();
+}
 
 function anySignal(signals: AbortSignal[]): AbortSignal {
   const ctrl = new AbortController();

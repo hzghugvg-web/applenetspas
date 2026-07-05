@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
 import { MobileShell } from "@/components/MobileShell";
+import { getFastSession } from "@/lib/fast-auth";
 
 function titleFor(pathname: string): string {
   if (pathname.startsWith("/my-vpn")) return "Мой VPN";
@@ -24,8 +24,8 @@ function AppLayout() {
 export const Route = createFileRoute("/_app")({
   ssr: false,
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) throw redirect({ to: "/auth" });
+    const { hasSession } = await getFastSession(650);
+    if (!hasSession) throw redirect({ to: "/auth" });
   },
   component: AppLayout,
 });

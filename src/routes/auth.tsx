@@ -1,17 +1,13 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { translateAuthError } from "@/lib/errors";
 import { bootstrapUser } from "@/lib/bootstrap";
 import { alertDialog as toast } from "@/lib/alert";
+import { getFastSession } from "@/lib/fast-auth";
 import { Shield, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
-  ssr: false,
-  beforeLoad: async () => {
-    const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/vpn" });
-  },
   component: AuthPage,
 });
 
@@ -23,6 +19,11 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    void getFastSession(250).then(({ hasSession }) => {
+      if (!cancelled && hasSession) void navigate({ to: "/vpn", replace: true });
+    });
+
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
         sessionStorage.removeItem("ns_is_admin");
@@ -30,7 +31,10 @@ function AuthPage() {
         navigate({ to: "/vpn" });
       }
     });
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
   }, [navigate]);
 
   async function submit(e: React.FormEvent) {
