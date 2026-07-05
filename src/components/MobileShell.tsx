@@ -1,6 +1,6 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { Globe, User, Settings, MessageCircle, ShieldCheck } from "lucide-react";
-import { useEffect, type ReactNode } from "react";
+import { Globe, User, Settings, MessageCircle, ShieldCheck, type LucideIcon } from "lucide-react";
+import { useMemo, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useHasActiveVpn } from "@/hooks/useHasActiveVpn";
@@ -8,7 +8,7 @@ import { BroadcastBanner } from "@/components/BroadcastBanner";
 
 interface Props { title: string; children: ReactNode; }
 type TabTo = "/vpn" | "/my-vpn" | "/support" | "/profile" | "/admin";
-type Tab = { to: TabTo; label: string; icon: typeof Globe };
+type Tab = { to: TabTo; label: string; icon: LucideIcon };
 
 export function MobileShell({ title, children }: Props) {
   const navigate = useNavigate();
@@ -18,19 +18,16 @@ export function MobileShell({ title, children }: Props) {
   const { data: activeVpn } = useHasActiveVpn();
   const showMyVpnTab = !!activeVpn || pathname.startsWith("/my-vpn");
 
-  const tabs: Tab[] = [
-    { to: "/vpn", label: "VPN", icon: Globe },
-    ...(showMyVpnTab ? [{ to: "/my-vpn", label: "Мой VPN", icon: ShieldCheck }] : []),
-    { to: "/support", label: "Поддержка", icon: MessageCircle },
-    { to: "/profile", label: "Настройки", icon: User },
-    ...(showAdminTab ? [{ to: "/admin", label: "Админ", icon: Settings }] : []),
-  ];
-
-  useEffect(() => {
-    for (const tab of tabs) {
-      void navigate({ to: tab.to, preload: true });
-    }
-  }, [navigate, tabs]);
+  const tabs = useMemo<Tab[]>(() => {
+    const items: Tab[] = [{ to: "/vpn", label: "VPN", icon: Globe }];
+    if (showMyVpnTab) items.push({ to: "/my-vpn", label: "Мой VPN", icon: ShieldCheck });
+    items.push(
+      { to: "/support", label: "Поддержка", icon: MessageCircle },
+      { to: "/profile", label: "Настройки", icon: User },
+    );
+    if (showAdminTab) items.push({ to: "/admin", label: "Админ", icon: Settings });
+    return items;
+  }, [showAdminTab, showMyVpnTab]);
 
   function openTab(to: TabTo) {
     if (pathname.startsWith(to)) return;
