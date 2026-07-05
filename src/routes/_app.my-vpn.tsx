@@ -3,16 +3,19 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { alertDialog as toast } from "@/lib/alert";
+import { getMyIssuedLinks } from "@/lib/vpn.functions";
 import { CalendarClock, Clock, Copy, ShieldCheck, Hourglass } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/_app/my-vpn")({ component: MyVpnPage });
 
 type Profile = { subscription_from: string | null; subscription_until: string | null };
-type Config = { id: string; vless_url: string; issued_at: string; direction_id: string | null };
+type Config = { id: string; link: string; issuedAt: string; directionId: string | null };
 type Direction = { id: string; name: string; flag: string | null };
 
 function MyVpnPage() {
   const qc = useQueryClient();
+  const getLinks = useServerFn(getMyIssuedLinks);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
@@ -24,12 +27,12 @@ function MyVpnPage() {
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return { profile: null as Profile | null, configs: [] as Config[], dirs: {} as Record<string, Direction> };
-      const [{ data: p }, { data: cs }] = await Promise.all([
+      const [{ data: p }, issued] = await Promise.all([
         supabase.from("profiles").select("subscription_from,subscription_until").eq("id", u.user.id).maybeSingle(),
-        supabase.from("issued_configs").select("id,vless_url,issued_at,direction_id").eq("user_id", u.user.id).order("issued_at", { ascending: false }),
+        getLinks(),
       ]);
-      const list = (cs ?? []) as Config[];
-      const dirIds = Array.from(new Set(list.map((c) => c.direction_id).filter(Boolean))) as string[];
+      const list = (issued.configs ?? []) as Config[];
+      const dirIds = Array.from(new Set(list.map((c) => c.directionId).filter(Boolean))) as string[];
       let dirs: Record<string, Direction> = {};
       if (dirIds.length) {
         const { data: ds } = await supabase.from("directions").select("id,name,flag").in("id", dirIds);
@@ -73,8 +76,8 @@ function MyVpnPage() {
     try {
       await navigator.clipboard.writeText(text);
       toast.success(
-        "Ссылка успешно скопирована",
-        "Вставьте её в браузер. Если это конфиг — вставьте в клиент (Happ, V2rayTun и т.д.)",
+        "Конфигурация скопирована",
+        "Вставьте её в VPN-клиент: Happ, V2rayTun, Streisand и т.д.",
       );
     } catch {
       toast.error("Не удалось скопировать");
@@ -93,7 +96,7 @@ function MyVpnPage() {
         >
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider" style={{ color: "var(--primary-foreground)", opacity: 0.8 }}>
             <ShieldCheck className="h-3.5 w-3.5" />
-            {active ? "Подписка активна" : "Подписка не активна"}
+            {active ? "VPN активен" : "VPN не активен"}
           </div>
           <div className="mt-2 text-2xl font-semibold" style={{ color: "var(--primary-foreground)" }}>
             {active ? fmtRemain(untilMs) : "—"}
@@ -136,18 +139,18 @@ function MyVpnPage() {
             </div>
           )}
           {configs.map((c) => {
-            const dir = c.direction_id ? dirs[c.direction_id] : null;
+            const dir = c.directionId ? dirs[c.directionId] : null;
             return (
               <div key={c.id} className="space-y-2 rounded-2xl border border-border bg-card p-3">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{dir?.flag ?? "🌐"}</span>
                   <span className="text-sm font-medium">{dir?.name ?? "Направление"}</span>
                   <span className="ml-auto text-[10px] text-muted-foreground">
-                    {new Date(c.issued_at).toLocaleString("ru-RU")}
+                    {new Date(c.issuedAt).toLocaleString("ru-RU")}
                   </span>
                 </div>
-                <div className="break-all rounded-xl bg-muted p-2 text-[11px]">{c.vless_url}</div>
-                <button onClick={() => copy(c.vless_url)} className="tg-btn-ghost w-full">
+                <div className="break-all rounded-xl bg-muted p-2 text-[11px]">{c.link}</div>
+                <button onClick={() => copy(c.link)} className="tg-btn-ghost w-full">
                   <Copy className="h-4 w-4" /> Копировать
                 </button>
               </div>

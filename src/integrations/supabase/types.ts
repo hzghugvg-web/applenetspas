@@ -515,6 +515,10 @@ export type Database = {
         Args: { _action: string; _details: Json; _target: string }
         Returns: undefined
       }
+      set_own_issued_config_vless: {
+        Args: { _config_id: string; _vless_url: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user"

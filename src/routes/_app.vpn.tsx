@@ -231,7 +231,7 @@ function VpnPage() {
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium">VPN активен</div>
               <div className="text-[12px] text-muted-foreground">
-                Ссылка и срок — во вкладке «Мой VPN»
+                Конфигурация и срок — во вкладке «Мой VPN»
               </div>
             </div>
             <ArrowRight className="h-4 w-4 text-muted-foreground" />

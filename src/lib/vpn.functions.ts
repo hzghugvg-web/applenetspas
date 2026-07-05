@@ -43,12 +43,11 @@ function extractLinks(body: string, brand: string): string[] {
           if (uri) out.push(uri);
         });
       });
-      if (out.length) {
-        return out.map((line, i) => {
+      const vlessOnly = out.filter((line) => /^vless:\/\//i.test(line));
+      if (vlessOnly.length) {
+        return vlessOnly.map((line, i) => {
           const tag = i === 0 ? brand : brand + "-" + (i + 1);
-          return line.toLowerCase().startsWith("vmess://")
-            ? rewriteVmess(line, tag)
-            : rewriteFragment(line, tag);
+          return rewriteFragment(line, tag);
         });
       }
     } catch {
@@ -60,12 +59,10 @@ function extractLinks(body: string, brand: string): string[] {
   const lines = source
     .split(/\r?\n/)
     .map((l) => l.trim())
-    .filter((l) => /^(vless|vmess|trojan|ss):\/\//i.test(l));
+    .filter((l) => /^vless:\/\//i.test(l));
   return lines.map((line, i) => {
     const tag = i === 0 ? brand : brand + "-" + (i + 1);
-    return line.toLowerCase().startsWith("vmess://")
-      ? rewriteVmess(line, tag)
-      : rewriteFragment(line, tag);
+    return rewriteFragment(line, tag);
   });
 }
 
@@ -182,9 +179,27 @@ export const issueVpnConfig = createServerFn({ method: "POST" })
       }
     }
 
+    const firstLink = links[0] ?? null;
+    if (firstLink) {
+      const { data: latest } = await context.supabase
+        .from("issued_configs")
+        .select("id")
+        .eq("user_id", context.userId)
+        .eq("upstream_url", row.upstream_url)
+        .order("issued_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (latest?.id) {
+        await (context.supabase as any).rpc("set_own_issued_config_vless", {
+          _config_id: latest.id,
+          _vless_url: firstLink,
+        });
+      }
+    }
+
     return {
-      links: links.slice(0, 1),
-      subscriptionUrl: row.vless_url,
+      links: firstLink ? [firstLink] : [],
+      subscriptionUrl: firstLink ?? row.vless_url,
     };
   });
 
@@ -193,7 +208,7 @@ export const getMyIssuedLinks = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: rows, error } = await context.supabase
       .from("issued_configs")
-      .select("upstream_url, issued_at")
+      .select("id, vless_url, upstream_url, issued_at, direction_id")
       .eq("user_id", context.userId)
       .order("issued_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -207,26 +222,40 @@ export const getMyIssuedLinks = createServerFn({ method: "GET" })
     const raw = (setting?.value ?? null) as unknown;
     if (typeof raw === "string" && raw.trim()) brand = raw.trim();
 
-    const all: string[] = [];
+    const configs: Array<{ id: string; link: string; issuedAt: string; directionId: string | null }> = [];
     for (const row of rows ?? []) {
-      const url = (row as any).upstream_url as string | null;
+      const url = ((row as any).upstream_url ?? (row as any).vless_url) as string | null;
       if (!url) continue;
+      let link: string | null = null;
       if (/^(vless|vmess|trojan|ss):\/\//i.test(url)) {
         const ex = extractLinks(url, brand);
-        if (ex[0]) all.push(ex[0]);
+        if (ex[0]) link = ex[0];
       } else {
         try {
           const r = await fetch(url, { headers: { "User-Agent": "NetSpas/1.0" } });
           if (r.ok) {
             const text = await r.text();
             const ex = extractLinks(text, brand);
-            if (ex[0]) all.push(ex[0]);
+            if (ex[0]) link = ex[0];
           }
         } catch {
           // skip
         }
       }
-      if (all.length >= 1) break;
+      if (link) {
+        if (!/^(vless|vmess|trojan|ss):\/\//i.test(((row as any).vless_url ?? "") as string)) {
+          await (context.supabase as any).rpc("set_own_issued_config_vless", {
+            _config_id: (row as any).id,
+            _vless_url: link,
+          });
+        }
+        configs.push({
+          id: (row as any).id,
+          link,
+          issuedAt: (row as any).issued_at,
+          directionId: (row as any).direction_id ?? null,
+        });
+      }
     }
-    return { links: all.slice(0, 1) };
+    return { links: configs.map((c) => c.link), configs };
   });
