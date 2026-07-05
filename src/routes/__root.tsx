@@ -113,7 +113,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var v=localStorage.getItem('ns_theme');var t=(v==='light'||v==='neon')?v:'dark';document.documentElement.dataset.theme=t;document.documentElement.classList.toggle('dark',t!=='light')}catch(e){}",
+              "try{var m=localStorage.getItem('ns_mode');var t=localStorage.getItem('ns_theme');var legacy=t;if(m!=='light'&&m!=='dark'){m=(legacy==='light')?'light':'dark';}if(t!=='midnight'&&t!=='sunset'&&t!=='forest'&&t!=='candy'){t=(legacy==='neon')?'candy':'midnight';}document.documentElement.dataset.mode=m;document.documentElement.dataset.theme=t;document.documentElement.classList.toggle('dark',m==='dark');}catch(e){}",
           }}
         />
         <HeadContent />
