@@ -71,6 +71,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          delivery_style: string
           email: string | null
           id: string
           link: string | null
@@ -81,6 +82,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
+          delivery_style?: string
           email?: string | null
           id?: string
           link?: string | null
@@ -91,6 +93,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
+          delivery_style?: string
           email?: string | null
           id?: string
           link?: string | null
@@ -439,6 +442,17 @@ export type Database = {
             }
             Returns: string
           }
+        | {
+            Args: {
+              _delivery_style?: string
+              _email?: string
+              _link?: string
+              _message: string
+              _title?: string
+              _website?: string
+            }
+            Returns: string
+          }
       admin_set_subscription_dates: {
         Args: { _from: string; _target: string; _until: string }
         Returns: undefined
@@ -447,17 +461,30 @@ export type Database = {
         Args: { _block: boolean; _target: string }
         Returns: undefined
       }
-      admin_update_broadcast: {
-        Args: {
-          _email?: string
-          _id: string
-          _link?: string
-          _message: string
-          _title?: string
-          _website?: string
-        }
-        Returns: undefined
-      }
+      admin_update_broadcast:
+        | {
+            Args: {
+              _email?: string
+              _id: string
+              _link?: string
+              _message: string
+              _title?: string
+              _website?: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _delivery_style?: string
+              _email?: string
+              _id: string
+              _link?: string
+              _message: string
+              _title?: string
+              _website?: string
+            }
+            Returns: undefined
+          }
       admin_update_complaint: {
         Args: {
           _id: string
