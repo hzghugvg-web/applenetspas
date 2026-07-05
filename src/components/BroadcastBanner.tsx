@@ -251,12 +251,6 @@ export function BroadcastBanner() {
               <div className="h-px w-full bg-border" />
               <div className="flex">
                 <button
-                  onClick={() => setOpened(null)}
-                  className="h-11 flex-1 border-r border-border text-[15px] font-medium text-muted-foreground tg-press"
-                >
-                  Закрыть
-                </button>
-                <button
                   onClick={() => {
                     const b = opened;
                     setOpened(null);
@@ -264,7 +258,7 @@ export function BroadcastBanner() {
                   }}
                   className="h-11 flex-1 text-[15px] font-semibold text-primary tg-press"
                 >
-                  Прочитано
+                  Хорошо
                 </button>
               </div>
             </motion.div>
