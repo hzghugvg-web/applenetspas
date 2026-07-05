@@ -15,7 +15,7 @@ function setSlow(v: boolean) {
   const next = v && !isSlowHintDismissed();
   if (slow === next) return;
   slow = next;
-  listeners.forEach((l) => l(v));
+  listeners.forEach((l) => l(next));
 }
 export function subscribeSlow(l: Listener): () => void {
   listeners.add(l);
