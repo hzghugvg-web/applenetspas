@@ -130,10 +130,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
-    const v = localStorage.getItem("ns_theme");
-    const saved = (v === "light" || v === "neon") ? v : "dark";
-    document.documentElement.dataset.theme = saved;
-    document.documentElement.classList.toggle("dark", saved !== "light");
+    import("@/lib/theme").then((m) => m.initThemeFromStorage());
   }, []);
 
   useEffect(() => {
