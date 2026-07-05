@@ -58,13 +58,13 @@ export function MobileShell({ title, children }: Props) {
           <div className="space-y-3 pb-2">{children}</div>
         </div>
       </main>
-      <div className="safe-bottom shrink-0" style={{ background: "var(--app-bg)" }}>
-        <nav
-          className="mx-2 mb-[22px] grid rounded-2xl glass"
-          style={{
-            gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
-          }}
-        >
+      <nav
+        className="mx-2 grid shrink-0 rounded-2xl glass"
+        style={{
+          gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
+          marginBottom: "max(8px, env(safe-area-inset-bottom))",
+        }}
+      >
         {tabs.map(({ to, label, icon: Icon }) => {
           const active = pathname.startsWith(to);
           return (
@@ -97,8 +97,7 @@ export function MobileShell({ title, children }: Props) {
             </button>
           );
         })}
-        </nav>
-      </div>
+      </nav>
     </div>
   );
 }
