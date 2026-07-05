@@ -55,6 +55,7 @@ type BroadcastRow = {
   email: string | null;
   website: string | null;
   created_at: string;
+  delivery_style?: "top" | "imessage";
 };
 
 function BroadcastTab() {
@@ -63,6 +64,7 @@ function BroadcastTab() {
   const [link, setLink] = useState("");
   const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
+  const [deliveryStyle, setDeliveryStyle] = useState<"top" | "imessage">("imessage");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [list, setList] = useState<BroadcastRow[]>([]);
@@ -70,7 +72,7 @@ function BroadcastTab() {
   async function load() {
     const { data } = await (supabase as any)
       .from("broadcasts")
-      .select("id,message,title,link,email,website,created_at")
+      .select("id,message,title,link,email,website,created_at,delivery_style")
       .order("created_at", { ascending: false })
       .limit(30);
     setList((data ?? []) as BroadcastRow[]);
@@ -79,6 +81,7 @@ function BroadcastTab() {
 
   function resetForm() {
     setTitle(""); setMessage(""); setLink(""); setEmail(""); setWebsite("");
+    setDeliveryStyle("imessage");
     setEditingId(null);
   }
 
@@ -89,6 +92,7 @@ function BroadcastTab() {
     setLink(b.link ?? "");
     setEmail(b.email ?? "");
     setWebsite(b.website ?? "");
+    setDeliveryStyle((b.delivery_style ?? "imessage") as "top" | "imessage");
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -102,6 +106,7 @@ function BroadcastTab() {
       _link: link.trim() || null,
       _email: email.trim() || null,
       _website: website.trim() || null,
+      _delivery_style: deliveryStyle,
     };
     const { error } = editingId
       ? await (supabase as any).rpc("admin_update_broadcast", { _id: editingId, ...payload })
@@ -167,6 +172,31 @@ function BroadcastTab() {
           placeholder="Почта (необязательно) — например netspas@internet.ru"
           className="h-11 w-full rounded-xl border border-border bg-input px-3 text-sm outline-none focus:border-primary"
         />
+        <div className="space-y-1.5">
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Способ показа</div>
+          <div className="grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
+            {([
+              ["top", "Сверху плашкой"],
+              ["imessage", "По центру (iPhone)"],
+            ] as const).map(([k, l]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setDeliveryStyle(k)}
+                className={`tg-press rounded-full py-1.5 text-[12px] font-medium transition-colors ${
+                  deliveryStyle === k ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                }`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            {deliveryStyle === "top"
+              ? "Появится тонкой плашкой сверху — пользователь нажмёт и прочитает."
+              : "Откроется по центру как уведомление на iPhone — нужно нажать «Прочитано»."}
+          </p>
+        </div>
         <button onClick={submit} disabled={saving || !message.trim()} className="tg-btn w-full">
           <Send className="h-4 w-4" />
           {saving ? "Сохранение..." : editingId ? "Сохранить изменения" : "Отправить всем"}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Megaphone, Copy, BookOpen, Globe, Mail } from "lucide-react";
+import { Megaphone, Copy, BookOpen, Mail } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { alertDialog } from "@/lib/alert";
 
@@ -12,6 +12,7 @@ type Broadcast = {
   email: string | null;
   website: string | null;
   created_at: string;
+  delivery_style: "top" | "imessage";
 };
 
 // Module-level cache keeps the banner state alive across route unmounts,
@@ -32,6 +33,7 @@ export function BroadcastBanner() {
   const [unread, setUnread] = useState<Broadcast[]>(cachedUnread);
   const [dismissing, setDismissing] = useState<string | null>(null);
   const [opened, setOpened] = useState<Broadcast | null>(null);
+  const [seenIds, setSeenIds] = useState<Set<string>>(() => new Set());
 
   async function load() {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -39,7 +41,7 @@ export function BroadcastBanner() {
     if (!user) { setCache([]); return; }
     const { data: bs } = await (supabase as any)
       .from("broadcasts")
-      .select("id,message,title,link,email,website,created_at")
+      .select("id,message,title,link,email,website,created_at,delivery_style")
       .order("created_at", { ascending: false })
       .limit(20);
     if (!bs?.length) { setCache([]); return; }
@@ -80,7 +82,23 @@ export function BroadcastBanner() {
     }, 220);
   }
 
-  const current = unread[0];
+  const topOnes = unread.filter((b) => (b.delivery_style ?? "imessage") === "top");
+  const imessageOnes = unread.filter((b) => (b.delivery_style ?? "imessage") === "imessage");
+  const current = topOnes[0];
+
+  // Auto-open first iMessage-style broadcast as a centered modal.
+  useEffect(() => {
+    if (opened) return;
+    const next = imessageOnes.find((b) => !seenIds.has(b.id));
+    if (next) {
+      setOpened(next);
+      setSeenIds((prev) => {
+        const s = new Set(prev);
+        s.add(next.id);
+        return s;
+      });
+    }
+  }, [imessageOnes, opened, seenIds]);
 
   async function copyLinkValue(url: string) {
     try {
@@ -213,28 +231,13 @@ export function BroadcastBanner() {
                   </button>
                 )}
                 {opened.website && (
-                  <div className="mt-2 grid grid-cols-[1fr_auto] gap-2">
-                    <a
-                      href={/^https?:\/\//.test(opened.website) ? opened.website : `https://${opened.website}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        copyWebsite(opened.website!);
-                      }}
-                      className="tg-press flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium"
-                      style={{ background: "var(--gradient-primary)", color: "var(--primary-foreground)" }}
-                    >
-                      <Globe className="h-4 w-4" /> Открыть сайт
-                    </a>
-                    <button
-                      onClick={() => copyWebsite(opened.website!)}
-                      className="tg-press flex items-center justify-center rounded-xl border border-border bg-muted px-3 text-[13px] font-medium text-foreground"
-                      aria-label="Копировать сайт"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => copyWebsite(opened.website!)}
+                    className="tg-press mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium"
+                    style={{ background: "var(--gradient-primary)", color: "var(--primary-foreground)" }}
+                  >
+                    <Copy className="h-4 w-4" /> Копировать сайт
+                  </button>
                 )}
                 {opened.email && (
                   <a
