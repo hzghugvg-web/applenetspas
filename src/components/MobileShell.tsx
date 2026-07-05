@@ -1,27 +1,41 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Globe, User, Settings, MessageCircle, ShieldCheck } from "lucide-react";
-import { type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useHasActiveVpn } from "@/hooks/useHasActiveVpn";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
 
 interface Props { title: string; children: ReactNode; }
+type TabTo = "/vpn" | "/my-vpn" | "/support" | "/profile" | "/admin";
+type Tab = { to: TabTo; label: string; icon: typeof Globe };
 
 export function MobileShell({ title, children }: Props) {
+  const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
   const showAdminTab = isAdmin === true || (pathname.startsWith("/admin") && adminLoading);
   const { data: activeVpn } = useHasActiveVpn();
   const showMyVpnTab = !!activeVpn || pathname.startsWith("/my-vpn");
 
-  const tabs = [
+  const tabs: Tab[] = [
     { to: "/vpn", label: "VPN", icon: Globe },
     ...(showMyVpnTab ? [{ to: "/my-vpn", label: "Мой VPN", icon: ShieldCheck }] : []),
     { to: "/support", label: "Поддержка", icon: MessageCircle },
     { to: "/profile", label: "Настройки", icon: User },
     ...(showAdminTab ? [{ to: "/admin", label: "Админ", icon: Settings }] : []),
   ];
+
+  useEffect(() => {
+    for (const tab of tabs) {
+      void navigate({ to: tab.to, preload: true });
+    }
+  }, [navigate, tabs]);
+
+  function openTab(to: TabTo) {
+    if (pathname.startsWith(to)) return;
+    void navigate({ to });
+  }
 
   return (
     <div
@@ -55,10 +69,17 @@ export function MobileShell({ title, children }: Props) {
         {tabs.map(({ to, label, icon: Icon }) => {
           const active = pathname.startsWith(to);
           return (
-            <Link
+            <button
               key={to}
-              to={to}
-              preload="render"
+              type="button"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                openTab(to);
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                openTab(to);
+              }}
               className={`tg-press relative flex h-[62px] flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors ${
                 active ? "text-foreground" : "text-muted-foreground"
               }`}
@@ -74,7 +95,7 @@ export function MobileShell({ title, children }: Props) {
               )}
               <Icon className="relative z-10 h-[22px] w-[22px]" strokeWidth={2} />
               <span className="relative z-10 tracking-tight">{label}</span>
-            </Link>
+            </button>
           );
         })}
       </nav>
