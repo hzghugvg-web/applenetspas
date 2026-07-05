@@ -26,8 +26,9 @@ function VpnPage() {
 
   const { data: directions = [] } = useQuery<Direction[]>({
     queryKey: ["vpn-directions"],
-    staleTime: 30_000,
-    refetchInterval: 30_000,
+    staleTime: 3_000,
+    refetchInterval: 5_000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       await supabase.rpc("cleanup_expired_vless_links");
       const { data: availableLinks } = await supabase

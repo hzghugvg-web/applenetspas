@@ -4,10 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { FaqList } from "@/components/FaqList";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { useTheme, THEMES, type ColorMode, type DesignTheme } from "@/lib/theme";
+import { useTheme, THEMES, MOTIONS, type ColorMode, type DesignTheme, type Motion } from "@/lib/theme";
 import {
   LogOut, Trash2, KeyRound, Loader2, Moon, Sun, Mail, HelpCircle,
-  Settings as SettingsIcon, X, Palette, ChevronRight, Check,
+  Settings as SettingsIcon, X, Palette, ChevronRight, Check, Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
@@ -146,6 +146,44 @@ function themePreviewGradient(t: DesignTheme): string {
   }
 }
 
+function MotionGrid({ current, onChange }: { current: Motion; onChange: (m: Motion) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {MOTIONS.map((m) => {
+        const active = current === m.id;
+        return (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => onChange(m.id)}
+            className="tg-press flex flex-col gap-0.5 rounded-xl border p-2.5 text-left transition-colors"
+            style={{
+              borderColor: active
+                ? "color-mix(in srgb, var(--primary) 65%, transparent)"
+                : "var(--border)",
+              background: active ? "color-mix(in srgb, var(--primary) 8%, transparent)" : "transparent",
+              boxShadow: active ? "0 6px 20px -12px var(--primary)" : "none",
+            }}
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="truncate text-[12px] font-semibold text-foreground">{m.label}</span>
+              {active && (
+                <span
+                  className="ml-auto grid h-4 w-4 place-items-center rounded-full"
+                  style={{ background: "var(--gradient-primary)", color: "var(--primary-foreground)" }}
+                >
+                  <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                </span>
+              )}
+            </div>
+            <div className="truncate text-[10px] leading-tight text-muted-foreground">{m.hint}</div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/_app/profile")({ component: ProfilePage });
 
 function ProfilePage() {
@@ -161,7 +199,7 @@ function ProfilePage() {
   const [deleting, setDeleting] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
 
-  const { mode, theme, setMode, setTheme } = useTheme();
+  const { mode, theme, motion, setMode, setTheme, setMotion } = useTheme();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -287,6 +325,15 @@ function ProfilePage() {
               />
               <div className="px-3 pb-3 pt-1">
                 <ThemeGrid current={theme} onChange={setTheme} />
+              </div>
+              <SettingsRow
+                iconBg="linear-gradient(135deg,#22D3EE,#7C6BFF)"
+                icon={Zap}
+                label="Анимации"
+                sub={MOTIONS.find((m) => m.id === motion)?.hint ?? ""}
+              />
+              <div className="px-3 pb-3 pt-1">
+                <MotionGrid current={motion} onChange={setMotion} />
               </div>
             </SettingsGroup>
 
