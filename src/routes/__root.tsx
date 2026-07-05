@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { PlatformGate } from "@/components/PlatformGate";
 import { AlertHost } from "@/lib/alert";
 import { installNetworkResilience } from "@/lib/network-resilience";
+import { supabase } from "@/integrations/supabase/client";
 
 installNetworkResilience();
 
@@ -131,10 +132,29 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
 
   useEffect(() => {
     import("@/lib/theme").then((m) => m.initThemeFromStorage());
   }, []);
+
+  // Reset cached data whenever the signed-in user changes so a new account
+  // doesn't see the previous user's VPN / profile data until a manual reload.
+  useEffect(() => {
+    let currentUserId: string | null | undefined;
+    supabase.auth.getSession().then(({ data }) => {
+      currentUserId = data.session?.user?.id ?? null;
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      const nextUserId = session?.user?.id ?? null;
+      if (nextUserId === currentUserId) return;
+      currentUserId = nextUserId;
+      queryClient.clear();
+      router.invalidate();
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [queryClient, router]);
 
   useEffect(() => {
     const isProtectedTouchTarget = (target: EventTarget | null) => {
