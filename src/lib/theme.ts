@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 export type ColorMode = "light" | "dark";
 export type DesignTheme = "midnight" | "sunset" | "forest" | "candy";
@@ -73,6 +73,3 @@ export function useTheme() {
 export function initThemeFromStorage() {
   applyTheme(readMode(), readTheme());
 }
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _keepUseState = useState;
