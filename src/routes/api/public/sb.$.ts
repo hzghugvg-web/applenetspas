@@ -34,7 +34,9 @@ const HOP_BY_HOP = new Set([
 ]);
 
 function buildTargetUrl(request: Request, splat: string | undefined): string {
-  const base = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
+  const projectId = process.env.SUPABASE_PROJECT_ID || process.env.VITE_SUPABASE_PROJECT_ID || "";
+  const configuredBase = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
+  const base = projectId ? `https://${projectId}.supabase.co` : configuredBase;
   if (!base) throw new Error("SUPABASE_URL not configured");
   const path = splat ? `/${splat}` : "";
   const search = new URL(request.url).search;

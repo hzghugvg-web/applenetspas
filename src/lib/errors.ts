@@ -1,6 +1,8 @@
 export function translateAuthError(msg?: string | null): string {
-  if (!msg) return "Произошла ошибка";
+  if (!msg || msg === "{}" || msg === "[object Object]") return "Не удалось подключиться к серверу. Попробуйте ещё раз.";
   const m = msg.toLowerCase();
+  if (m.includes("failed to fetch") || m.includes("fetch is aborted") || m.includes("aborterror") || m.includes("upstream_unreachable")) return "Не удалось подключиться к серверу. Попробуйте ещё раз.";
+  if (m.includes("lovable error") || m.includes("access denied")) return "Сервер временно недоступен. Попробуйте ещё раз.";
   if (m.includes("invalid login")) return "Неверный email или пароль";
   if (m.includes("user already") || m.includes("already registered")) return "Пользователь с таким email уже существует";
   if (m.includes("password") && m.includes("weak")) return "Слишком простой пароль";
