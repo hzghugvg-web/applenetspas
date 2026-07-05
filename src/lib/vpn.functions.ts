@@ -182,9 +182,27 @@ export const issueVpnConfig = createServerFn({ method: "POST" })
       }
     }
 
+    const firstLink = links[0] ?? null;
+    if (firstLink) {
+      const { data: latest } = await context.supabase
+        .from("issued_configs")
+        .select("id")
+        .eq("user_id", context.userId)
+        .eq("upstream_url", row.upstream_url)
+        .order("issued_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (latest?.id) {
+        await (context.supabase as any).rpc("set_own_issued_config_vless", {
+          _config_id: latest.id,
+          _vless_url: firstLink,
+        });
+      }
+    }
+
     return {
-      links: links.slice(0, 1),
-      subscriptionUrl: row.vless_url,
+      links: firstLink ? [firstLink] : [],
+      subscriptionUrl: firstLink ?? row.vless_url,
     };
   });
 
@@ -228,6 +246,12 @@ export const getMyIssuedLinks = createServerFn({ method: "GET" })
         }
       }
       if (link) {
+        if (!/^(vless|vmess|trojan|ss):\/\//i.test(((row as any).vless_url ?? "") as string)) {
+          await (context.supabase as any).rpc("set_own_issued_config_vless", {
+            _config_id: (row as any).id,
+            _vless_url: link,
+          });
+        }
         configs.push({
           id: (row as any).id,
           link,
