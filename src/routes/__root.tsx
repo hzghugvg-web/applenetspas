@@ -131,6 +131,7 @@ function RootComponent() {
 
   useEffect(() => {
     import("@/lib/theme").then((m) => m.initThemeFromStorage());
+    import("@/lib/network-resilience").then((m) => m.installNetworkResilience());
   }, []);
 
   useEffect(() => {
