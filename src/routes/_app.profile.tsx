@@ -4,9 +4,147 @@ import { supabase } from "@/integrations/supabase/client";
 import { FaqList } from "@/components/FaqList";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { LogOut, Trash2, KeyRound, Loader2, Moon, Sun, Mail, Sparkles, HelpCircle, Settings as SettingsIcon, X } from "lucide-react";
+import { useTheme, THEMES, type ColorMode, type DesignTheme } from "@/lib/theme";
+import {
+  LogOut, Trash2, KeyRound, Loader2, Moon, Sun, Mail, HelpCircle,
+  Settings as SettingsIcon, X, Palette, ChevronRight, Check,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
-type Theme = "dark" | "light" | "neon";
+function SettingsGroup({
+  title, tone = "default", children,
+}: { title: string; tone?: "default" | "danger"; children: ReactNode }) {
+  return (
+    <section className="space-y-2">
+      <div
+        className={`px-2 text-[11px] uppercase tracking-wider ${tone === "danger" ? "text-destructive/80" : "text-muted-foreground"}`}
+      >
+        {title}
+      </div>
+      <div
+        className="overflow-hidden rounded-2xl border"
+        style={{
+          background: "var(--card-solid)",
+          borderColor: "var(--border)",
+          boxShadow: "var(--shadow-card)",
+        }}
+      >
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SettingsRow({
+  icon: Icon, iconBg, label, sub, right, onClick, labelClassName,
+}: {
+  icon: LucideIcon;
+  iconBg: string;
+  label: string;
+  sub?: string;
+  right?: ReactNode;
+  onClick?: () => void;
+  labelClassName?: string;
+}) {
+  const Tag = onClick ? "button" : "div";
+  return (
+    <Tag
+      onClick={onClick}
+      className={`tg-press flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors ${onClick ? "hover:bg-muted/40" : ""}`}
+      style={{ borderTop: "1px solid color-mix(in srgb, var(--border) 45%, transparent)" }}
+    >
+      <div
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
+        style={{ background: iconBg }}
+      >
+        <Icon className="h-4 w-4 text-white" strokeWidth={2.4} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className={`truncate text-[14px] font-medium ${labelClassName ?? "text-foreground"}`}>{label}</div>
+        {sub && <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{sub}</div>}
+      </div>
+      {right}
+    </Tag>
+  );
+}
+
+function ModePill({ mode, onChange }: { mode: ColorMode; onChange: (m: ColorMode) => void }) {
+  return (
+    <div className="flex items-center gap-0.5 rounded-full bg-muted p-0.5">
+      {(["light", "dark"] as const).map((k) => {
+        const active = mode === k;
+        const Icon = k === "light" ? Sun : Moon;
+        return (
+          <button
+            key={k}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onChange(k); }}
+            className={`grid h-7 w-9 place-items-center rounded-full transition-colors ${
+              active ? "text-primary-foreground" : "text-muted-foreground"
+            }`}
+            style={active ? { background: "var(--gradient-primary)" } : undefined}
+            aria-label={k === "light" ? "Светлая" : "Тёмная"}
+          >
+            <Icon className="h-3.5 w-3.5" />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ThemeGrid({ current, onChange }: { current: DesignTheme; onChange: (t: DesignTheme) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {THEMES.map((t) => {
+        const active = current === t.id;
+        const swatchGradient = themePreviewGradient(t.id);
+        return (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => onChange(t.id)}
+            className="tg-press relative flex flex-col gap-2 overflow-hidden rounded-xl border p-2 text-left transition-colors"
+            style={{
+              borderColor: active
+                ? "color-mix(in srgb, var(--primary) 65%, transparent)"
+                : "var(--border)",
+              background: active ? "color-mix(in srgb, var(--primary) 8%, transparent)" : "transparent",
+              boxShadow: active ? "0 6px 20px -12px var(--primary)" : "none",
+            }}
+          >
+            <div
+              className="relative h-14 w-full overflow-hidden rounded-lg"
+              style={{ background: swatchGradient }}
+            >
+              <div className="absolute inset-2 rounded-md bg-white/15 backdrop-blur-[2px]" />
+              <div className="absolute right-2 top-2 h-1.5 w-6 rounded-full bg-white/40" />
+              {active && (
+                <div className="absolute right-1.5 bottom-1.5 grid h-5 w-5 place-items-center rounded-full bg-white text-black shadow">
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-[12px] font-semibold text-foreground">{t.label}</div>
+              <div className="truncate text-[10px] text-muted-foreground">{t.hint}</div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function themePreviewGradient(t: DesignTheme): string {
+  switch (t) {
+    case "midnight": return "linear-gradient(135deg,#7C6BFF 0%,#5EE7DF 100%)";
+    case "sunset":   return "linear-gradient(135deg,#FB7185 0%,#F59E0B 100%)";
+    case "forest":   return "linear-gradient(135deg,#10B981 0%,#22D3EE 100%)";
+    case "candy":    return "linear-gradient(135deg,#EC4899 0%,#8B5CF6 45%,#00E7FF 100%)";
+  }
+}
 
 export const Route = createFileRoute("/_app/profile")({ component: ProfilePage });
 
@@ -17,30 +155,20 @@ function ProfilePage() {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [theme, setTheme] = useState<Theme>("dark");
   const [tab, setTab] = useState<"settings" | "faq">("settings");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+
+  const { mode, theme, setMode, setTheme } = useTheme();
 
   useEffect(() => {
-    const v = localStorage.getItem("ns_theme");
-    const saved: Theme = (v === "light" || v === "neon") ? v : "dark";
-    setTheme(saved);
-    document.documentElement.dataset.theme = saved;
-    document.documentElement.classList.toggle("dark", saved !== "light");
     supabase.auth.getSession().then(({ data }) => {
       setEmail(data.session?.user.email ?? "");
       setEmailLoading(false);
     });
   }, []);
-
-  function changeTheme(next: Theme) {
-    setTheme(next);
-    localStorage.setItem("ns_theme", next);
-    document.documentElement.dataset.theme = next;
-    document.documentElement.classList.toggle("dark", next !== "light");
-  }
 
   async function updatePassword() {
     if (!oldPassword) { toast.error("Введите текущий пароль"); return; }
@@ -54,6 +182,7 @@ function ProfilePage() {
       if (error) throw error;
       setOldPassword("");
       setNewPassword("");
+      setPasswordOpen(false);
       toast.success("Пароль обновлён");
     } catch (e: any) { toast.error(translateAuthError(e?.message)); }
     finally { setLoading(false); }
@@ -117,63 +246,116 @@ function ProfilePage() {
         )}
 
         {tab === "settings" && (
-          <div key="settings" className="ns-fade space-y-4">
-        <section className="rounded-2xl border border-border bg-card p-4">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Mail className="h-4 w-4 text-primary" /> Текущий email
-          </div>
-          <div className="mt-2 min-h-6 text-base font-medium">
-            {emailLoading ? <span className="inline-block h-5 w-40 animate-pulse rounded-md bg-muted" /> : (email || "—")}
-          </div>
-        </section>
-
-        <section className="space-y-3 rounded-2xl border border-border bg-card p-4">
-          <div className="text-sm font-medium">Тема приложения</div>
-          <div className="grid grid-cols-3 gap-2 rounded-2xl bg-muted p-1">
-            {([
-              { k: "dark", label: "Тёмная", icon: Moon },
-              { k: "light", label: "Светлая", icon: Sun },
-              { k: "neon", label: "Neon", icon: Sparkles },
-            ] as const).map(({ k, label, icon: Icon }) => {
-              const active = theme === k;
-              return (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => changeTheme(k)}
-                  className={`tg-press relative flex h-11 flex-col items-center justify-center gap-0.5 rounded-xl text-[11px] font-medium transition-colors ${active ? "text-foreground" : "text-muted-foreground"}`}
-                  style={active ? { background: "var(--card-solid)", boxShadow: k === "neon" ? "0 0 0 1px color-mix(in srgb, var(--primary) 40%, transparent), 0 6px 20px -10px var(--primary)" : "0 2px 6px rgba(0,0,0,0.15)" } : undefined}
+          <div key="settings" className="ns-fade space-y-6">
+            {/* Profile identity card */}
+            <section
+              className="relative overflow-hidden rounded-3xl p-5"
+              style={{ background: "var(--gradient-surface)", border: "1px solid var(--border)" }}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-lg font-semibold"
+                  style={{ background: "var(--gradient-primary)", color: "var(--primary-foreground)" }}
                 >
-                  <Icon className="h-4 w-4" /> {label}
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-[11px] text-muted-foreground">Neon — тёмная тема с розово-циановыми градиентами и свечением.</p>
-        </section>
+                  {(email || "?").slice(0, 1).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Аккаунт</div>
+                  <div className="mt-0.5 truncate text-[15px] font-semibold">
+                    {emailLoading ? <span className="inline-block h-4 w-40 animate-pulse rounded-md bg-muted" /> : (email || "—")}
+                  </div>
+                </div>
+                <Mail className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </section>
 
-        <section className="space-y-2 rounded-2xl border border-border bg-card p-4">
-          <div className="flex items-center gap-2 text-sm font-medium"><KeyRound className="h-4 w-4 text-primary" /> Сменить пароль</div>
-          <input type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)}
-            placeholder="Текущий пароль" autoComplete="current-password"
-            className="h-11 w-full rounded-xl border border-border bg-input px-3 outline-none focus:border-primary" />
-          <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="Новый пароль (минимум 6 символов)" minLength={6} autoComplete="new-password"
-            className="h-11 w-full rounded-xl border border-border bg-input px-3 outline-none focus:border-primary" />
-          <button onClick={updatePassword} disabled={loading} className="tg-btn w-full">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Обновить пароль"}
-          </button>
-        </section>
+            {/* Appearance group */}
+            <SettingsGroup title="Внешний вид">
+              <SettingsRow
+                iconBg="linear-gradient(135deg,#0EA5E9,#6366F1)"
+                icon={mode === "dark" ? Moon : Sun}
+                label="Режим цвета"
+                right={
+                  <ModePill mode={mode} onChange={setMode} />
+                }
+              />
+              <SettingsRow
+                iconBg="var(--gradient-primary)"
+                icon={Palette}
+                label="Тема оформления"
+                sub={THEMES.find((t) => t.id === theme)?.hint ?? ""}
+              />
+              <div className="px-3 pb-3 pt-1">
+                <ThemeGrid current={theme} onChange={setTheme} />
+              </div>
+            </SettingsGroup>
 
-        <button onClick={logout} className="tg-btn-ghost w-full">
-          <LogOut className="h-4 w-4" /> Выйти
-        </button>
-        <button onClick={() => { setConfirmPassword(""); setConfirmOpen(true); }} className="tg-btn-danger w-full">
-          <Trash2 className="h-4 w-4" /> Удалить аккаунт
-        </button>
+            {/* Security group */}
+            <SettingsGroup title="Безопасность">
+              <SettingsRow
+                iconBg="linear-gradient(135deg,#F59E0B,#EF4444)"
+                icon={KeyRound}
+                label="Сменить пароль"
+                onClick={() => setPasswordOpen(true)}
+                right={<ChevronRight className="h-4 w-4 text-muted-foreground" />}
+              />
+              <SettingsRow
+                iconBg="linear-gradient(135deg,#64748B,#334155)"
+                icon={LogOut}
+                label="Выйти из аккаунта"
+                onClick={logout}
+                right={<ChevronRight className="h-4 w-4 text-muted-foreground" />}
+              />
+            </SettingsGroup>
+
+            {/* Danger zone */}
+            <SettingsGroup title="Опасная зона" tone="danger">
+              <SettingsRow
+                iconBg="linear-gradient(135deg,#F43F5E,#B91C1C)"
+                icon={Trash2}
+                label="Удалить аккаунт"
+                sub="Все данные и конфигурации будут удалены навсегда"
+                onClick={() => { setConfirmPassword(""); setConfirmOpen(true); }}
+                labelClassName="text-destructive"
+                right={<ChevronRight className="h-4 w-4 text-destructive/70" />}
+              />
+            </SettingsGroup>
           </div>
         )}
       </div>
+
+      {passwordOpen && (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center px-6"
+          style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)" }}
+          onClick={() => !loading && setPasswordOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-[340px] rounded-2xl border border-border p-5"
+            style={{ background: "var(--card-solid)", boxShadow: "var(--shadow-elegant)" }}
+          >
+            <div className="mb-2 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2 text-[16px] font-semibold">
+                <KeyRound className="h-4 w-4 text-primary" /> Сменить пароль
+              </div>
+              <button onClick={() => setPasswordOpen(false)} disabled={loading}
+                className="tg-press -m-1 grid h-7 w-7 place-items-center rounded-full text-muted-foreground" aria-label="Закрыть">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <input type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)}
+              placeholder="Текущий пароль" autoComplete="current-password"
+              className="mt-1 h-11 w-full rounded-xl border border-border bg-input px-3 outline-none focus:border-primary" />
+            <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Новый пароль (минимум 6 символов)" minLength={6} autoComplete="new-password"
+              className="mt-2 h-11 w-full rounded-xl border border-border bg-input px-3 outline-none focus:border-primary" />
+            <button onClick={updatePassword} disabled={loading} className="tg-btn mt-3 w-full">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Обновить пароль"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {confirmOpen && (
         <div

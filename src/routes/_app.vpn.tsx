@@ -6,7 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { issueVpnConfig } from "@/lib/vpn.functions";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { Clock, Loader2, ShieldCheck } from "lucide-react";
+import { Clock, Loader2, ShieldCheck, Zap, Globe, ArrowRight, Check } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app/vpn")({ component: VpnPage });
@@ -130,45 +130,97 @@ function VpnPage() {
 
   return (
     <>
-      <div className="space-y-4">
+      <div className="space-y-5">
         {onCooldown && (
-          <section className="rounded-2xl border border-border bg-card p-4">
-            <div className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm">
-              <Clock className="h-4 w-4 text-primary" />
-              <span className="text-muted-foreground">До следующей выдачи:</span>
-              <span className="ml-auto font-medium">{fmtCooldown(cooldownMs)}</span>
-            </div>
-          </section>
+          <div
+            className="flex items-center gap-2 rounded-2xl px-3 py-2.5 text-sm"
+            style={{ background: "color-mix(in srgb, var(--primary) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)" }}
+          >
+            <Clock className="h-4 w-4 text-primary" />
+            <span className="text-muted-foreground">До следующей выдачи</span>
+            <span className="ml-auto font-semibold tabular-nums">{fmtCooldown(cooldownMs)}</span>
+          </div>
         )}
 
-        <section className="space-y-2">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">Направление</div>
-          <div className="grid grid-cols-2 gap-2">
-            {directions.map((d) => (
-              <button key={d.id} onClick={() => setSelected(d.id)}
-                className={`flex items-center gap-2 rounded-xl border px-3 py-3 text-left transition-colors ${
-                  selected === d.id ? "border-primary bg-primary/10" : "border-border bg-card"
-                }`}>
-                <span className="text-xl">{d.flag ?? "🌐"}</span>
-                <span className="text-sm font-medium">{d.name}</span>
-              </button>
-            ))}
-            {!directions.length && <div className="col-span-2 text-sm text-muted-foreground">Нет активных направлений</div>}
-          </div>
-        </section>
-
-        <button
-          onClick={handleIssue}
+        {/* Hero: selected direction */}
+        <HeroCard
+          selected={directions.find((d) => d.id === selected)}
+          totalCount={directions.length}
+          loading={loading}
+          onIssue={handleIssue}
           disabled={loading || onCooldown || hasActiveSubscription || profile?.is_blocked || !selected}
-          className="tg-btn w-full h-14 text-[15px]"
-        >
-          {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (hasActiveSubscription ? "VPN уже активен" : onCooldown ? "Кулдаун активен" : "Получить конфигурацию")}
-        </button>
+          buttonLabel={
+            hasActiveSubscription ? "VPN уже активен"
+              : onCooldown ? "Кулдаун активен"
+              : "Получить конфигурацию"
+          }
+        />
+
+        {/* Directions grid */}
+        {directions.length > 0 ? (
+          <section className="space-y-2.5">
+            <div className="flex items-center justify-between px-1">
+              <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Направления
+              </div>
+              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <Globe className="h-3 w-3" /> {directions.length} доступно
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              {directions.map((d) => {
+                const active = selected === d.id;
+                return (
+                  <button
+                    key={d.id}
+                    onClick={() => setSelected(d.id)}
+                    className="tg-press group relative flex flex-col gap-2 overflow-hidden rounded-2xl p-3 text-left transition-colors"
+                    style={{
+                      background: active ? "var(--gradient-surface)" : "var(--card-solid)",
+                      border: "1.5px solid " + (active ? "color-mix(in srgb, var(--primary) 70%, transparent)" : "var(--border)"),
+                      boxShadow: active ? "0 8px 22px -14px var(--primary)" : "0 4px 14px -10px rgba(0,0,0,0.35)",
+                    }}
+                  >
+                    {active && (
+                      <div
+                        className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full"
+                        style={{ background: "var(--gradient-primary)", color: "var(--primary-foreground)" }}
+                      >
+                        <Check className="h-3 w-3" strokeWidth={3} />
+                      </div>
+                    )}
+                    <div className="text-[28px] leading-none">{d.flag ?? "🌐"}</div>
+                    <div className="min-w-0">
+                      <div className="truncate text-[13px] font-semibold text-foreground">{d.name}</div>
+                      <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        Доступно
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ) : (
+          <div
+            className="rounded-2xl border border-dashed p-6 text-center"
+            style={{ borderColor: "var(--border)" }}
+          >
+            <Globe className="mx-auto h-8 w-8 text-muted-foreground/60" />
+            <p className="mt-2 text-sm text-muted-foreground">Нет активных направлений</p>
+            <p className="mt-1 text-[11px] text-muted-foreground/70">Загляните позже — новые серверы добавляются регулярно</p>
+          </div>
+        )}
 
         {hasActiveSubscription && (
           <Link
             to="/my-vpn"
-            className="ns-fade flex items-center gap-3 rounded-2xl border border-border bg-card p-4"
+            className="ns-fade flex items-center gap-3 rounded-2xl p-4"
+            style={{
+              background: "var(--gradient-surface)",
+              border: "1px solid color-mix(in srgb, var(--primary) 40%, var(--border))",
+            }}
           >
             <div
               className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
@@ -182,9 +234,71 @@ function VpnPage() {
                 Ссылка и срок — во вкладке «Мой VPN»
               </div>
             </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground" />
           </Link>
         )}
       </div>
     </>
+  );
+}
+
+function HeroCard({
+  selected, totalCount, loading, onIssue, disabled, buttonLabel,
+}: {
+  selected: Direction | undefined;
+  totalCount: number;
+  loading: boolean;
+  onIssue: () => void;
+  disabled: boolean;
+  buttonLabel: string;
+}) {
+  return (
+    <div
+      className="relative overflow-hidden rounded-3xl p-5"
+      style={{
+        background: "var(--gradient-surface)",
+        border: "1px solid var(--border)",
+        boxShadow: "var(--shadow-card)",
+      }}
+    >
+      {/* Ambient glow */}
+      <div
+        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-60"
+        style={{ background: "var(--gradient-primary)", filter: "blur(60px)" }}
+      />
+
+      <div className="relative flex items-center gap-3">
+        <div
+          className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-[28px]"
+          style={{
+            background: "color-mix(in srgb, var(--card-solid) 70%, transparent)",
+            border: "1px solid var(--border)",
+          }}
+        >
+          {selected?.flag ?? "🌐"}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Выбранное направление
+          </div>
+          <div className="mt-0.5 truncate text-[17px] font-semibold text-foreground">
+            {selected?.name ?? "Выберите ниже"}
+          </div>
+          <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Zap className="h-3 w-3 text-primary" />
+            {totalCount > 0 ? `${totalCount} серверов онлайн` : "Ожидание серверов"}
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={onIssue}
+        disabled={disabled}
+        className="tg-btn mt-4 h-13 w-full text-[15px]"
+        style={{ height: 52 }}
+      >
+        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : buttonLabel}
+      </button>
+    </div>
   );
 }
