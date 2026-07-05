@@ -33,6 +33,7 @@ export function BroadcastBanner() {
   const [unread, setUnread] = useState<Broadcast[]>(cachedUnread);
   const [dismissing, setDismissing] = useState<string | null>(null);
   const [opened, setOpened] = useState<Broadcast | null>(null);
+  const [seenIds, setSeenIds] = useState<Set<string>>(() => new Set());
 
   async function load() {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -88,9 +89,16 @@ export function BroadcastBanner() {
   // Auto-open first iMessage-style broadcast as a centered modal.
   useEffect(() => {
     if (opened) return;
-    const next = imessageOnes[0];
-    if (next) setOpened(next);
-  }, [imessageOnes, opened]);
+    const next = imessageOnes.find((b) => !seenIds.has(b.id));
+    if (next) {
+      setOpened(next);
+      setSeenIds((prev) => {
+        const s = new Set(prev);
+        s.add(next.id);
+        return s;
+      });
+    }
+  }, [imessageOnes, opened, seenIds]);
 
   async function copyLinkValue(url: string) {
     try {
