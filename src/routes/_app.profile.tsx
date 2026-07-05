@@ -9,6 +9,142 @@ import {
   LogOut, Trash2, KeyRound, Loader2, Moon, Sun, Mail, HelpCircle,
   Settings as SettingsIcon, X, Palette, ChevronRight, Check,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
+
+function SettingsGroup({
+  title, tone = "default", children,
+}: { title: string; tone?: "default" | "danger"; children: ReactNode }) {
+  return (
+    <section className="space-y-2">
+      <div
+        className={`px-2 text-[11px] uppercase tracking-wider ${tone === "danger" ? "text-destructive/80" : "text-muted-foreground"}`}
+      >
+        {title}
+      </div>
+      <div
+        className="overflow-hidden rounded-2xl border"
+        style={{
+          background: "var(--card-solid)",
+          borderColor: "var(--border)",
+          boxShadow: "var(--shadow-card)",
+        }}
+      >
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SettingsRow({
+  icon: Icon, iconBg, label, sub, right, onClick, labelClassName,
+}: {
+  icon: LucideIcon;
+  iconBg: string;
+  label: string;
+  sub?: string;
+  right?: ReactNode;
+  onClick?: () => void;
+  labelClassName?: string;
+}) {
+  const Tag = onClick ? "button" : "div";
+  return (
+    <Tag
+      onClick={onClick}
+      className={`tg-press flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors ${onClick ? "hover:bg-muted/40" : ""}`}
+      style={{ borderTop: "1px solid color-mix(in srgb, var(--border) 45%, transparent)" }}
+    >
+      <div
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
+        style={{ background: iconBg }}
+      >
+        <Icon className="h-4 w-4 text-white" strokeWidth={2.4} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className={`truncate text-[14px] font-medium ${labelClassName ?? "text-foreground"}`}>{label}</div>
+        {sub && <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{sub}</div>}
+      </div>
+      {right}
+    </Tag>
+  );
+}
+
+function ModePill({ mode, onChange }: { mode: ColorMode; onChange: (m: ColorMode) => void }) {
+  return (
+    <div className="flex items-center gap-0.5 rounded-full bg-muted p-0.5">
+      {(["light", "dark"] as const).map((k) => {
+        const active = mode === k;
+        const Icon = k === "light" ? Sun : Moon;
+        return (
+          <button
+            key={k}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onChange(k); }}
+            className={`grid h-7 w-9 place-items-center rounded-full transition-colors ${
+              active ? "text-primary-foreground" : "text-muted-foreground"
+            }`}
+            style={active ? { background: "var(--gradient-primary)" } : undefined}
+            aria-label={k === "light" ? "Светлая" : "Тёмная"}
+          >
+            <Icon className="h-3.5 w-3.5" />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ThemeGrid({ current, onChange }: { current: DesignTheme; onChange: (t: DesignTheme) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {THEMES.map((t) => {
+        const active = current === t.id;
+        const swatchGradient = themePreviewGradient(t.id);
+        return (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => onChange(t.id)}
+            className="tg-press relative flex flex-col gap-2 overflow-hidden rounded-xl border p-2 text-left transition-colors"
+            style={{
+              borderColor: active
+                ? "color-mix(in srgb, var(--primary) 65%, transparent)"
+                : "var(--border)",
+              background: active ? "color-mix(in srgb, var(--primary) 8%, transparent)" : "transparent",
+              boxShadow: active ? "0 6px 20px -12px var(--primary)" : "none",
+            }}
+          >
+            <div
+              className="relative h-14 w-full overflow-hidden rounded-lg"
+              style={{ background: swatchGradient }}
+            >
+              <div className="absolute inset-2 rounded-md bg-white/15 backdrop-blur-[2px]" />
+              <div className="absolute right-2 top-2 h-1.5 w-6 rounded-full bg-white/40" />
+              {active && (
+                <div className="absolute right-1.5 bottom-1.5 grid h-5 w-5 place-items-center rounded-full bg-white text-black shadow">
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-[12px] font-semibold text-foreground">{t.label}</div>
+              <div className="truncate text-[10px] text-muted-foreground">{t.hint}</div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function themePreviewGradient(t: DesignTheme): string {
+  switch (t) {
+    case "midnight": return "linear-gradient(135deg,#7C6BFF 0%,#5EE7DF 100%)";
+    case "sunset":   return "linear-gradient(135deg,#FB7185 0%,#F59E0B 100%)";
+    case "forest":   return "linear-gradient(135deg,#10B981 0%,#22D3EE 100%)";
+    case "candy":    return "linear-gradient(135deg,#EC4899 0%,#8B5CF6 45%,#00E7FF 100%)";
+  }
+}
 
 export const Route = createFileRoute("/_app/profile")({ component: ProfilePage });
 
