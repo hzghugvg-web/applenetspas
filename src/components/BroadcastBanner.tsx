@@ -153,7 +153,7 @@ export function BroadcastBanner() {
             initial={{ opacity: 0, y: -8, height: 0 }}
             animate={{ opacity: dismissing === current.id ? 0 : 1, y: 0, height: "auto" }}
             exit={{ opacity: 0, y: -8, height: 0 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
             className="mx-2 mt-2 overflow-hidden"
           >
             <button
@@ -198,7 +198,7 @@ export function BroadcastBanner() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
             className="fixed inset-0 z-[100] flex items-center justify-center px-6"
             style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
             onClick={() => setOpened(null)}
@@ -207,7 +207,7 @@ export function BroadcastBanner() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 380, damping: 28 }}
+              transition={{ type: "spring", stiffness: 260, damping: 26, mass: 0.9 }}
               className="flex max-h-[80vh] w-full max-w-[340px] flex-col overflow-hidden rounded-2xl border border-border bg-card-solid shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
