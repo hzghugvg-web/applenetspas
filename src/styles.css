@@ -276,6 +276,32 @@ html, body {
   }
 }
 
+/* User motion preference */
+:root[data-motion="none"] *,
+:root[data-motion="none"] *::before,
+:root[data-motion="none"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+:root[data-motion="fast"] *,
+:root[data-motion="fast"] *::before,
+:root[data-motion="fast"] *::after {
+  animation-duration: 140ms !important;
+  transition-duration: 120ms !important;
+}
+:root[data-motion="ultra"] *,
+:root[data-motion="ultra"] *::before,
+:root[data-motion="ultra"] *::after {
+  animation-duration: 520ms !important;
+  transition-duration: 420ms !important;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
 /* Glossy pill primary button with gradient sheen and shimmer */
 @utility tg-btn {
   position: relative;
