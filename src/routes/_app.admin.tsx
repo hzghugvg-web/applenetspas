@@ -172,6 +172,31 @@ function BroadcastTab() {
           placeholder="Почта (необязательно) — например netspas@internet.ru"
           className="h-11 w-full rounded-xl border border-border bg-input px-3 text-sm outline-none focus:border-primary"
         />
+        <div className="space-y-1.5">
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Способ показа</div>
+          <div className="grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
+            {([
+              ["top", "Сверху плашкой"],
+              ["imessage", "По центру (iPhone)"],
+            ] as const).map(([k, l]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setDeliveryStyle(k)}
+                className={`tg-press rounded-full py-1.5 text-[12px] font-medium transition-colors ${
+                  deliveryStyle === k ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                }`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            {deliveryStyle === "top"
+              ? "Появится тонкой плашкой сверху — пользователь нажмёт и прочитает."
+              : "Откроется по центру как уведомление на iPhone — нужно нажать «Прочитано»."}
+          </p>
+        </div>
         <button onClick={submit} disabled={saving || !message.trim()} className="tg-btn w-full">
           <Send className="h-4 w-4" />
           {saving ? "Сохранение..." : editingId ? "Сохранить изменения" : "Отправить всем"}
