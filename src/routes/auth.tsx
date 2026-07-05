@@ -58,7 +58,7 @@ function AuthPage() {
         if (error) throw error;
       }
     } catch (err: any) {
-      toast.error(translateAuthError(err?.message));
+      toast.error(translateAuthError(getAuthErrorMessage(err)));
     } finally {
       setLoading(false);
     }
@@ -108,4 +108,16 @@ function AuthPage() {
       </div>
     </div>
   );
+}
+
+function getAuthErrorMessage(err: unknown): string {
+  if (err instanceof Error && err.message) return err.message;
+  if (typeof err === "string") return err;
+  if (err && typeof err === "object") {
+    const maybe = err as { message?: unknown; error_description?: unknown; error?: unknown };
+    if (typeof maybe.message === "string" && maybe.message) return maybe.message;
+    if (typeof maybe.error_description === "string" && maybe.error_description) return maybe.error_description;
+    if (typeof maybe.error === "string" && maybe.error) return maybe.error;
+  }
+  return "Не удалось подключиться к серверу. Попробуйте ещё раз.";
 }
