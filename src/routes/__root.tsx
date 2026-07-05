@@ -135,8 +135,14 @@ function RootComponent() {
   }, []);
 
   useEffect(() => {
+    const isProtectedTouchTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false;
+      return Boolean(target.closest("[data-allow-touch],button,a,input,textarea,select,[role='button']"));
+    };
+
     let startX = 0, startY = 0, edge = false;
     const onTouchStart = (e: TouchEvent) => {
+      if (isProtectedTouchTarget(e.target)) return;
       const t = e.touches[0];
       if (!t) return;
       startX = t.clientX; startY = t.clientY;
@@ -144,6 +150,7 @@ function RootComponent() {
       if (edge) e.preventDefault();
     };
     const onTouchMove = (e: TouchEvent) => {
+      if (isProtectedTouchTarget(e.target)) return;
       const t = e.touches[0];
       if (!t) return;
       const dx = Math.abs(t.clientX - startX);

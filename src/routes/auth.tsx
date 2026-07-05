@@ -4,13 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { translateAuthError } from "@/lib/errors";
 import { bootstrapUser } from "@/lib/bootstrap";
 import { alertDialog as toast } from "@/lib/alert";
+import { getFastSession } from "@/lib/fast-auth";
 import { Shield, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/vpn" });
+    const { hasSession } = await getFastSession(450);
+    if (hasSession) throw redirect({ to: "/vpn" });
   },
   component: AuthPage,
 });
