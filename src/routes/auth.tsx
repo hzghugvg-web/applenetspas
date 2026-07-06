@@ -74,8 +74,8 @@ function AuthPage() {
           <div className="grid h-16 w-16 place-items-center rounded-2xl" style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}>
             <Shield className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-semibold">NetSpas</h1>
-          <p className="text-sm text-muted-foreground">{mode === "signup" ? "Создайте аккаунт" : "Войдите в аккаунт"}</p>
+          <h1 className="text-2xl font-semibold text-center">Добро пожаловать в NetSpas</h1>
+          <p className="text-sm text-muted-foreground text-center">{mode === "signup" ? "Создайте аккаунт если у вас его нет." : "Войдите в аккаунт"}</p>
         </div>
 
         <form onSubmit={submit} className="space-y-3">
