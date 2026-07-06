@@ -202,6 +202,7 @@
   }
   html, body, #root {
     height: 100%;
+    background-color: var(--color-background);
     overflow: hidden;
     overscroll-behavior: none;
     touch-action: pan-y;

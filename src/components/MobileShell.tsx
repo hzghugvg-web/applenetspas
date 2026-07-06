@@ -59,10 +59,9 @@ export function MobileShell({ title, children }: Props) {
         </div>
       </main>
       <nav
-        className="mx-2 grid shrink-0 rounded-2xl glass"
+        className="mx-2 mb-0 grid shrink-0 rounded-t-2xl glass"
         style={{
           gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
-          marginBottom: "max(8px, env(safe-area-inset-bottom))",
         }}
       >
         {tabs.map(({ to, label, icon: Icon }) => {
