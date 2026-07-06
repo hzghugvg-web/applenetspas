@@ -287,18 +287,25 @@ html, body {
   transition-delay: 0ms !important;
   scroll-behavior: auto !important;
 }
-:root[data-motion="fast"] *,
-:root[data-motion="fast"] *::before,
-:root[data-motion="fast"] *::after {
-  animation-duration: 140ms !important;
+:root[data-motion="fast"] {
+  --ns-anim-scale: 0.7;
+}
+:root[data-motion="ultra"] {
+  --ns-anim-scale: 1.35;
+}
+:root[data-motion="fast"] .tg-press,
+:root[data-motion="fast"] .tg-btn,
+:root[data-motion="fast"] .tg-btn-ghost,
+:root[data-motion="fast"] .tg-btn-danger,
+:root[data-motion="fast"] .tg-card {
   transition-duration: 120ms !important;
 }
-:root[data-motion="ultra"] *,
-:root[data-motion="ultra"] *::before,
-:root[data-motion="ultra"] *::after {
-  animation-duration: 520ms !important;
-  transition-duration: 420ms !important;
-  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important;
+:root[data-motion="ultra"] .tg-press,
+:root[data-motion="ultra"] .tg-btn,
+:root[data-motion="ultra"] .tg-btn-ghost,
+:root[data-motion="ultra"] .tg-btn-danger,
+:root[data-motion="ultra"] .tg-card {
+  transition-duration: 320ms !important;
   transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
