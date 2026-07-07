@@ -269,6 +269,45 @@ export type Database = {
         }
         Relationships: []
       }
+      password_recovery_requests: {
+        Row: {
+          admin_reply: string | null
+          approximate_registration: string | null
+          contact_method: string
+          contact_value: string
+          created_at: string
+          description: string
+          email: string
+          id: string
+          replied_at: string | null
+          status: string
+        }
+        Insert: {
+          admin_reply?: string | null
+          approximate_registration?: string | null
+          contact_method: string
+          contact_value: string
+          created_at?: string
+          description: string
+          email: string
+          id?: string
+          replied_at?: string | null
+          status?: string
+        }
+        Update: {
+          admin_reply?: string | null
+          approximate_registration?: string | null
+          contact_method?: string
+          contact_value?: string
+          created_at?: string
+          description?: string
+          email?: string
+          id?: string
+          replied_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           cooldown_until: string | null
