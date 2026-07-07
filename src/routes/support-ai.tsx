@@ -327,28 +327,56 @@ function AiChatPage() {
               онлайн · отвечает мгновенно
             </p>
           </div>
+          {messages.length > 1 && (
+            <button
+              onClick={() => setConfirmClear(true)}
+              className="tg-press grid h-10 w-10 place-items-center rounded-full text-muted-foreground hover:text-destructive"
+              aria-label="Очистить чат"
+              title="Очистить чат"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </header>
 
       {/* Messages (scroll area) */}
       <div className="ns-scroll min-h-0 flex-1 overflow-y-auto px-3 pt-3">
         <div className="mx-auto flex max-w-2xl flex-col gap-2 pb-4">
-          {messages.map((m) => (
-            <MessageBubble key={m.id} m={m} />
-          ))}
+          <AnimatePresence initial={false}>
+            {messages.map((m) => (
+              <MessageBubble key={m.id} m={m} anim={anim} />
+            ))}
+          </AnimatePresence>
 
-          {thinking && (
-            <div className="flex justify-start">
-              <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary [animation-delay:150ms]" />
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary [animation-delay:300ms]" />
-              </div>
-            </div>
-          )}
+          <AnimatePresence>
+            {thinking && (
+              <motion.div
+                key="thinking"
+                initial={anim ? { opacity: 0, y: 6 } : false}
+                animate={{ opacity: 1, y: 0 }}
+                exit={anim ? { opacity: 0 } : undefined}
+                transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                className="flex justify-start"
+              >
+                <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary [animation-delay:150ms]" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary [animation-delay:300ms]" />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
+          <AnimatePresence>
           {confirmingEscalate && !escalated && (
-            <div className="mt-1 rounded-2xl border border-primary/30 bg-primary/5 p-3 text-[13px]">
+            <motion.div
+              initial={anim ? { opacity: 0, y: 8, scale: 0.98 } : false}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={anim ? { opacity: 0, y: 4 } : undefined}
+              transition={{ type: "spring", stiffness: 320, damping: 28 }}
+              className="mt-1 rounded-2xl border border-primary/30 bg-primary/5 p-3 text-[13px]"
+            >
               <p className="mb-2 font-medium text-foreground">Передать вопрос оператору?</p>
               <p className="mb-3 text-[12px] text-muted-foreground">
                 Оператор ответит в разделе «Мои обращения», обычно за несколько минут.
@@ -370,8 +398,9 @@ function AiChatPage() {
                   Передать
                 </button>
               </div>
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
 
           <div ref={endRef} />
         </div>
