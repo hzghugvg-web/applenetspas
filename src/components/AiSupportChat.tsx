@@ -149,7 +149,7 @@ export function AiSupportChat({
             transition={{ type: "spring", stiffness: 260, damping: 30, mass: 0.9 }}
             className="flex h-full w-full flex-col"
           >
-            <header className="safe-top tg-blur flex shrink-0 items-center gap-3 border-b border-border px-3 pb-2">
+            <header className="safe-top tg-blur flex shrink-0 items-center gap-3 border-b border-border px-3 pb-2 pt-3">
               <button
                 onClick={onClose}
                 className="tg-press grid h-9 w-9 place-items-center rounded-full text-muted-foreground"
