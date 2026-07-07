@@ -10,7 +10,7 @@ import { useServerFn } from "@tanstack/react-start";
 export const Route = createFileRoute("/_app/my-vpn")({ component: MyVpnPage });
 
 type Profile = { subscription_from: string | null; subscription_until: string | null };
-type Config = { id: string; link: string; issuedAt: string; directionId: string | null };
+type Config = { id: string; link: string; title?: string | null; issuedAt: string; directionId: string | null };
 type Direction = { id: string; name: string; flag: string | null };
 
 function MyVpnPage() {
@@ -144,7 +144,7 @@ function MyVpnPage() {
               <div key={c.id} className="space-y-2 rounded-2xl border border-border bg-card p-3">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{dir?.flag ?? "🌐"}</span>
-                  <span className="text-sm font-medium">{dir?.name ?? "Направление"}</span>
+                  <span className="text-sm font-medium">{c.title ?? dir?.name ?? "Направление"}</span>
                   <span className="ml-auto text-[10px] text-muted-foreground">
                     {new Date(c.issuedAt).toLocaleString("ru-RU")}
                   </span>
