@@ -1,22 +1,35 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { askSupportAI } from "@/lib/support-ai.functions";
 import { alertDialog as toast } from "@/lib/alert";
 import { translateAuthError } from "@/lib/errors";
+import { hasStoredSupabaseSession } from "@/lib/fast-auth";
 import {
   Send, Loader2, Sparkles, Headphones, CheckCircle2, ChevronLeft,
-  Paperclip, X, Play, ImageIcon,
+  Paperclip, X, Play,
 } from "lucide-react";
 
-export const Route = createFileRoute("/_app/support-ai")({ component: AiChatPage });
+export const Route = createFileRoute("/support-ai")({
+  ssr: false,
+  beforeLoad: () => {
+    if (!hasStoredSupabaseSession()) throw redirect({ to: "/auth" });
+  },
+  head: () => ({
+    meta: [
+      { title: "Чат с ИИ-помощником · NetSpas" },
+      { name: "description", content: "Задайте вопрос ИИ-помощнику NetSpas — быстрые ответы 24/7." },
+    ],
+  }),
+  component: AiChatPage,
+});
 
 type Attachment = {
   id: string;
   kind: "image" | "video";
-  url: string;          // signed URL (for AI + preview)
-  path: string;         // storage path (for reference)
+  url: string;
+  path: string;
   name: string;
 };
 
@@ -29,8 +42,6 @@ type Msg = {
 
 const GREETING =
   "Привет! Я ИИ-помощник NetSpas. Спросите про подключение, кулдаун, подписку — постараюсь ответить сразу. Можно прикрепить скриншот 📎 — я его увижу. Если не смогу помочь, передам оператору.";
-
-const COMPOSER_H = 132; // px reserved above bottom nav (input + attach preview + hint)
 
 function AiChatPage() {
   const navigate = useNavigate();
@@ -129,13 +140,15 @@ function AiChatPage() {
         { id: crypto.randomUUID(), role: "assistant", content: res.text },
       ]);
       if (res.escalate) setConfirmingEscalate(true);
-    } catch {
+    } catch (err) {
+      console.error("[support-ai] request failed", err);
       setMessages((prev) => [
         ...prev,
         {
           id: crypto.randomUUID(),
           role: "assistant",
-          content: "Не удалось получить ответ. Хотите, чтобы я передал вопрос оператору?",
+          content:
+            "Не удалось получить ответ ИИ. Хотите, я передам вопрос оператору — он ответит в разделе «Мои обращения».",
         },
       ]);
       setConfirmingEscalate(true);
@@ -170,7 +183,6 @@ function AiChatPage() {
         `Обращение из чата с ИИ.\n\nВопрос: ${lastUser.content}\n\n— История —\n${transcript}`.slice(
           0, 2000,
         );
-      // If the user attached a video, pass the first one as the complaint video.
       const firstVideo = [...messages]
         .reverse()
         .flatMap((m) => m.attachments ?? [])
@@ -203,83 +215,88 @@ function AiChatPage() {
   }
 
   return (
-    <div className="-mx-4 -mt-4 flex min-h-full flex-col">
-      {/* Chat header (inside shell) */}
-      <div className="tg-blur sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/70 px-3 py-2">
-        <Link
-          to="/support"
-          className="tg-press grid h-9 w-9 place-items-center rounded-full text-muted-foreground"
-          aria-label="Назад"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Link>
-        <div
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-full"
-          style={{ background: "var(--gradient-primary)" }}
-        >
-          <Sparkles className="h-4 w-4 text-white" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-semibold text-foreground">ИИ-помощник</p>
-          <p className="truncate text-[11px] text-emerald-400">
-            <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 align-middle" />
-            онлайн · отвечает мгновенно
-          </p>
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div
-        className="flex flex-1 flex-col gap-2 px-1 pt-3"
-        style={{ paddingBottom: `calc(${COMPOSER_H}px + env(safe-area-inset-bottom))` }}
-      >
-        {messages.map((m) => (
-          <MessageBubble key={m.id} m={m} />
-        ))}
-
-        {thinking && (
-          <div className="flex justify-start">
-            <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary [animation-delay:150ms]" />
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary [animation-delay:300ms]" />
-            </div>
+    <div
+      className="fixed inset-0 flex flex-col text-foreground"
+      style={{ background: "var(--app-bg)" }}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      {/* Header */}
+      <header className="safe-top tg-blur shrink-0 border-b border-border">
+        <div className="flex items-center gap-3 px-3 pb-2 pt-3">
+          <Link
+            to="/support"
+            className="tg-press grid h-10 w-10 place-items-center rounded-full text-muted-foreground"
+            aria-label="Назад"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Link>
+          <div
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full"
+            style={{ background: "var(--gradient-primary)" }}
+          >
+            <Sparkles className="h-5 w-5 text-white" />
           </div>
-        )}
-
-        {confirmingEscalate && !escalated && (
-          <div className="mt-1 rounded-2xl border border-primary/30 bg-primary/5 p-3 text-[13px]">
-            <p className="mb-2 font-medium text-foreground">Передать вопрос оператору?</p>
-            <p className="mb-3 text-[12px] text-muted-foreground">
-              Оператор ответит в разделе «Мои обращения», обычно за несколько минут.
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[15px] font-semibold text-foreground">ИИ-помощник</p>
+            <p className="truncate text-[11px] text-emerald-400">
+              <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 align-middle" />
+              онлайн · отвечает мгновенно
             </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setConfirmingEscalate(false)}
-                disabled={creating}
-                className="tg-press flex-1 rounded-xl border border-border bg-transparent py-2 text-[13px] font-medium text-muted-foreground"
-              >
-                Не надо
-              </button>
-              <button
-                onClick={escalate}
-                disabled={creating}
-                className="tg-press flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-[13px] font-medium text-primary-foreground disabled:opacity-60"
-              >
-                {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Headphones className="h-3.5 w-3.5" />}
-                Передать
-              </button>
-            </div>
           </div>
-        )}
+        </div>
+      </header>
 
-        <div ref={endRef} />
+      {/* Messages (scroll area) */}
+      <div className="ns-scroll min-h-0 flex-1 overflow-y-auto px-3 pt-3">
+        <div className="mx-auto flex max-w-2xl flex-col gap-2 pb-4">
+          {messages.map((m) => (
+            <MessageBubble key={m.id} m={m} />
+          ))}
+
+          {thinking && (
+            <div className="flex justify-start">
+              <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary [animation-delay:150ms]" />
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary [animation-delay:300ms]" />
+              </div>
+            </div>
+          )}
+
+          {confirmingEscalate && !escalated && (
+            <div className="mt-1 rounded-2xl border border-primary/30 bg-primary/5 p-3 text-[13px]">
+              <p className="mb-2 font-medium text-foreground">Передать вопрос оператору?</p>
+              <p className="mb-3 text-[12px] text-muted-foreground">
+                Оператор ответит в разделе «Мои обращения», обычно за несколько минут.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConfirmingEscalate(false)}
+                  disabled={creating}
+                  className="tg-press flex-1 rounded-xl border border-border bg-transparent py-2 text-[13px] font-medium text-muted-foreground"
+                >
+                  Не надо
+                </button>
+                <button
+                  onClick={escalate}
+                  disabled={creating}
+                  className="tg-press flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-[13px] font-medium text-primary-foreground disabled:opacity-60"
+                >
+                  {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Headphones className="h-3.5 w-3.5" />}
+                  Передать
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div ref={endRef} />
+        </div>
       </div>
 
-      {/* Composer — fixed above bottom nav */}
+      {/* Composer */}
       <div
-        className="tg-blur fixed inset-x-2 z-30 border-t border-border bg-background/85 px-3 pb-2 pt-2"
-        style={{ bottom: `calc(62px + env(safe-area-inset-bottom))` }}
+        className="tg-blur shrink-0 border-t border-border bg-background/85 px-3 pt-2"
+        style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
       >
         {escalated ? (
           <button
@@ -289,7 +306,7 @@ function AiChatPage() {
             Перейти к моим обращениям
           </button>
         ) : (
-          <>
+          <div className="mx-auto max-w-2xl">
             {pending.length > 0 && (
               <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
                 {pending.map((a) => (
@@ -361,7 +378,7 @@ function AiChatPage() {
             >
               <Headphones className="h-3 w-3" /> Позвать оператора
             </button>
-          </>
+          </div>
         )}
       </div>
     </div>
@@ -395,7 +412,10 @@ function MessageBubble({ m }: { m: Msg }) {
           </p>
         )}
         {m.attachments && m.attachments.length > 0 && (
-          <div className="mb-1.5 grid gap-1.5" style={{ gridTemplateColumns: m.attachments.length > 1 ? "1fr 1fr" : "1fr" }}>
+          <div
+            className="mb-1.5 grid gap-1.5"
+            style={{ gridTemplateColumns: m.attachments.length > 1 ? "1fr 1fr" : "1fr" }}
+          >
             {m.attachments.map((a) => (
               <AttachmentPreview key={a.id} a={a} />
             ))}
@@ -416,13 +436,6 @@ function AttachmentPreview({ a }: { a: Attachment }) {
     );
   }
   return (
-    <video
-      src={a.url}
-      controls
-      playsInline
-      className="max-h-56 w-full rounded-xl bg-black"
-    >
-      <ImageIcon />
-    </video>
+    <video src={a.url} controls playsInline className="max-h-56 w-full rounded-xl bg-black" />
   );
 }

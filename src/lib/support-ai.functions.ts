@@ -79,20 +79,26 @@ export const askSupportAI = createServerFn({ method: "POST" })
       return { role: m.role, content: parts };
     });
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          ...gatewayMessages,
-        ],
-      }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            ...gatewayMessages,
+          ],
+        }),
+      });
+    } catch (err) {
+      console.error("[support-ai] fetch failed", err);
+      return { text: "Не удалось связаться с ИИ. Могу позвать оператора?", escalate: true };
+    }
 
     if (res.status === 429) {
       return { text: "Слишком много запросов. Попробуйте чуть позже или напишите оператору.", escalate: false };
@@ -101,12 +107,18 @@ export const askSupportAI = createServerFn({ method: "POST" })
       return { text: "ИИ-помощник временно недоступен. Соединяю с оператором.", escalate: true };
     }
     if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error("[support-ai] gateway error", res.status, body.slice(0, 500));
       return { text: "Не удалось получить ответ ИИ. Могу позвать оператора.", escalate: true };
     }
 
-    const json = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
+    let json: { choices?: Array<{ message?: { content?: string } }> };
+    try {
+      json = await res.json();
+    } catch (err) {
+      console.error("[support-ai] json parse failed", err);
+      return { text: "Не удалось обработать ответ ИИ. Позвать оператора?", escalate: true };
+    }
     let text = json.choices?.[0]?.message?.content?.trim() ?? "";
     let escalate = false;
     if (/\[ESCALATE\]\s*$/i.test(text)) {

@@ -9,11 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SupportAiRouteImport } from './routes/support-ai'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppVpnRouteImport } from './routes/_app.vpn'
-import { Route as AppSupportAiRouteImport } from './routes/_app.support-ai'
 import { Route as AppSupportRouteImport } from './routes/_app.support'
 import { Route as AppProfileRouteImport } from './routes/_app.profile'
 import { Route as AppMyVpnRouteImport } from './routes/_app.my-vpn'
@@ -22,6 +22,11 @@ import { Route as AppAdminRouteImport } from './routes/_app.admin'
 import { Route as ApiPublicSubTokenRouteImport } from './routes/api/public/sub.$token'
 import { Route as ApiPublicSbSplatRouteImport } from './routes/api/public/sb.$'
 
+const SupportAiRoute = SupportAiRouteImport.update({
+  id: '/support-ai',
+  path: '/support-ai',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -39,11 +44,6 @@ const IndexRoute = IndexRouteImport.update({
 const AppVpnRoute = AppVpnRouteImport.update({
   id: '/vpn',
   path: '/vpn',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppSupportAiRoute = AppSupportAiRouteImport.update({
-  id: '/support-ai',
-  path: '/support-ai',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSupportRoute = AppSupportRouteImport.update({
@@ -85,12 +85,12 @@ const ApiPublicSbSplatRoute = ApiPublicSbSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/support-ai': typeof SupportAiRoute
   '/admin': typeof AppAdminRoute
   '/faq': typeof AppFaqRoute
   '/my-vpn': typeof AppMyVpnRoute
   '/profile': typeof AppProfileRoute
   '/support': typeof AppSupportRoute
-  '/support-ai': typeof AppSupportAiRoute
   '/vpn': typeof AppVpnRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
   '/api/public/sub/$token': typeof ApiPublicSubTokenRoute
@@ -98,12 +98,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/support-ai': typeof SupportAiRoute
   '/admin': typeof AppAdminRoute
   '/faq': typeof AppFaqRoute
   '/my-vpn': typeof AppMyVpnRoute
   '/profile': typeof AppProfileRoute
   '/support': typeof AppSupportRoute
-  '/support-ai': typeof AppSupportAiRoute
   '/vpn': typeof AppVpnRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
   '/api/public/sub/$token': typeof ApiPublicSubTokenRoute
@@ -113,12 +113,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/support-ai': typeof SupportAiRoute
   '/_app/admin': typeof AppAdminRoute
   '/_app/faq': typeof AppFaqRoute
   '/_app/my-vpn': typeof AppMyVpnRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/support': typeof AppSupportRoute
-  '/_app/support-ai': typeof AppSupportAiRoute
   '/_app/vpn': typeof AppVpnRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
   '/api/public/sub/$token': typeof ApiPublicSubTokenRoute
@@ -128,12 +128,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/support-ai'
     | '/admin'
     | '/faq'
     | '/my-vpn'
     | '/profile'
     | '/support'
-    | '/support-ai'
     | '/vpn'
     | '/api/public/sb/$'
     | '/api/public/sub/$token'
@@ -141,12 +141,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/support-ai'
     | '/admin'
     | '/faq'
     | '/my-vpn'
     | '/profile'
     | '/support'
-    | '/support-ai'
     | '/vpn'
     | '/api/public/sb/$'
     | '/api/public/sub/$token'
@@ -155,12 +155,12 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/auth'
+    | '/support-ai'
     | '/_app/admin'
     | '/_app/faq'
     | '/_app/my-vpn'
     | '/_app/profile'
     | '/_app/support'
-    | '/_app/support-ai'
     | '/_app/vpn'
     | '/api/public/sb/$'
     | '/api/public/sub/$token'
@@ -170,12 +170,20 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
+  SupportAiRoute: typeof SupportAiRoute
   ApiPublicSbSplatRoute: typeof ApiPublicSbSplatRoute
   ApiPublicSubTokenRoute: typeof ApiPublicSubTokenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/support-ai': {
+      id: '/support-ai'
+      path: '/support-ai'
+      fullPath: '/support-ai'
+      preLoaderRoute: typeof SupportAiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -202,13 +210,6 @@ declare module '@tanstack/react-router' {
       path: '/vpn'
       fullPath: '/vpn'
       preLoaderRoute: typeof AppVpnRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/support-ai': {
-      id: '/_app/support-ai'
-      path: '/support-ai'
-      fullPath: '/support-ai'
-      preLoaderRoute: typeof AppSupportAiRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/support': {
@@ -269,7 +270,6 @@ interface AppRouteChildren {
   AppMyVpnRoute: typeof AppMyVpnRoute
   AppProfileRoute: typeof AppProfileRoute
   AppSupportRoute: typeof AppSupportRoute
-  AppSupportAiRoute: typeof AppSupportAiRoute
   AppVpnRoute: typeof AppVpnRoute
 }
 
@@ -279,7 +279,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppMyVpnRoute: AppMyVpnRoute,
   AppProfileRoute: AppProfileRoute,
   AppSupportRoute: AppSupportRoute,
-  AppSupportAiRoute: AppSupportAiRoute,
   AppVpnRoute: AppVpnRoute,
 }
 
@@ -289,9 +288,20 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
+  SupportAiRoute: SupportAiRoute,
   ApiPublicSbSplatRoute: ApiPublicSbSplatRoute,
   ApiPublicSubTokenRoute: ApiPublicSubTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
