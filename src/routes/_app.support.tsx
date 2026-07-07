@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
@@ -11,7 +11,6 @@ import {
   Clock, CheckCircle2, XCircle, HelpCircle,
 } from "lucide-react";
 import { ComplaintChatModal } from "@/components/ComplaintChat";
-import { AiSupportChat } from "@/components/AiSupportChat";
 
 export const Route = createFileRoute("/_app/support")({ component: SupportPage });
 
@@ -41,38 +40,29 @@ const STATUS_DOT: Record<Complaint["status"], string> = {
 };
 
 function SupportPage() {
-  const [aiOpen, setAiOpen] = useState(false);
   const [operatorFormOpen, setOperatorFormOpen] = useState(false);
-  const qc = useQueryClient();
 
   return (
     <div className="space-y-5">
       <HeroCard
-        onAskAI={() => setAiOpen(true)}
         onCallOperator={() => setOperatorFormOpen(true)}
       />
       <MyComplaints
         openFormExternal={operatorFormOpen}
         onFormClosed={() => setOperatorFormOpen(false)}
       />
-      <AiSupportChat
-        open={aiOpen}
-        onClose={() => setAiOpen(false)}
-        onEscalated={() => qc.invalidateQueries({ queryKey: ["complaints"] })}
-      />
     </div>
   );
 }
 
 function HeroCard({
-  onAskAI, onCallOperator,
-}: { onAskAI: () => void; onCallOperator: () => void }) {
+  onCallOperator,
+}: { onCallOperator: () => void }) {
   return (
     <section className="space-y-3">
-      <button
-        type="button"
-        onClick={onAskAI}
-        className="tg-press relative w-full overflow-hidden rounded-3xl p-5 text-left"
+      <Link
+        to="/support-ai"
+        className="tg-press relative block w-full overflow-hidden rounded-3xl p-5 text-left"
         style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
       >
         <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-white/15 blur-2xl" />
@@ -86,14 +76,14 @@ function HeroCard({
             </p>
             <h2 className="mt-0.5 text-[18px] font-semibold leading-tight">Спросите ИИ-помощника</h2>
             <p className="mt-1 text-[13px] leading-snug text-white/85">
-              Ответит мгновенно на большинство вопросов. Если не сможет — передаст оператору.
+              Ответит мгновенно, видит скриншоты. Если не сможет — передаст оператору.
             </p>
             <div className="mt-3 inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-[12px] font-medium text-white backdrop-blur">
-              Начать чат <ArrowRight className="h-3.5 w-3.5" />
+              Открыть чат <ArrowRight className="h-3.5 w-3.5" />
             </div>
           </div>
         </div>
-      </button>
+      </Link>
 
       <button
         type="button"
