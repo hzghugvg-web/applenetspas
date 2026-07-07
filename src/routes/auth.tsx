@@ -7,6 +7,7 @@ import { bootstrapUser } from "@/lib/bootstrap";
 import { alertDialog as toast } from "@/lib/alert";
 import { hasStoredSupabaseSession } from "@/lib/fast-auth";
 import { Shield, Loader2, Mail, Lock, Eye, EyeOff, Sparkles } from "lucide-react";
+import { ForgotPasswordModal } from "@/components/ForgotPasswordModal";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -66,6 +67,7 @@ function AuthPage() {
   }
 
   const [showPassword, setShowPassword] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
 
   return (
     <div
@@ -213,13 +215,27 @@ function AuthPage() {
             </button>
           </form>
 
-          {mode === "signup" && (
+          {mode === "signup" ? (
             <p className="mt-4 text-center text-[11px] leading-snug text-muted-foreground/80">
               Регистрируясь, вы соглашаетесь с правилами сервиса.
             </p>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setForgotOpen(true)}
+              className="mt-3 block w-full text-center text-[13px] font-medium text-primary hover:opacity-80"
+            >
+              Забыли пароль? Обратиться в поддержку
+            </button>
           )}
         </div>
       </motion.div>
+
+      <ForgotPasswordModal
+        open={forgotOpen}
+        onClose={() => setForgotOpen(false)}
+        initialEmail={email}
+      />
     </div>
   );
 }
