@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppVpnRouteImport } from './routes/_app.vpn'
+import { Route as AppSupportAiRouteImport } from './routes/_app.support-ai'
 import { Route as AppSupportRouteImport } from './routes/_app.support'
 import { Route as AppProfileRouteImport } from './routes/_app.profile'
 import { Route as AppMyVpnRouteImport } from './routes/_app.my-vpn'
@@ -38,6 +39,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppVpnRoute = AppVpnRouteImport.update({
   id: '/vpn',
   path: '/vpn',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSupportAiRoute = AppSupportAiRouteImport.update({
+  id: '/support-ai',
+  path: '/support-ai',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSupportRoute = AppSupportRouteImport.update({
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/my-vpn': typeof AppMyVpnRoute
   '/profile': typeof AppProfileRoute
   '/support': typeof AppSupportRoute
+  '/support-ai': typeof AppSupportAiRoute
   '/vpn': typeof AppVpnRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
   '/api/public/sub/$token': typeof ApiPublicSubTokenRoute
@@ -96,6 +103,7 @@ export interface FileRoutesByTo {
   '/my-vpn': typeof AppMyVpnRoute
   '/profile': typeof AppProfileRoute
   '/support': typeof AppSupportRoute
+  '/support-ai': typeof AppSupportAiRoute
   '/vpn': typeof AppVpnRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
   '/api/public/sub/$token': typeof ApiPublicSubTokenRoute
@@ -110,6 +118,7 @@ export interface FileRoutesById {
   '/_app/my-vpn': typeof AppMyVpnRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/support': typeof AppSupportRoute
+  '/_app/support-ai': typeof AppSupportAiRoute
   '/_app/vpn': typeof AppVpnRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
   '/api/public/sub/$token': typeof ApiPublicSubTokenRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
     | '/my-vpn'
     | '/profile'
     | '/support'
+    | '/support-ai'
     | '/vpn'
     | '/api/public/sb/$'
     | '/api/public/sub/$token'
@@ -136,6 +146,7 @@ export interface FileRouteTypes {
     | '/my-vpn'
     | '/profile'
     | '/support'
+    | '/support-ai'
     | '/vpn'
     | '/api/public/sb/$'
     | '/api/public/sub/$token'
@@ -149,6 +160,7 @@ export interface FileRouteTypes {
     | '/_app/my-vpn'
     | '/_app/profile'
     | '/_app/support'
+    | '/_app/support-ai'
     | '/_app/vpn'
     | '/api/public/sb/$'
     | '/api/public/sub/$token'
@@ -190,6 +202,13 @@ declare module '@tanstack/react-router' {
       path: '/vpn'
       fullPath: '/vpn'
       preLoaderRoute: typeof AppVpnRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/support-ai': {
+      id: '/_app/support-ai'
+      path: '/support-ai'
+      fullPath: '/support-ai'
+      preLoaderRoute: typeof AppSupportAiRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/support': {
@@ -250,6 +269,7 @@ interface AppRouteChildren {
   AppMyVpnRoute: typeof AppMyVpnRoute
   AppProfileRoute: typeof AppProfileRoute
   AppSupportRoute: typeof AppSupportRoute
+  AppSupportAiRoute: typeof AppSupportAiRoute
   AppVpnRoute: typeof AppVpnRoute
 }
 
@@ -259,6 +279,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMyVpnRoute: AppMyVpnRoute,
   AppProfileRoute: AppProfileRoute,
   AppSupportRoute: AppSupportRoute,
+  AppSupportAiRoute: AppSupportAiRoute,
   AppVpnRoute: AppVpnRoute,
 }
 
