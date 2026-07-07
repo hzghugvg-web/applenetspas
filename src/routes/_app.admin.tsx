@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { Plus, Trash2, RotateCcw, Ban, CheckCircle2, MessageCircle, Megaphone, Send, Pencil, X, KeyRound } from "lucide-react";
+import { Plus, Trash2, RotateCcw, Ban, CheckCircle2, MessageCircle, Megaphone, Send, Pencil, X, KeyRound, Loader2 } from "lucide-react";
 import { ComplaintChatModal } from "@/components/ComplaintChat";
 
 export const Route = createFileRoute("/_app/admin")({ component: AdminPage });
