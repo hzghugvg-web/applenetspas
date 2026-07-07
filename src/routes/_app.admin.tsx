@@ -679,3 +679,210 @@ function AdminComplaintCard({
     </>
   );
 }
+
+type RecoveryRow = {
+  id: string;
+  email: string;
+  contact_method: "telegram" | "email" | "phone" | "other";
+  contact_value: string;
+  description: string;
+  approximate_registration: string | null;
+  status: "new" | "in_progress" | "resolved" | "rejected";
+  admin_reply: string | null;
+  created_at: string;
+  replied_at: string | null;
+};
+
+const REC_STATUS_LABEL: Record<RecoveryRow["status"], string> = {
+  new: "Новая",
+  in_progress: "В работе",
+  resolved: "Решена",
+  rejected: "Отклонена",
+};
+
+const REC_STATUS_DOT: Record<RecoveryRow["status"], string> = {
+  new: "bg-yellow-400",
+  in_progress: "bg-primary",
+  resolved: "bg-emerald-500",
+  rejected: "bg-destructive",
+};
+
+function RecoveryTab() {
+  const [rows, setRows] = useState<RecoveryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    const { data, error } = await (supabase as any)
+      .from("password_recovery_requests")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    setLoading(false);
+    if (error) { toast.error(translateAuthError(error.message)); return; }
+    setRows((data ?? []) as RecoveryRow[]);
+  }
+
+  useEffect(() => { load(); }, []);
+
+  const opened = rows.find((r) => r.id === openId) ?? null;
+
+  return (
+    <div className="space-y-2">
+      {loading && (
+        <p className="py-6 text-center text-[13px] text-muted-foreground">Загрузка…</p>
+      )}
+      {!loading && rows.length === 0 && (
+        <p className="py-6 text-center text-[13px] text-muted-foreground">Заявок пока нет</p>
+      )}
+      {rows.map((r) => (
+        <button
+          key={r.id}
+          type="button"
+          onClick={() => setOpenId(r.id)}
+          className="tg-press flex w-full items-start gap-3 rounded-xl bg-card p-3 text-left"
+        >
+          <div
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"
+            style={{ background: "var(--gradient-primary)" }}
+          >
+            <KeyRound className="h-4 w-4 text-primary-foreground" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${REC_STATUS_DOT[r.status]}`} />
+              <span className="truncate text-[11px] font-medium text-muted-foreground">
+                {REC_STATUS_LABEL[r.status]} · {new Date(r.created_at).toLocaleDateString("ru-RU")}
+              </span>
+            </div>
+            <p className="mt-0.5 truncate text-[14px] font-medium text-foreground">{r.email}</p>
+            <p className="truncate text-[12px] text-muted-foreground">
+              {r.contact_method}: {r.contact_value}
+            </p>
+          </div>
+        </button>
+      ))}
+
+      {opened && (
+        <RecoveryDetail
+          row={opened}
+          onClose={() => setOpenId(null)}
+          onChanged={() => { setOpenId(null); load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function RecoveryDetail({
+  row, onClose, onChanged,
+}: { row: RecoveryRow; onClose: () => void; onChanged: () => void }) {
+  const [reply, setReply] = useState(row.admin_reply ?? "");
+  const [saving, setSaving] = useState<"" | "reply" | "resolve" | "reject" | "progress">("");
+
+  async function update(patch: Partial<RecoveryRow>, kind: typeof saving) {
+    setSaving(kind);
+    const { error } = await (supabase as any)
+      .from("password_recovery_requests")
+      .update({
+        ...patch,
+        ...(patch.status && patch.status !== "in_progress" ? { replied_at: new Date().toISOString() } : {}),
+      })
+      .eq("id", row.id);
+    setSaving("");
+    if (error) { toast.error(translateAuthError(error.message)); return; }
+    toast.success("Обновлено");
+    onChanged();
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="ns-scroll max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-border p-5 sm:rounded-3xl"
+        style={{
+          background: "var(--card-solid)",
+          boxShadow: "var(--shadow-elegant)",
+          paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))",
+        }}
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-[17px] font-semibold text-foreground">Восстановление пароля</h3>
+            <p className="text-[12px] text-muted-foreground">
+              {new Date(row.created_at).toLocaleString("ru-RU")} · {REC_STATUS_LABEL[row.status]}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="tg-press -mr-1 -mt-1 grid h-9 w-9 place-items-center rounded-full text-muted-foreground"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-2 rounded-xl border border-border bg-muted/40 p-3 text-[13px]">
+          <InfoRow k="Email">{row.email}</InfoRow>
+          <InfoRow k="Контакт">{row.contact_method}: {row.contact_value}</InfoRow>
+          {row.approximate_registration && (
+            <InfoRow k="Регистрация">{row.approximate_registration}</InfoRow>
+          )}
+          <div>
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Описание</div>
+            <p className="mt-0.5 whitespace-pre-wrap text-foreground/90">{row.description}</p>
+          </div>
+        </div>
+
+        <div className="mt-3 space-y-2">
+          <label className="block px-1 text-[12px] font-medium text-muted-foreground">
+            Внутренняя заметка / что ответил
+          </label>
+          <textarea
+            value={reply}
+            onChange={(e) => setReply(e.target.value)}
+            rows={3}
+            placeholder="например: отправил ссылку восстановления в Telegram"
+            className="w-full resize-none rounded-xl border border-border bg-input p-3 text-[14px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
+          />
+          <button
+            onClick={() => update({ admin_reply: reply, status: "in_progress" }, "reply")}
+            disabled={!!saving}
+            className="tg-press h-10 w-full rounded-xl bg-primary text-[13px] font-medium text-primary-foreground disabled:opacity-60"
+          >
+            {saving === "reply" ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Сохранить заметку"}
+          </button>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            onClick={() => update({ admin_reply: reply || row.admin_reply, status: "resolved" }, "resolve")}
+            disabled={!!saving}
+            className="tg-press flex h-10 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 text-[13px] font-medium text-white disabled:opacity-60"
+          >
+            {saving === "resolve" ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle2 className="h-4 w-4" /> Решено</>}
+          </button>
+          <button
+            onClick={() => update({ admin_reply: reply || row.admin_reply, status: "rejected" }, "reject")}
+            disabled={!!saving}
+            className="tg-press flex h-10 items-center justify-center gap-1.5 rounded-xl bg-destructive text-[13px] font-medium text-destructive-foreground disabled:opacity-60"
+          >
+            {saving === "reject" ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Ban className="h-4 w-4" /> Отклонить</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ k, children }: { k: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{k}</div>
+      <div className="mt-0.5 text-foreground/90">{children}</div>
+    </div>
+  );
+}
