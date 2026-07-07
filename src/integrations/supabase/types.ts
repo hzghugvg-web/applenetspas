@@ -415,6 +415,7 @@ export type Database = {
           expires_at: string | null
           id: string
           is_active: boolean
+          title: string | null
           url: string
         }
         Insert: {
@@ -424,6 +425,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          title?: string | null
           url: string
         }
         Update: {
@@ -433,6 +435,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          title?: string | null
           url?: string
         }
         Relationships: [
