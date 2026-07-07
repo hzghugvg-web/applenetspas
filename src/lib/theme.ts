@@ -12,10 +12,10 @@ export const MOTIONS: { id: Motion; label: string; hint: string }[] = [
 ];
 
 export const THEMES: { id: DesignTheme; label: string; accent: string; hint: string }[] = [
-  { id: "midnight", label: "Midnight", accent: "#7C6BFF", hint: "Фиолетово-мятный, по умолчанию" },
-  { id: "sunset",   label: "Sunset",   accent: "#FB7185", hint: "Розово-оранжевый закат" },
-  { id: "forest",   label: "Forest",   accent: "#10B981", hint: "Зелёный, спокойный минимализм" },
-  { id: "candy",    label: "Candy",    accent: "#EC4899", hint: "Яркая неоновая карамель" },
+  { id: "midnight", label: "Aurora",   accent: "#6366F1", hint: "Северное сияние. Индиго × циан" },
+  { id: "sunset",   label: "Ember",    accent: "#F97316", hint: "Тёплое золото на угольном" },
+  { id: "forest",   label: "Sapphire", accent: "#3B82F6", hint: "Глубокий океан. Синий × азур" },
+  { id: "candy",    label: "Rose Gold", accent: "#EC4899", hint: "Розовое золото и слива" },
 ];
 
 const MODE_KEY = "ns_mode";

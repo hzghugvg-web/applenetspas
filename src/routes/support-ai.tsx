@@ -1,14 +1,16 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { askSupportAI } from "@/lib/support-ai.functions";
 import { alertDialog as toast } from "@/lib/alert";
 import { translateAuthError } from "@/lib/errors";
 import { hasStoredSupabaseSession } from "@/lib/fast-auth";
+import { useTheme } from "@/lib/theme";
 import {
   Send, Loader2, Sparkles, Headphones, CheckCircle2, ChevronLeft,
-  Paperclip, X, Play,
+  Paperclip, X, Play, Trash2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/support-ai")({
@@ -40,15 +42,47 @@ type Msg = {
   attachments?: Attachment[];
 };
 
+const CHAT_KEY_PREFIX = "ns_ai_chat_v1_";
+
+function greetingMsg(): Msg {
+  return { id: "g", role: "assistant", content: GREETING };
+}
+
+function stripAttachmentUrls(m: Msg): Msg {
+  if (!m.attachments?.length) return m;
+  return {
+    ...m,
+    attachments: m.attachments.map((a) => ({ ...a, url: "" })),
+  };
+}
+
+async function refreshAttachmentUrls(msgs: Msg[]): Promise<Msg[]> {
+  const out: Msg[] = [];
+  for (const m of msgs) {
+    if (!m.attachments?.length) { out.push(m); continue; }
+    const refreshed: Attachment[] = [];
+    for (const a of m.attachments) {
+      const { data } = await supabase.storage
+        .from("complaints")
+        .createSignedUrl(a.path, 3600);
+      refreshed.push({ ...a, url: data?.signedUrl ?? a.url });
+    }
+    out.push({ ...m, attachments: refreshed });
+  }
+  return out;
+}
+
 const GREETING =
   "Привет! Я ИИ-помощник NetSpas. Спросите про подключение, кулдаун, подписку — постараюсь ответить сразу. Можно прикрепить скриншот 📎 — я его увижу. Если не смогу помочь, передам оператору.";
 
 function AiChatPage() {
   const navigate = useNavigate();
   const ask = useServerFn(askSupportAI);
-  const [messages, setMessages] = useState<Msg[]>([
-    { id: "g", role: "assistant", content: GREETING },
-  ]);
+  const { motion: motionPref } = useTheme();
+  const [userId, setUserId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Msg[]>([greetingMsg()]);
+  const [hydrated, setHydrated] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const [text, setText] = useState("");
   const [pending, setPending] = useState<Attachment[]>([]);
   const [thinking, setThinking] = useState(false);
@@ -58,10 +92,60 @@ function AiChatPage() {
   const [creating, setCreating] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const anim = motionPref !== "none";
+
+  // Hydrate from localStorage (per-user).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (cancelled) return;
+      const uid = u.user?.id ?? null;
+      setUserId(uid);
+      if (uid) {
+        const raw = localStorage.getItem(CHAT_KEY_PREFIX + uid);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw) as Msg[];
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              const refreshed = await refreshAttachmentUrls(parsed);
+              if (!cancelled) setMessages(refreshed);
+            }
+          } catch { /* corrupt — ignore */ }
+        }
+      }
+      if (!cancelled) setHydrated(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Persist on change (skip the initial greeting-only state).
+  useEffect(() => {
+    if (!hydrated || !userId) return;
+    const onlyGreeting = messages.length === 1 && messages[0].id === "g";
+    const key = CHAT_KEY_PREFIX + userId;
+    if (onlyGreeting) {
+      localStorage.removeItem(key);
+      return;
+    }
+    try {
+      localStorage.setItem(key, JSON.stringify(messages.map(stripAttachmentUrls)));
+    } catch { /* quota — ignore */ }
+  }, [messages, userId, hydrated]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length, thinking, confirmingEscalate, escalated, pending.length]);
+
+  function clearChat() {
+    setMessages([greetingMsg()]);
+    setConfirmingEscalate(false);
+    setEscalated(false);
+    setConfirmClear(false);
+    setText("");
+    setPending([]);
+    if (userId) localStorage.removeItem(CHAT_KEY_PREFIX + userId);
+  }
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -243,28 +327,56 @@ function AiChatPage() {
               онлайн · отвечает мгновенно
             </p>
           </div>
+          {messages.length > 1 && (
+            <button
+              onClick={() => setConfirmClear(true)}
+              className="tg-press grid h-10 w-10 place-items-center rounded-full text-muted-foreground hover:text-destructive"
+              aria-label="Очистить чат"
+              title="Очистить чат"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </header>
 
       {/* Messages (scroll area) */}
       <div className="ns-scroll min-h-0 flex-1 overflow-y-auto px-3 pt-3">
         <div className="mx-auto flex max-w-2xl flex-col gap-2 pb-4">
-          {messages.map((m) => (
-            <MessageBubble key={m.id} m={m} />
-          ))}
+          <AnimatePresence initial={false}>
+            {messages.map((m) => (
+              <MessageBubble key={m.id} m={m} anim={anim} />
+            ))}
+          </AnimatePresence>
 
-          {thinking && (
-            <div className="flex justify-start">
-              <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary [animation-delay:150ms]" />
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary [animation-delay:300ms]" />
-              </div>
-            </div>
-          )}
+          <AnimatePresence>
+            {thinking && (
+              <motion.div
+                key="thinking"
+                initial={anim ? { opacity: 0, y: 6 } : false}
+                animate={{ opacity: 1, y: 0 }}
+                exit={anim ? { opacity: 0 } : undefined}
+                transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                className="flex justify-start"
+              >
+                <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary [animation-delay:150ms]" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary [animation-delay:300ms]" />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
+          <AnimatePresence>
           {confirmingEscalate && !escalated && (
-            <div className="mt-1 rounded-2xl border border-primary/30 bg-primary/5 p-3 text-[13px]">
+            <motion.div
+              initial={anim ? { opacity: 0, y: 8, scale: 0.98 } : false}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={anim ? { opacity: 0, y: 4 } : undefined}
+              transition={{ type: "spring", stiffness: 320, damping: 28 }}
+              className="mt-1 rounded-2xl border border-primary/30 bg-primary/5 p-3 text-[13px]"
+            >
               <p className="mb-2 font-medium text-foreground">Передать вопрос оператору?</p>
               <p className="mb-3 text-[12px] text-muted-foreground">
                 Оператор ответит в разделе «Мои обращения», обычно за несколько минут.
@@ -286,8 +398,9 @@ function AiChatPage() {
                   Передать
                 </button>
               </div>
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
 
           <div ref={endRef} />
         </div>
@@ -307,11 +420,24 @@ function AiChatPage() {
           </button>
         ) : (
           <div className="mx-auto max-w-2xl">
+            <AnimatePresence initial={false}>
             {pending.length > 0 && (
-              <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
+              <motion.div
+                key="pending"
+                initial={anim ? { opacity: 0, height: 0 } : false}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={anim ? { opacity: 0, height: 0 } : undefined}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                className="mb-2 flex gap-2 overflow-x-auto pb-1"
+              >
                 {pending.map((a) => (
-                  <div
+                  <motion.div
                     key={a.id}
+                    layout={anim}
+                    initial={anim ? { opacity: 0, scale: 0.9 } : false}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={anim ? { opacity: 0, scale: 0.9 } : undefined}
+                    transition={{ type: "spring", stiffness: 360, damping: 26 }}
                     className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border bg-muted"
                   >
                     {a.kind === "image" ? (
@@ -328,10 +454,11 @@ function AiChatPage() {
                     >
                       <X className="h-3 w-3" />
                     </button>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             )}
+            </AnimatePresence>
             <div className="flex items-end gap-2">
               <input
                 ref={fileRef}
@@ -381,24 +508,85 @@ function AiChatPage() {
           </div>
         )}
       </div>
+
+      {/* Clear chat confirm */}
+      <AnimatePresence>
+        {confirmClear && (
+          <motion.div
+            key="clear-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center px-6"
+            style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+            onClick={() => setConfirmClear(false)}
+          >
+            <motion.div
+              onClick={(e) => e.stopPropagation()}
+              initial={anim ? { opacity: 0, y: 24, scale: 0.96 } : false}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={anim ? { opacity: 0, y: 24, scale: 0.96 } : undefined}
+              transition={{ type: "spring", stiffness: 320, damping: 28 }}
+              className="w-full max-w-[340px] rounded-2xl border border-border p-5"
+              style={{ background: "var(--card-solid)", boxShadow: "var(--shadow-elegant)" }}
+            >
+              <div className="mb-2 flex items-center gap-2 text-[16px] font-semibold text-foreground">
+                <Trash2 className="h-4 w-4 text-destructive" /> Очистить чат?
+              </div>
+              <p className="text-[13px] text-muted-foreground">
+                История переписки с ИИ будет удалена. Обращения, переданные оператору, сохранятся.
+              </p>
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={() => setConfirmClear(false)}
+                  className="tg-press flex-1 rounded-xl border border-border py-2.5 text-[13px] font-medium text-foreground"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={clearChat}
+                  className="tg-press flex-1 rounded-xl py-2.5 text-[13px] font-medium text-white"
+                  style={{ background: "linear-gradient(135deg,#F43F5E,#B91C1C)" }}
+                >
+                  Очистить
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function MessageBubble({ m }: { m: Msg }) {
+function MessageBubble({ m, anim }: { m: Msg; anim: boolean }) {
+  const enter = anim
+    ? { initial: { opacity: 0, y: 8, scale: 0.98 }, animate: { opacity: 1, y: 0, scale: 1 }, exit: { opacity: 0 } }
+    : { initial: false as const, animate: { opacity: 1 } };
   if (m.role === "system-note") {
     return (
-      <div className="flex justify-center">
+      <motion.div
+        layout={anim}
+        {...enter}
+        transition={{ type: "spring", stiffness: 340, damping: 28, mass: 0.7 }}
+        className="flex justify-center"
+      >
         <div className="max-w-[92%] rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-center text-[12px] text-emerald-300">
           <CheckCircle2 className="mr-1 -mt-0.5 inline h-3.5 w-3.5" />
           {m.content}
         </div>
-      </div>
+      </motion.div>
     );
   }
   const isUser = m.role === "user";
   return (
-    <div className={isUser ? "flex justify-end" : "flex justify-start"}>
+    <motion.div
+      layout={anim}
+      {...enter}
+      transition={{ type: "spring", stiffness: 340, damping: 28, mass: 0.7 }}
+      className={isUser ? "flex justify-end" : "flex justify-start"}
+    >
       <div
         className={`max-w-[85%] rounded-2xl px-3 py-2 text-[14px] leading-snug ${
           isUser
@@ -423,7 +611,7 @@ function MessageBubble({ m }: { m: Msg }) {
         )}
         {m.content && <p className="whitespace-pre-wrap break-words">{m.content}</p>}
       </div>
-    </div>
+    </motion.div>
   );
 }
 

@@ -94,56 +94,99 @@ function ModePill({ mode, onChange }: { mode: ColorMode; onChange: (m: ColorMode
   );
 }
 
+const THEME_STYLE: Record<DesignTheme, { bg: string; c1: string; c2: string; glow: string }> = {
+  midnight: { bg: "#0B0F1E", c1: "#6366F1", c2: "#22D3EE", glow: "rgba(99,102,241,0.55)" },
+  sunset:   { bg: "#140B07", c1: "#FBBF24", c2: "#EA580C", glow: "rgba(234,88,12,0.55)" },
+  forest:   { bg: "#07101F", c1: "#3B82F6", c2: "#06B6D4", glow: "rgba(59,130,246,0.55)" },
+  candy:    { bg: "#160C15", c1: "#F472B6", c2: "#A855F7", glow: "rgba(244,114,182,0.55)" },
+};
+
+function ThemePreview({ id }: { id: DesignTheme }) {
+  const s = THEME_STYLE[id];
+  const grad = `linear-gradient(135deg, ${s.c1} 0%, ${s.c2} 100%)`;
+  return (
+    <div
+      className="relative h-[76px] w-full overflow-hidden rounded-xl"
+      style={{
+        background: s.bg,
+        boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${s.c1} 22%, transparent)`,
+      }}
+    >
+      {/* ambient glow */}
+      <div
+        className="absolute -right-6 -top-6 h-16 w-16 rounded-full"
+        style={{ background: s.glow, filter: "blur(18px)", opacity: 0.85 }}
+      />
+      <div
+        className="absolute -left-4 bottom-0 h-10 w-16 rounded-full"
+        style={{ background: s.c2, filter: "blur(16px)", opacity: 0.35 }}
+      />
+      {/* fake status bar */}
+      <div className="absolute inset-x-2 top-1.5 flex items-center justify-between">
+        <span className="h-1 w-6 rounded-full bg-white/45" />
+        <span className="h-1 w-4 rounded-full bg-white/25" />
+      </div>
+      {/* hero pill */}
+      <div
+        className="absolute left-2 right-2 top-4 h-7 rounded-lg"
+        style={{ background: grad, boxShadow: `0 6px 14px -6px ${s.glow}` }}
+      >
+        <div className="absolute inset-y-1 left-1.5 w-4 rounded-md bg-white/25" />
+        <div className="absolute right-2 top-2 h-1 w-8 rounded-full bg-white/50" />
+        <div className="absolute right-2 top-4 h-1 w-5 rounded-full bg-white/30" />
+      </div>
+      {/* content cards */}
+      <div className="absolute inset-x-2 bottom-1.5 flex gap-1">
+        <div className="h-4 flex-1 rounded-md bg-white/10 backdrop-blur-sm" />
+        <div
+          className="h-4 w-8 rounded-md"
+          style={{ background: `color-mix(in srgb, ${s.c1} 60%, transparent)` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function ThemeGrid({ current, onChange }: { current: DesignTheme; onChange: (t: DesignTheme) => void }) {
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 gap-2.5">
       {THEMES.map((t) => {
         const active = current === t.id;
-        const swatchGradient = themePreviewGradient(t.id);
+        const s = THEME_STYLE[t.id];
         return (
           <button
             key={t.id}
             type="button"
             onClick={() => onChange(t.id)}
-            className="tg-press relative flex flex-col gap-2 overflow-hidden rounded-xl border p-2 text-left transition-colors"
+            className="tg-press group relative flex flex-col gap-2 rounded-2xl border p-2 text-left transition-all"
             style={{
               borderColor: active
-                ? "color-mix(in srgb, var(--primary) 65%, transparent)"
+                ? `color-mix(in srgb, ${s.c1} 75%, transparent)`
                 : "var(--border)",
-              background: active ? "color-mix(in srgb, var(--primary) 8%, transparent)" : "transparent",
-              boxShadow: active ? "0 6px 20px -12px var(--primary)" : "none",
+              background: active
+                ? `color-mix(in srgb, ${s.c1} 10%, transparent)`
+                : "transparent",
+              boxShadow: active ? `0 10px 28px -14px ${s.glow}` : "none",
             }}
           >
-            <div
-              className="relative h-14 w-full overflow-hidden rounded-lg"
-              style={{ background: swatchGradient }}
-            >
-              <div className="absolute inset-2 rounded-md bg-white/15 backdrop-blur-[2px]" />
-              <div className="absolute right-2 top-2 h-1.5 w-6 rounded-full bg-white/40" />
-              {active && (
-                <div className="absolute right-1.5 bottom-1.5 grid h-5 w-5 place-items-center rounded-full bg-white text-black shadow">
-                  <Check className="h-3 w-3" strokeWidth={3} />
-                </div>
-              )}
-            </div>
-            <div className="min-w-0">
-              <div className="truncate text-[12px] font-semibold text-foreground">{t.label}</div>
-              <div className="truncate text-[10px] text-muted-foreground">{t.hint}</div>
+            <ThemePreview id={t.id} />
+            {active && (
+              <div
+                className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full text-white shadow-lg"
+                style={{ background: `linear-gradient(135deg, ${s.c1}, ${s.c2})` }}
+              >
+                <Check className="h-3 w-3" strokeWidth={3} />
+              </div>
+            )}
+            <div className="min-w-0 px-0.5">
+              <div className="truncate text-[13px] font-semibold text-foreground">{t.label}</div>
+              <div className="truncate text-[10.5px] text-muted-foreground">{t.hint}</div>
             </div>
           </button>
         );
       })}
     </div>
   );
-}
-
-function themePreviewGradient(t: DesignTheme): string {
-  switch (t) {
-    case "midnight": return "linear-gradient(135deg,#7C6BFF 0%,#5EE7DF 100%)";
-    case "sunset":   return "linear-gradient(135deg,#FB7185 0%,#F59E0B 100%)";
-    case "forest":   return "linear-gradient(135deg,#10B981 0%,#22D3EE 100%)";
-    case "candy":    return "linear-gradient(135deg,#EC4899 0%,#8B5CF6 45%,#00E7FF 100%)";
-  }
 }
 
 function MotionGrid({ current, onChange }: { current: Motion; onChange: (m: Motion) => void }) {
