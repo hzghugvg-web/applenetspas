@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { Plus, Trash2, RotateCcw, Ban, CheckCircle2, MessageCircle, Megaphone, Send, Pencil, X } from "lucide-react";
+import { Plus, Trash2, RotateCcw, Ban, CheckCircle2, MessageCircle, Megaphone, Send, Pencil, X, KeyRound } from "lucide-react";
 import { ComplaintChatModal } from "@/components/ComplaintChat";
 
 export const Route = createFileRoute("/_app/admin")({ component: AdminPage });
@@ -15,7 +15,7 @@ type UserRow = { id: string; email: string; is_blocked: boolean; cooldown_until:
 type IssuedConfig = { id: string; vless_url: string; issued_at: string; direction_id: string | null };
 
 function AdminPage() {
-  const [tab, setTab] = useState<"catalog" | "users" | "complaints" | "broadcast">("catalog");
+  const [tab, setTab] = useState<"catalog" | "users" | "complaints" | "broadcast" | "recovery">("catalog");
   const { data: isAdmin, isLoading } = useIsAdmin();
 
   if (isLoading || isAdmin === undefined)
@@ -25,12 +25,13 @@ function AdminPage() {
 
   return (
     <>
-      <div className="mb-4 grid grid-cols-4 gap-1 rounded-2xl bg-muted p-1">
+      <div className="mb-4 grid grid-cols-5 gap-1 rounded-2xl bg-muted p-1">
         {([
           ["catalog", "Каталог"],
           ["users", "Пользователи"],
           ["complaints", "Обращения"],
           ["broadcast", "Рассылка"],
+          ["recovery", "Пароли"],
         ] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)}
             className={`tg-press rounded-xl py-2 text-xs font-medium transition-colors ${tab === k ? "bg-card-solid text-foreground shadow" : "text-muted-foreground"}`}
@@ -43,6 +44,7 @@ function AdminPage() {
       {tab === "users" && <UsersTab />}
       {tab === "complaints" && <ComplaintsTab />}
       {tab === "broadcast" && <BroadcastTab />}
+      {tab === "recovery" && <RecoveryTab />}
     </>
   );
 }
