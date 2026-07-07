@@ -144,7 +144,7 @@ function outboundToUri(ob: any): string | null {
 
 export const issueVpnConfig = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { directionId: string }) => data)
+  .validator((data: { directionId: string }) => data)
   .handler(async ({ data, context }) => {
     const { data: rpc, error } = await context.supabase.rpc("issue_vpn_config", {
       _direction_id: data.directionId,
