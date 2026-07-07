@@ -10,7 +10,7 @@ import { ComplaintChatModal } from "@/components/ComplaintChat";
 export const Route = createFileRoute("/_app/admin")({ component: AdminPage });
 
 type Direction = { id: string; name: string; flag: string | null; is_active: boolean };
-type VlessLink = { id: string; url: string; direction_id: string; is_active: boolean; available_from: string | null; expires_at: string | null };
+type VlessLink = { id: string; url: string; direction_id: string; is_active: boolean; available_from: string | null; expires_at: string | null; title: string | null };
 type UserRow = { id: string; email: string; is_blocked: boolean; cooldown_until: string | null; subscription_from: string | null; subscription_until: string | null };
 type IssuedConfig = { id: string; vless_url: string; issued_at: string; direction_id: string | null };
 
@@ -245,6 +245,12 @@ function CatalogTab() {
   const [urlDraft, setUrlDraft] = useState<Record<string, string>>({});
   const [fromDraft, setFromDraft] = useState<Record<string, string>>({});
   const [untilDraft, setUntilDraft] = useState<Record<string, string>>({});
+  const [titleDraft, setTitleDraft] = useState<Record<string, string>>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editUrl, setEditUrl] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+  const [editFrom, setEditFrom] = useState("");
+  const [editUntil, setEditUntil] = useState("");
 
   async function load() {
     await supabase.rpc("cleanup_expired_vless_links");
@@ -284,12 +290,14 @@ function CatalogTab() {
       url,
       available_from: from,
       expires_at: until,
+      title: (titleDraft[dirId] ?? "").trim() || null,
     });
     if (error) toast.error(translateAuthError(error.message));
     else {
       setUrlDraft((s) => ({ ...s, [dirId]: "" }));
       setFromDraft((s) => ({ ...s, [dirId]: "" }));
       setUntilDraft((s) => ({ ...s, [dirId]: "" }));
+      setTitleDraft((s) => ({ ...s, [dirId]: "" }));
       load();
       toast.success("Ссылка добавлена");
     }
@@ -297,6 +305,34 @@ function CatalogTab() {
   async function delLink(id: string) {
     if (!confirm("Удалить ссылку?")) return;
     await supabase.from("vless_links").delete().eq("id", id); load();
+  }
+
+  function startEditLink(l: VlessLink) {
+    setEditingId(l.id);
+    setEditUrl(l.url);
+    setEditTitle(l.title ?? "");
+    setEditFrom(toLocalInput(l.available_from));
+    setEditUntil(toLocalInput(l.expires_at));
+  }
+  function cancelEdit() {
+    setEditingId(null); setEditUrl(""); setEditTitle(""); setEditFrom(""); setEditUntil("");
+  }
+  async function saveEditLink() {
+    if (!editingId) return;
+    const url = editUrl.trim();
+    if (!url) { toast.error("Ссылка не может быть пустой"); return; }
+    const from = editFrom ? new Date(editFrom).toISOString() : null;
+    const until = editUntil ? new Date(editUntil).toISOString() : null;
+    if (from && until && new Date(until).getTime() <= new Date(from).getTime()) {
+      toast.error("Дата окончания должна быть позже даты запуска");
+      return;
+    }
+    const { error } = await supabase
+      .from("vless_links")
+      .update({ url, title: editTitle.trim() || null, available_from: from, expires_at: until })
+      .eq("id", editingId);
+    if (error) toast.error(translateAuthError(error.message));
+    else { toast.success("Ссылка обновлена"); cancelEdit(); load(); }
   }
 
   return (
@@ -332,9 +368,15 @@ function CatalogTab() {
                   <textarea
                     value={urlDraft[d.id] ?? ""}
                     onChange={(e) => setUrlDraft((s) => ({ ...s, [d.id]: e.target.value }))}
-                    placeholder="vless://..."
+                    placeholder="https://.../sub/... или vless://..."
                     rows={2}
                     className="w-full rounded-xl border border-border bg-input px-3 py-2 text-xs outline-none focus:border-primary"
+                  />
+                  <input
+                    value={titleDraft[d.id] ?? ""}
+                    onChange={(e) => setTitleDraft((s) => ({ ...s, [d.id]: e.target.value }))}
+                    placeholder="Название сервера (необязательно)"
+                    className="h-10 w-full rounded-xl border border-border bg-input px-3 text-xs outline-none focus:border-primary"
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <label className="space-y-1">
@@ -362,15 +404,46 @@ function CatalogTab() {
                 </div>
                 {dirLinks.length === 0 && <p className="text-center text-[11px] text-muted-foreground">Ссылок пока нет</p>}
                 {dirLinks.map((l) => (
-                  <div key={l.id} className="flex items-start gap-2 rounded-xl bg-muted p-2">
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="break-all text-[11px] text-muted-foreground">{l.url}</div>
-                      <div className="text-[10px] text-muted-foreground">
-                        Старт: {l.available_from ? new Date(l.available_from).toLocaleString("ru-RU") : "сразу"} · Конец: {l.expires_at ? new Date(l.expires_at).toLocaleString("ru-RU") : "не задан"}
+                  editingId === l.id ? (
+                    <div key={l.id} className="space-y-2 rounded-xl border border-primary/40 bg-muted p-2">
+                      <textarea
+                        value={editUrl}
+                        onChange={(e) => setEditUrl(e.target.value)}
+                        rows={2}
+                        className="w-full rounded-lg border border-border bg-input px-2 py-1.5 text-[11px] outline-none focus:border-primary"
+                      />
+                      <input
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        placeholder="Название сервера"
+                        className="h-9 w-full rounded-lg border border-border bg-input px-2 text-[11px] outline-none focus:border-primary"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input type="datetime-local" value={editFrom} onChange={(e) => setEditFrom(e.target.value)}
+                          className="h-9 w-full rounded-lg border border-border bg-input px-2 text-[10px] outline-none focus:border-primary" />
+                        <input type="datetime-local" value={editUntil} onChange={(e) => setEditUntil(e.target.value)}
+                          className="h-9 w-full rounded-lg border border-border bg-input px-2 text-[10px] outline-none focus:border-primary" />
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={saveEditLink} className="tg-press flex-1 rounded-lg bg-primary py-2 text-[11px] text-primary-foreground">Сохранить</button>
+                        <button onClick={cancelEdit} className="tg-press flex-1 rounded-lg bg-secondary py-2 text-[11px]">Отмена</button>
                       </div>
                     </div>
-                    <button onClick={() => delLink(l.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></button>
-                  </div>
+                  ) : (
+                    <div key={l.id} className="flex items-start gap-2 rounded-xl bg-muted p-2">
+                      <div className="min-w-0 flex-1 space-y-1">
+                        {l.title && <div className="text-[12px] font-medium">{l.title}</div>}
+                        <div className="break-all text-[11px] text-muted-foreground">{l.url}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          Старт: {l.available_from ? new Date(l.available_from).toLocaleString("ru-RU") : "сразу"} · Конец: {l.expires_at ? new Date(l.expires_at).toLocaleString("ru-RU") : "не задан"}
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <button onClick={() => startEditLink(l)} className="text-primary" aria-label="Редактировать"><Pencil className="h-4 w-4" /></button>
+                        <button onClick={() => delLink(l.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                    </div>
+                  )
                 ))}
               </div>
             )}
