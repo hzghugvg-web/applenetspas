@@ -6,8 +6,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { alertDialog as toast } from "@/lib/alert";
 import { translateAuthError } from "@/lib/errors";
-import { Plus, Upload, X, Loader2, MessageCircle } from "lucide-react";
+import {
+  Plus, Upload, X, Loader2, MessageCircle, Sparkles, Headphones, ArrowRight,
+  Clock, CheckCircle2, XCircle, HelpCircle,
+} from "lucide-react";
 import { ComplaintChatModal } from "@/components/ComplaintChat";
+import { AiSupportChat } from "@/components/AiSupportChat";
 
 export const Route = createFileRoute("/_app/support")({ component: SupportPage });
 
@@ -37,16 +41,90 @@ const STATUS_DOT: Record<Complaint["status"], string> = {
 };
 
 function SupportPage() {
+  const [aiOpen, setAiOpen] = useState(false);
+  const [operatorFormOpen, setOperatorFormOpen] = useState(false);
+  const qc = useQueryClient();
+
   return (
-    <>
-      <MyComplaints />
-    </>
+    <div className="space-y-5">
+      <HeroCard
+        onAskAI={() => setAiOpen(true)}
+        onCallOperator={() => setOperatorFormOpen(true)}
+      />
+      <MyComplaints
+        openFormExternal={operatorFormOpen}
+        onFormClosed={() => setOperatorFormOpen(false)}
+      />
+      <AiSupportChat
+        open={aiOpen}
+        onClose={() => setAiOpen(false)}
+        onEscalated={() => qc.invalidateQueries({ queryKey: ["complaints"] })}
+      />
+    </div>
   );
 }
 
-function MyComplaints() {
+function HeroCard({
+  onAskAI, onCallOperator,
+}: { onAskAI: () => void; onCallOperator: () => void }) {
+  return (
+    <section className="space-y-3">
+      <motion.button
+        type="button"
+        onClick={onAskAI}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 260, damping: 26 }}
+        className="tg-press relative w-full overflow-hidden rounded-3xl p-5 text-left"
+        style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
+      >
+        <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-white/15 blur-2xl" />
+        <div className="relative flex items-start gap-3">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/20 backdrop-blur">
+            <Sparkles className="h-5 w-5 text-white" />
+          </div>
+          <div className="min-w-0 flex-1 text-white">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-white/70">
+              Новое
+            </p>
+            <h2 className="mt-0.5 text-[18px] font-semibold leading-tight">Спросите ИИ-помощника</h2>
+            <p className="mt-1 text-[13px] leading-snug text-white/85">
+              Ответит мгновенно на большинство вопросов. Если не сможет — передаст оператору.
+            </p>
+            <div className="mt-3 inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-[12px] font-medium text-white backdrop-blur">
+              Начать чат <ArrowRight className="h-3.5 w-3.5" />
+            </div>
+          </div>
+        </div>
+      </motion.button>
+
+      <button
+        type="button"
+        onClick={onCallOperator}
+        className="tg-press flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left"
+      >
+        <div
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl"
+          style={{ background: "linear-gradient(135deg,#F59E0B,#EF4444)" }}
+        >
+          <Headphones className="h-5 w-5 text-white" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] font-semibold text-foreground">Написать оператору</p>
+          <p className="text-[12px] text-muted-foreground">
+            Для проблем с VPN приложите видео до 20 МБ
+          </p>
+        </div>
+        <Plus className="h-4 w-4 text-muted-foreground" />
+      </button>
+    </section>
+  );
+}
+
+function MyComplaints({
+  openFormExternal, onFormClosed,
+}: { openFormExternal: boolean; onFormClosed: () => void }) {
   const qc = useQueryClient();
-  const [openForm, setOpenForm] = useState(false);
   const [chatId, setChatId] = useState<string | null>(null);
 
   const { data: items = [] } = useQuery<Complaint[]>({
@@ -63,36 +141,43 @@ function MyComplaints() {
   });
   const load = () => qc.invalidateQueries({ queryKey: ["complaints"] });
 
+  const active = items.filter((c) => c.status === "new" || c.status === "in_progress");
+  const closed = items.filter((c) => c.status === "resolved" || c.status === "rejected");
+
   return (
-    <div className="space-y-3">
-      <button
-        onClick={() => setOpenForm(true)}
-        className="tg-press flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-[15px] font-medium text-primary-foreground"
-      >
-        <Plus className="h-4 w-4" /> Новое обращение
-      </button>
+    <div className="space-y-4">
+      <SectionTitle
+        title="Мои обращения"
+        count={items.length}
+      />
 
       {items.length === 0 && (
-        <p className="pt-4 text-center text-[14px] text-muted-foreground">Обращений пока нет</p>
+        <div className="rounded-2xl border border-dashed border-border bg-card/50 p-6 text-center">
+          <div className="mx-auto mb-2 grid h-10 w-10 place-items-center rounded-full bg-muted">
+            <HelpCircle className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <p className="text-[13px] text-muted-foreground">
+            Обращений пока нет — задайте вопрос ИИ или напишите оператору выше.
+          </p>
+        </div>
       )}
 
-      {items.map((c) => (
-        <button
-          key={c.id}
-          type="button"
-          onClick={() => setChatId(c.id)}
-          className="tg-press flex w-full items-center gap-3 rounded-xl bg-card p-3 text-left"
-        >
-          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT[c.status]}`} />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-medium text-foreground">{c.description}</p>
-            <p className="text-[12px] text-muted-foreground">
-              {STATUS_LABEL[c.status]} · {new Date(c.created_at).toLocaleDateString("ru-RU")}
-            </p>
-          </div>
-          <MessageCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
-        </button>
-      ))}
+      {active.length > 0 && (
+        <div className="space-y-2">
+          {active.map((c) => (
+            <ComplaintRow key={c.id} c={c} onOpen={() => setChatId(c.id)} />
+          ))}
+        </div>
+      )}
+
+      {closed.length > 0 && (
+        <div className="space-y-2">
+          <p className="px-1 pt-2 text-[11px] uppercase tracking-wider text-muted-foreground">Завершённые</p>
+          {closed.map((c) => (
+            <ComplaintRow key={c.id} c={c} onOpen={() => setChatId(c.id)} dim />
+          ))}
+        </div>
+      )}
 
       {items.map((c) => (
         <ComplaintChatModal
@@ -115,13 +200,76 @@ function MyComplaints() {
         />
       ))}
 
-      {openForm && (
+      {openFormExternal && (
         <ComplaintForm
-          onClose={() => setOpenForm(false)}
-          onSaved={() => { setOpenForm(false); load(); }}
+          onClose={onFormClosed}
+          onSaved={() => { onFormClosed(); load(); }}
         />
       )}
     </div>
+  );
+}
+
+function SectionTitle({ title, count }: { title: string; count: number }) {
+  return (
+    <div className="flex items-center justify-between px-1">
+      <h3 className="text-[15px] font-semibold text-foreground">{title}</h3>
+      {count > 0 && (
+        <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+          {count}
+        </span>
+      )}
+    </div>
+  );
+}
+
+const STATUS_ICON: Record<Complaint["status"], typeof Clock> = {
+  new: Clock,
+  in_progress: MessageCircle,
+  resolved: CheckCircle2,
+  rejected: XCircle,
+};
+
+function ComplaintRow({
+  c, onOpen, dim,
+}: { c: Complaint; onOpen: () => void; dim?: boolean }) {
+  const StatusIcon = STATUS_ICON[c.status];
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`tg-press flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-3 text-left transition-opacity ${dim ? "opacity-70" : ""}`}
+    >
+      <div className="relative shrink-0">
+        <div
+          className="grid h-10 w-10 place-items-center rounded-xl"
+          style={{
+            background:
+              c.status === "resolved"
+                ? "linear-gradient(135deg,#10B981,#059669)"
+                : c.status === "rejected"
+                  ? "linear-gradient(135deg,#F43F5E,#B91C1C)"
+                  : c.status === "in_progress"
+                    ? "var(--gradient-primary)"
+                    : "linear-gradient(135deg,#F59E0B,#D97706)",
+          }}
+        >
+          <StatusIcon className="h-5 w-5 text-white" strokeWidth={2.2} />
+        </div>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[c.status]}`} />
+          <span className="truncate text-[11px] font-medium text-muted-foreground">
+            {STATUS_LABEL[c.status]} · {new Date(c.created_at).toLocaleDateString("ru-RU")}
+          </span>
+        </div>
+        <p className="mt-0.5 line-clamp-2 text-[14px] font-medium leading-snug text-foreground">
+          {c.description}
+        </p>
+      </div>
+      <MessageCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
+    </button>
   );
 }
 
