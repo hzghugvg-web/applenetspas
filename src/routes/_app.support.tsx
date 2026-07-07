@@ -69,12 +69,9 @@ function HeroCard({
 }: { onAskAI: () => void; onCallOperator: () => void }) {
   return (
     <section className="space-y-3">
-      <motion.button
+      <button
         type="button"
         onClick={onAskAI}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 260, damping: 26 }}
         className="tg-press relative w-full overflow-hidden rounded-3xl p-5 text-left"
         style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
       >
@@ -96,7 +93,7 @@ function HeroCard({
             </div>
           </div>
         </div>
-      </motion.button>
+      </button>
 
       <button
         type="button"
