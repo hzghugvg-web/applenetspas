@@ -213,11 +213,11 @@ function AuthPage() {
             </button>
           </form>
 
-          <p className="mt-4 text-center text-[11px] leading-snug text-muted-foreground/80">
-            {mode === "signup"
-              ? "Регистрируясь, вы соглашаетесь с правилами сервиса."
-              : "Забыли пароль? Напишите оператору в поддержку после входа."}
-          </p>
+          {mode === "signup" && (
+            <p className="mt-4 text-center text-[11px] leading-snug text-muted-foreground/80">
+              Регистрируясь, вы соглашаетесь с правилами сервиса.
+            </p>
+          )}
         </div>
       </motion.div>
     </div>
