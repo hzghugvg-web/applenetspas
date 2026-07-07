@@ -1,14 +1,16 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { askSupportAI } from "@/lib/support-ai.functions";
 import { alertDialog as toast } from "@/lib/alert";
 import { translateAuthError } from "@/lib/errors";
 import { hasStoredSupabaseSession } from "@/lib/fast-auth";
+import { useTheme } from "@/lib/theme";
 import {
   Send, Loader2, Sparkles, Headphones, CheckCircle2, ChevronLeft,
-  Paperclip, X, Play,
+  Paperclip, X, Play, Trash2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/support-ai")({
@@ -40,15 +42,47 @@ type Msg = {
   attachments?: Attachment[];
 };
 
+const CHAT_KEY_PREFIX = "ns_ai_chat_v1_";
+
+function greetingMsg(): Msg {
+  return { id: "g", role: "assistant", content: GREETING };
+}
+
+function stripAttachmentUrls(m: Msg): Msg {
+  if (!m.attachments?.length) return m;
+  return {
+    ...m,
+    attachments: m.attachments.map((a) => ({ ...a, url: "" })),
+  };
+}
+
+async function refreshAttachmentUrls(msgs: Msg[]): Promise<Msg[]> {
+  const out: Msg[] = [];
+  for (const m of msgs) {
+    if (!m.attachments?.length) { out.push(m); continue; }
+    const refreshed: Attachment[] = [];
+    for (const a of m.attachments) {
+      const { data } = await supabase.storage
+        .from("complaints")
+        .createSignedUrl(a.path, 3600);
+      refreshed.push({ ...a, url: data?.signedUrl ?? a.url });
+    }
+    out.push({ ...m, attachments: refreshed });
+  }
+  return out;
+}
+
 const GREETING =
   "Привет! Я ИИ-помощник NetSpas. Спросите про подключение, кулдаун, подписку — постараюсь ответить сразу. Можно прикрепить скриншот 📎 — я его увижу. Если не смогу помочь, передам оператору.";
 
 function AiChatPage() {
   const navigate = useNavigate();
   const ask = useServerFn(askSupportAI);
-  const [messages, setMessages] = useState<Msg[]>([
-    { id: "g", role: "assistant", content: GREETING },
-  ]);
+  const { motion: motionPref } = useTheme();
+  const [userId, setUserId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Msg[]>([greetingMsg()]);
+  const [hydrated, setHydrated] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const [text, setText] = useState("");
   const [pending, setPending] = useState<Attachment[]>([]);
   const [thinking, setThinking] = useState(false);
@@ -58,10 +92,60 @@ function AiChatPage() {
   const [creating, setCreating] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const anim = motionPref !== "none";
+
+  // Hydrate from localStorage (per-user).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (cancelled) return;
+      const uid = u.user?.id ?? null;
+      setUserId(uid);
+      if (uid) {
+        const raw = localStorage.getItem(CHAT_KEY_PREFIX + uid);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw) as Msg[];
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              const refreshed = await refreshAttachmentUrls(parsed);
+              if (!cancelled) setMessages(refreshed);
+            }
+          } catch { /* corrupt — ignore */ }
+        }
+      }
+      if (!cancelled) setHydrated(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Persist on change (skip the initial greeting-only state).
+  useEffect(() => {
+    if (!hydrated || !userId) return;
+    const onlyGreeting = messages.length === 1 && messages[0].id === "g";
+    const key = CHAT_KEY_PREFIX + userId;
+    if (onlyGreeting) {
+      localStorage.removeItem(key);
+      return;
+    }
+    try {
+      localStorage.setItem(key, JSON.stringify(messages.map(stripAttachmentUrls)));
+    } catch { /* quota — ignore */ }
+  }, [messages, userId, hydrated]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length, thinking, confirmingEscalate, escalated, pending.length]);
+
+  function clearChat() {
+    setMessages([greetingMsg()]);
+    setConfirmingEscalate(false);
+    setEscalated(false);
+    setConfirmClear(false);
+    setText("");
+    setPending([]);
+    if (userId) localStorage.removeItem(CHAT_KEY_PREFIX + userId);
+  }
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
