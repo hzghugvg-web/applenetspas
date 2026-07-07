@@ -413,6 +413,51 @@ function ProfilePage() {
         </div>
       )}
 
+      {logoutOpen && (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center px-6"
+          style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)" }}
+          onClick={() => !loggingOut && setLogoutOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-[320px] rounded-2xl border border-border p-5"
+            style={{ background: "var(--card-solid)", boxShadow: "var(--shadow-elegant)" }}
+          >
+            <div className="mb-3 flex items-start gap-3">
+              <div
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl"
+                style={{ background: "linear-gradient(135deg,#64748B,#334155)" }}
+              >
+                <LogOut className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="text-[16px] font-semibold text-foreground">Выйти из аккаунта?</div>
+                <p className="mt-1 text-[13px] text-muted-foreground">
+                  Вы уверены, что хотите выйти? Придётся снова войти по email и паролю.
+                </p>
+              </div>
+            </div>
+            <div className="mt-2 flex gap-2">
+              <button
+                onClick={() => setLogoutOpen(false)}
+                disabled={loggingOut}
+                className="tg-btn-ghost flex-1"
+              >
+                Остаться
+              </button>
+              <button
+                onClick={logout}
+                disabled={loggingOut}
+                className="tg-press flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-2.5 text-[14px] font-semibold text-primary-foreground disabled:opacity-60"
+              >
+                {loggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : "Выйти"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {confirmOpen && (
         <div
           className="fixed inset-0 z-[90] flex items-center justify-center px-6"
