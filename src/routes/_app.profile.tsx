@@ -198,6 +198,8 @@ function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const { mode, theme, motion, setMode, setTheme, setMotion } = useTheme();
 
@@ -227,9 +229,16 @@ function ProfilePage() {
   }
 
   async function logout() {
-    sessionStorage.removeItem("ns_is_admin");
-    await supabase.auth.signOut();
-    navigate({ to: "/auth" });
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      sessionStorage.removeItem("ns_is_admin");
+      await supabase.auth.signOut();
+      setLogoutOpen(false);
+      navigate({ to: "/auth" });
+    } finally {
+      setLoggingOut(false);
+    }
   }
 
   async function confirmDeleteAccount() {
@@ -350,7 +359,7 @@ function ProfilePage() {
                 iconBg="linear-gradient(135deg,#64748B,#334155)"
                 icon={LogOut}
                 label="Выйти из аккаунта"
-                onClick={logout}
+                onClick={() => setLogoutOpen(true)}
                 right={<ChevronRight className="h-4 w-4 text-muted-foreground" />}
               />
             </SettingsGroup>
