@@ -1,147 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-function tryBase64Decode(s: string): string | null {
-  try {
-    const clean = s.replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
-    const pad = clean.length % 4 === 0 ? "" : "=".repeat(4 - (clean.length % 4));
-    return decodeURIComponent(escape(atob(clean + pad)));
-  } catch {
-    return null;
-  }
-}
-
-function rewriteVmess(link: string, brand: string): string {
-  try {
-    const decoded = atob(link.slice("vmess://".length));
-    const obj = JSON.parse(decoded);
-    obj.ps = brand;
-    return "vmess://" + btoa(JSON.stringify(obj));
-  } catch {
-    return link;
-  }
-}
-
-function rewriteFragment(link: string, brand: string): string {
-  const hashIdx = link.indexOf("#");
-  const base = hashIdx >= 0 ? link.slice(0, hashIdx) : link;
-  return base + "#" + encodeURIComponent(brand);
-}
-
-function extractLinks(body: string, brand: string): string[] {
-  const trimmed = body.trim();
-  // Xray/V2Ray JSON config (array of configs or single config with outbounds)
-  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      const configs = Array.isArray(parsed) ? parsed : [parsed];
-      const out: string[] = [];
-      configs.forEach((cfg: any) => {
-        const outbounds: any[] = cfg?.outbounds ?? [];
-        outbounds.forEach((ob) => {
-          const uri = outboundToUri(ob);
-          if (uri) out.push(uri);
-        });
-      });
-      const vlessOnly = out.filter((line) => /^vless:\/\//i.test(line));
-      if (vlessOnly.length) {
-        return vlessOnly.map((line, i) => {
-          const tag = i === 0 ? brand : brand + "-" + (i + 1);
-          return rewriteFragment(line, tag);
-        });
-      }
-    } catch {
-      // fall through
-    }
-  }
-  const source =
-    /^(vless|vmess|trojan|ss):\/\//im.test(trimmed) ? trimmed : tryBase64Decode(trimmed) ?? trimmed;
-  const lines = source
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => /^vless:\/\//i.test(l));
-  return lines.map((line, i) => {
-    const tag = i === 0 ? brand : brand + "-" + (i + 1);
-    return rewriteFragment(line, tag);
-  });
-}
-
-function outboundToUri(ob: any): string | null {
-  const proto = String(ob?.protocol ?? "").toLowerCase();
-  const stream = ob?.streamSettings ?? {};
-  const network = String(stream.network ?? "tcp");
-  const security = String(stream.security ?? "none");
-
-  const streamParams: Record<string, string> = { type: network, security };
-  if (security === "tls" || security === "reality") {
-    const tls = stream.tlsSettings ?? {};
-    const reality = stream.realitySettings ?? {};
-    const sni = reality.serverName ?? tls.serverName;
-    if (sni) streamParams.sni = sni;
-    const fp = reality.fingerprint ?? tls.fingerprint;
-    if (fp) streamParams.fp = fp;
-    if (reality.publicKey) streamParams.pbk = reality.publicKey;
-    if (reality.shortId !== undefined) streamParams.sid = String(reality.shortId);
-    if (tls.alpn?.length) streamParams.alpn = tls.alpn.join(",");
-  }
-  if (network === "ws") {
-    const ws = stream.wsSettings ?? {};
-    if (ws.path) streamParams.path = ws.path;
-    if (ws.headers?.Host) streamParams.host = ws.headers.Host;
-  } else if (network === "grpc") {
-    const g = stream.grpcSettings ?? {};
-    if (g.serviceName) streamParams.serviceName = g.serviceName;
-  }
-
-  const enc = (o: Record<string, string>) =>
-    Object.entries(o)
-      .filter(([, v]) => v !== undefined && v !== "")
-      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-      .join("&");
-
-  if (proto === "vless") {
-    const v = ob.settings?.vnext?.[0];
-    if (!v) return null;
-    const u = v.users?.[0];
-    if (!u?.id) return null;
-    const params = { ...streamParams, encryption: u.encryption ?? "none", flow: u.flow ?? "" };
-    return `vless://${u.id}@${v.address}:${v.port}?${enc(params)}#Config`;
-  }
-  if (proto === "trojan") {
-    const s = ob.settings?.servers?.[0];
-    if (!s?.password) return null;
-    return `trojan://${encodeURIComponent(s.password)}@${s.address}:${s.port}?${enc(streamParams)}#Config`;
-  }
-  if (proto === "vmess") {
-    const v = ob.settings?.vnext?.[0];
-    const u = v?.users?.[0];
-    if (!u?.id) return null;
-    const obj = {
-      v: "2",
-      ps: "Config",
-      add: v.address,
-      port: String(v.port),
-      id: u.id,
-      aid: String(u.alterId ?? 0),
-      scy: u.security ?? "auto",
-      net: network,
-      type: "none",
-      host: streamParams.host ?? "",
-      path: streamParams.path ?? "",
-      tls: security === "tls" ? "tls" : "",
-      sni: streamParams.sni ?? "",
-    };
-    return "vmess://" + btoa(JSON.stringify(obj));
-  }
-  if (proto === "shadowsocks") {
-    const s = ob.settings?.servers?.[0];
-    if (!s?.password || !s?.method) return null;
-    const userinfo = btoa(`${s.method}:${s.password}`);
-    return `ss://${userinfo}@${s.address}:${s.port}#Config`;
-  }
-  return null;
-}
-
 export const issueVpnConfig = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: { directionId: string }) => data)
@@ -152,55 +11,8 @@ export const issueVpnConfig = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     const row = (rpc as Array<{ vless_url: string; upstream_url: string }> | null)?.[0];
     if (!row) throw new Error("no_result");
-
-    let brand = "NetSpas";
-    const { data: setting } = await context.supabase
-      .from("system_settings")
-      .select("value")
-      .eq("key", "config_name")
-      .maybeSingle();
-    const raw = (setting?.value ?? null) as unknown;
-    if (typeof raw === "string" && raw.trim()) brand = raw.trim();
-
-    let links: string[] = [];
-    if (/^(vless|vmess|trojan|ss):\/\//i.test(row.upstream_url)) {
-      links = extractLinks(row.upstream_url, brand);
-    } else {
-      try {
-        const r = await fetch(row.upstream_url, {
-          headers: { "User-Agent": "NetSpas/1.0" },
-        });
-        if (r.ok) {
-          const text = await r.text();
-          links = extractLinks(text, brand);
-        }
-      } catch {
-        // fallback below
-      }
-    }
-
-    const firstLink = links[0] ?? null;
-    if (firstLink) {
-      const { data: latest } = await context.supabase
-        .from("issued_configs")
-        .select("id")
-        .eq("user_id", context.userId)
-        .eq("upstream_url", row.upstream_url)
-        .order("issued_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (latest?.id) {
-        await (context.supabase as any).rpc("set_own_issued_config_vless", {
-          _config_id: latest.id,
-          _vless_url: firstLink,
-        });
-      }
-    }
-
-    return {
-      links: firstLink ? [firstLink] : [],
-      subscriptionUrl: firstLink ?? row.vless_url,
-    };
+    const link = row.upstream_url || row.vless_url;
+    return { links: link ? [link] : [], subscriptionUrl: link };
   });
 
 export const getMyIssuedLinks = createServerFn({ method: "GET" })
@@ -213,49 +25,33 @@ export const getMyIssuedLinks = createServerFn({ method: "GET" })
       .order("issued_at", { ascending: false });
     if (error) throw new Error(error.message);
 
-    let brand = "NetSpas";
-    const { data: setting } = await context.supabase
-      .from("system_settings")
-      .select("value")
-      .eq("key", "config_name")
-      .maybeSingle();
-    const raw = (setting?.value ?? null) as unknown;
-    if (typeof raw === "string" && raw.trim()) brand = raw.trim();
-
-    const configs: Array<{ id: string; link: string; issuedAt: string; directionId: string | null }> = [];
-    for (const row of rows ?? []) {
-      const url = ((row as any).upstream_url ?? (row as any).vless_url) as string | null;
-      if (!url) continue;
-      let link: string | null = null;
-      if (/^(vless|vmess|trojan|ss):\/\//i.test(url)) {
-        const ex = extractLinks(url, brand);
-        if (ex[0]) link = ex[0];
-      } else {
-        try {
-          const r = await fetch(url, { headers: { "User-Agent": "NetSpas/1.0" } });
-          if (r.ok) {
-            const text = await r.text();
-            const ex = extractLinks(text, brand);
-            if (ex[0]) link = ex[0];
-          }
-        } catch {
-          // skip
-        }
-      }
-      if (link) {
-        if (!/^(vless|vmess|trojan|ss):\/\//i.test(((row as any).vless_url ?? "") as string)) {
-          await (context.supabase as any).rpc("set_own_issued_config_vless", {
-            _config_id: (row as any).id,
-            _vless_url: link,
-          });
-        }
-        configs.push({
-          id: (row as any).id,
-          link,
-          issuedAt: (row as any).issued_at,
-          directionId: (row as any).direction_id ?? null,
-        });
+    const list = (rows ?? []) as Array<{
+      id: string; vless_url: string | null; upstream_url: string | null;
+      issued_at: string; direction_id: string | null;
+    }>;
+    const upstreams = Array.from(new Set(list.map((r) => r.upstream_url).filter(Boolean))) as string[];
+    const titleByUrl: Record<string, string | null> = {};
+    if (upstreams.length) {
+      const { data: linkRows } = await context.supabase
+        .from("vless_links")
+        .select("url, title")
+        .in("url", upstreams);
+      for (const l of (linkRows ?? []) as Array<{ url: string; title: string | null }>) {
+        titleByUrl[l.url] = l.title;
       }
     }
+    const configs = list
+      .map((r) => {
+        const link = r.upstream_url || r.vless_url;
+        if (!link) return null;
+        return {
+          id: r.id,
+          link,
+          title: (r.upstream_url && titleByUrl[r.upstream_url]) || null,
+          issuedAt: r.issued_at,
+          directionId: r.direction_id ?? null,
+        };
+      })
+      .filter(Boolean) as Array<{ id: string; link: string; title: string | null; issuedAt: string; directionId: string | null }>;
     return { links: configs.map((c) => c.link), configs };
   });
