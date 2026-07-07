@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { translateAuthError } from "@/lib/errors";
 import { bootstrapUser } from "@/lib/bootstrap";
 import { alertDialog as toast } from "@/lib/alert";
 import { hasStoredSupabaseSession } from "@/lib/fast-auth";
-import { Shield, Loader2 } from "lucide-react";
+import { Shield, Loader2, Mail, Lock, Eye, EyeOff, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -64,48 +65,178 @@ function AuthPage() {
     }
   }
 
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <div
       onContextMenu={(e) => e.preventDefault()}
-      className="fixed inset-0 flex flex-col items-center justify-center bg-background px-6"
+      className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden px-5"
+      style={{ background: "var(--app-bg)" }}
     >
-      <div className="ns-fade w-full max-w-sm space-y-6">
-        <div className="flex flex-col items-center gap-3">
-          <div className="grid h-16 w-16 place-items-center rounded-2xl" style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}>
-            <Shield className="h-8 w-8 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-semibold text-center">Добро пожаловать в NetSpas</h1>
-          <p className="text-sm text-muted-foreground text-center">{mode === "signup" ? "Создайте аккаунт если у вас его нет." : "Войдите в аккаунт"}</p>
-        </div>
+      {/* Ambient background glows */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-32 -left-24 h-72 w-72 rounded-full blur-3xl"
+        style={{ background: "var(--gradient-primary)", opacity: 0.35 }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-32 -right-24 h-80 w-80 rounded-full blur-3xl"
+        style={{ background: "var(--gradient-primary)", opacity: 0.25 }}
+      />
 
-        <form onSubmit={submit} className="space-y-3">
-          <input
-            type="email" required autoComplete="email" placeholder="Email"
-            value={email} onChange={(e) => setEmail(e.target.value)}
-            className="h-12 w-full rounded-xl border border-border bg-input px-4 text-foreground outline-none focus:border-primary"
-          />
-          <input
-            type="password" required minLength={6} autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            placeholder="Пароль (мин. 6 символов)"
-            value={password} onChange={(e) => setPassword(e.target.value)}
-            className="h-12 w-full rounded-xl border border-border bg-input px-4 text-foreground outline-none focus:border-primary"
-          />
-          <button
-            type="submit" disabled={loading}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl font-semibold text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-60"
-            style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
-          >
-            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (mode === "signup" ? "Зарегистрироваться" : "Войти")}
-          </button>
-        </form>
-
-        <button
-          onClick={() => setMode(mode === "signup" ? "login" : "signup")}
-          className="block w-full text-center text-sm text-muted-foreground hover:text-foreground"
+      <motion.div
+        initial={{ opacity: 0, y: 16, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="relative w-full max-w-sm"
+      >
+        <div
+          className="rounded-3xl border p-6"
+          style={{
+            background: "var(--card-solid)",
+            borderColor: "color-mix(in srgb, var(--border) 70%, transparent)",
+            boxShadow: "var(--shadow-elegant)",
+          }}
         >
-          {mode === "signup" ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Создать"}
-        </button>
-      </div>
+          <div className="mb-5 flex flex-col items-center gap-3 text-center">
+            <motion.div
+              initial={{ rotate: -10, scale: 0.85 }}
+              animate={{ rotate: 0, scale: 1 }}
+              transition={{ type: "spring", stiffness: 260, damping: 18 }}
+              className="relative grid h-16 w-16 place-items-center rounded-2xl"
+              style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
+            >
+              <Shield className="h-8 w-8 text-primary-foreground" />
+              <span className="absolute -right-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full bg-background text-primary shadow-md">
+                <Sparkles className="h-3.5 w-3.5" />
+              </span>
+            </motion.div>
+            <div>
+              <h1 className="text-[22px] font-semibold tracking-tight text-foreground">
+                {mode === "signup" ? "Добро пожаловать" : "С возвращением"}
+              </h1>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                {mode === "signup"
+                  ? "Создайте аккаунт NetSpas за 10 секунд."
+                  : "Войдите, чтобы продолжить."}
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-4 grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
+            {(["signup", "login"] as const).map((k) => {
+              const active = mode === k;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setMode(k)}
+                  className={`tg-press relative rounded-full py-1.5 text-[13px] font-medium transition-colors ${
+                    active ? "text-primary-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="auth-tab"
+                      className="absolute inset-0 rounded-full"
+                      style={{ background: "var(--gradient-primary)" }}
+                      transition={{ type: "spring", stiffness: 320, damping: 30 }}
+                    />
+                  )}
+                  <span className="relative z-10">{k === "signup" ? "Регистрация" : "Вход"}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <form onSubmit={submit} className="space-y-2.5">
+            <FieldWrap icon={Mail}>
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-12 w-full bg-transparent pl-11 pr-4 text-[15px] text-foreground outline-none placeholder:text-muted-foreground/70"
+              />
+            </FieldWrap>
+            <FieldWrap icon={Lock}>
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                minLength={6}
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                placeholder="Пароль (мин. 6 символов)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-12 w-full bg-transparent pl-11 pr-12 text-[15px] text-foreground outline-none placeholder:text-muted-foreground/70"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Скрыть" : "Показать"}
+                className="absolute right-2 top-1/2 -translate-y-1/2 grid h-9 w-9 place-items-center rounded-full text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </FieldWrap>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-1 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[15px] font-semibold text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-60"
+              style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                {loading ? (
+                  <motion.span
+                    key="l"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key={mode}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                  >
+                    {mode === "signup" ? "Создать аккаунт" : "Войти"}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </button>
+          </form>
+
+          <p className="mt-4 text-center text-[11px] leading-snug text-muted-foreground/80">
+            {mode === "signup"
+              ? "Регистрируясь, вы соглашаетесь с правилами сервиса."
+              : "Забыли пароль? Напишите оператору в поддержку после входа."}
+          </p>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function FieldWrap({
+  icon: Icon, children,
+}: { icon: typeof Mail; children: React.ReactNode }) {
+  return (
+    <div
+      className="relative rounded-xl border transition-colors focus-within:border-primary/60"
+      style={{
+        background: "color-mix(in srgb, var(--input) 92%, transparent)",
+        borderColor: "var(--border)",
+      }}
+    >
+      <Icon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      {children}
     </div>
   );
 }
