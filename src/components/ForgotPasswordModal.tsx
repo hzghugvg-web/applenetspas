@@ -142,7 +142,7 @@ export function ForgotPasswordModal({
                     placeholder="email, с которым регистрировались"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="input-base"
+                    className="h-11 w-full rounded-xl border border-border bg-input px-3 text-[14px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
                   />
                 </Field>
 
@@ -169,7 +169,7 @@ export function ForgotPasswordModal({
                     value={contact}
                     onChange={(e) => setContact(e.target.value)}
                     placeholder={METHODS.find((m) => m.id === method)?.placeholder}
-                    className="input-base mt-2"
+                    className="mt-2 h-11 w-full rounded-xl border border-border bg-input px-3 text-[14px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
                   />
                 </Field>
 
@@ -178,7 +178,7 @@ export function ForgotPasswordModal({
                     value={approx}
                     onChange={(e) => setApprox(e.target.value)}
                     placeholder="например, октябрь 2025"
-                    className="input-base"
+                    className="h-11 w-full rounded-xl border border-border bg-input px-3 text-[14px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
                   />
                 </Field>
 
@@ -188,7 +188,7 @@ export function ForgotPasswordModal({
                     onChange={(e) => setDesc(e.target.value)}
                     rows={4}
                     placeholder="Забыл пароль, не приходит письмо восстановления, потерял доступ к почте и т.п."
-                    className="input-base resize-none py-3"
+                    className="w-full resize-none rounded-xl border border-border bg-input px-3 py-3 text-[14px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
                   />
                 </Field>
 
