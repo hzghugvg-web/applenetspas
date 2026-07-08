@@ -315,6 +315,88 @@ html, body {
   transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
+/* ==== Motion personalities ====
+   Each preset has its own signature entrance — not just different durations. */
+
+/* Medium (default): calm iOS-style rise + fade. Already covered by base rules. */
+
+/* Fast: snappy pop-in with overshoot */
+:root[data-motion="fast"] .ns-page {
+  animation: ns-page-pop 220ms cubic-bezier(.34,1.56,.64,1) both;
+}
+:root[data-motion="fast"] .ns-title {
+  animation: ns-title-pop 180ms cubic-bezier(.34,1.56,.64,1) both;
+}
+:root[data-motion="fast"] .ns-soft-in {
+  animation: ns-item-pop 200ms cubic-bezier(.34,1.56,.64,1) both;
+}
+:root[data-motion="fast"] .ns-segment-content {
+  animation: ns-segment-pop 160ms cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes ns-page-pop {
+  from { opacity: 0; transform: translate3d(0,0,0) scale(0.94); }
+  60%  { opacity: 1; transform: translate3d(0,0,0) scale(1.015); }
+  to   { opacity: 1; transform: translate3d(0,0,0) scale(1); }
+}
+@keyframes ns-title-pop {
+  from { opacity: 0; transform: translate3d(0,0,0) scale(0.9); }
+  to   { opacity: 1; transform: translate3d(0,0,0) scale(1); }
+}
+@keyframes ns-item-pop {
+  from { opacity: 0; transform: translate3d(0,0,0) scale(0.92); }
+  to   { opacity: 1; transform: translate3d(0,0,0) scale(1); }
+}
+@keyframes ns-segment-pop {
+  from { opacity: 0; transform: translate3d(0,0,0) scale(0.97); }
+  to   { opacity: 1; transform: translate3d(0,0,0) scale(1); }
+}
+
+/* Ultra: cinematic long slide from further away, with soft blur unblur */
+:root[data-motion="ultra"] .ns-page {
+  animation: ns-page-cinema 520ms cubic-bezier(.19,1,.22,1) both;
+}
+:root[data-motion="ultra"] .ns-title {
+  animation: ns-title-cinema 480ms cubic-bezier(.19,1,.22,1) both;
+}
+:root[data-motion="ultra"] .ns-soft-in {
+  animation: ns-item-cinema 520ms cubic-bezier(.19,1,.22,1) both;
+}
+:root[data-motion="ultra"] .ns-segment-content {
+  animation: ns-segment-cinema 380ms cubic-bezier(.19,1,.22,1) both;
+}
+@keyframes ns-page-cinema {
+  from { opacity: 0; transform: translate3d(0,18px,0); filter: blur(8px); }
+  to   { opacity: 1; transform: translate3d(0,0,0);    filter: blur(0); }
+}
+@keyframes ns-title-cinema {
+  from { opacity: 0; letter-spacing: 0.08em; transform: translate3d(0,10px,0); filter: blur(6px); }
+  to   { opacity: 1; letter-spacing: normal;  transform: translate3d(0,0,0);    filter: blur(0); }
+}
+@keyframes ns-item-cinema {
+  from { opacity: 0; transform: translate3d(0,22px,0) scale(0.98); filter: blur(6px); }
+  to   { opacity: 1; transform: translate3d(0,0,0)   scale(1);    filter: blur(0); }
+}
+@keyframes ns-segment-cinema {
+  from { opacity: 0; transform: translate3d(0,12px,0); filter: blur(5px); }
+  to   { opacity: 1; transform: translate3d(0,0,0);    filter: blur(0); }
+}
+
+/* Countdown digit tick */
+@keyframes ns-tick {
+  0%   { transform: translateY(-40%); opacity: 0; }
+  60%  { transform: translateY(4%);   opacity: 1; }
+  100% { transform: translateY(0);    opacity: 1; }
+}
+.ns-tick { display: inline-block; animation: ns-tick 380ms cubic-bezier(.22,1,.36,1); }
+
+/* Subtle live pulse ring */
+@keyframes ns-pulse-ring {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 45%, transparent); }
+  70%  { box-shadow: 0 0 0 14px color-mix(in srgb, var(--primary) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent); }
+}
+.ns-live { animation: ns-pulse-ring 2s ease-out infinite; }
+
 /* Glossy pill primary button with gradient sheen and shimmer */
 @utility tg-btn {
   position: relative;
