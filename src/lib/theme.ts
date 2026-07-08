@@ -5,10 +5,10 @@ export type DesignTheme = "midnight" | "sunset" | "forest" | "candy";
 export type Motion = "none" | "medium" | "fast" | "ultra";
 
 export const MOTIONS: { id: Motion; label: string; hint: string }[] = [
-  { id: "none",   label: "Без анимаций", hint: "Без плавных переходов и анимаций" },
-  { id: "medium", label: "Средний",      hint: "Обычные анимации" },
-  { id: "fast",   label: "Быстро",       hint: "Быстрые и плавные анимации" },
-  { id: "ultra",  label: "Ультра",       hint: "Очень плавные и качественные анимации" },
+  { id: "none",   label: "Выключены", hint: "Мгновенно, без переходов" },
+  { id: "medium", label: "Плавно",    hint: "Спокойные iOS-подобные переходы" },
+  { id: "fast",   label: "Живо",      hint: "Резкие поп-анимации с отскоком" },
+  { id: "ultra",  label: "Кино",      hint: "Долгие переходы с мягким размытием" },
 ];
 
 export const THEMES: { id: DesignTheme; label: string; accent: string; hint: string }[] = [
