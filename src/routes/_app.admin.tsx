@@ -299,7 +299,7 @@ function CatalogTab() {
       setUntilDraft((s) => ({ ...s, [dirId]: "" }));
       setTitleDraft((s) => ({ ...s, [dirId]: "" }));
       load();
-      toast.success("Ссылка добавлена");
+      toast.success("Конфиг добавлен");
     }
   }
   async function delLink(id: string) {
@@ -320,7 +320,7 @@ function CatalogTab() {
   async function saveEditLink() {
     if (!editingId) return;
     const url = editUrl.trim();
-    if (!url) { toast.error("Ссылка не может быть пустой"); return; }
+    if (!url) { toast.error("Конфиг не может быть пустым"); return; }
     const from = editFrom ? new Date(editFrom).toISOString() : null;
     const until = editUntil ? new Date(editUntil).toISOString() : null;
     if (from && until && new Date(until).getTime() <= new Date(from).getTime()) {
@@ -332,7 +332,7 @@ function CatalogTab() {
       .update({ url, title: editTitle.trim() || null, available_from: from, expires_at: until })
       .eq("id", editingId);
     if (error) toast.error(translateAuthError(error.message));
-    else { toast.success("Ссылка обновлена"); cancelEdit(); load(); }
+    else { toast.success("Конфиг обновлён"); cancelEdit(); load(); }
   }
 
   return (
@@ -368,14 +368,14 @@ function CatalogTab() {
                   <textarea
                     value={urlDraft[d.id] ?? ""}
                     onChange={(e) => setUrlDraft((s) => ({ ...s, [d.id]: e.target.value }))}
-                    placeholder="https://.../sub/... или vless://..."
+                    placeholder="Ссылка подписки или полный конфиг: https://.../sub/..., VLESS/Xray JSON, список vless://..."
                     rows={2}
                     className="w-full rounded-xl border border-border bg-input px-3 py-2 text-xs outline-none focus:border-primary"
                   />
                   <input
                     value={titleDraft[d.id] ?? ""}
                     onChange={(e) => setTitleDraft((s) => ({ ...s, [d.id]: e.target.value }))}
-                    placeholder="Название сервера (необязательно)"
+                    placeholder="Название внутри конфига (например NetSpas)"
                     className="h-10 w-full rounded-xl border border-border bg-input px-3 text-xs outline-none focus:border-primary"
                   />
                   <div className="grid grid-cols-2 gap-2">
@@ -399,23 +399,24 @@ function CatalogTab() {
                     </label>
                   </div>
                   <button onClick={() => addLink(d.id)} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
-                    <Plus className="h-5 w-5" /> Добавить ссылку
+                    <Plus className="h-5 w-5" /> Добавить конфиг
                   </button>
                 </div>
-                {dirLinks.length === 0 && <p className="text-center text-[11px] text-muted-foreground">Ссылок пока нет</p>}
+                {dirLinks.length === 0 && <p className="text-center text-[11px] text-muted-foreground">Конфигов пока нет</p>}
                 {dirLinks.map((l) => (
                   editingId === l.id ? (
                     <div key={l.id} className="space-y-2 rounded-xl border border-primary/40 bg-muted p-2">
                       <textarea
                         value={editUrl}
                         onChange={(e) => setEditUrl(e.target.value)}
-                        rows={2}
+                        rows={4}
+                        placeholder="Ссылка подписки или полный конфиг"
                         className="w-full rounded-lg border border-border bg-input px-2 py-1.5 text-[11px] outline-none focus:border-primary"
                       />
                       <input
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
-                        placeholder="Название сервера"
+                        placeholder="Название внутри конфига"
                         className="h-9 w-full rounded-lg border border-border bg-input px-2 text-[11px] outline-none focus:border-primary"
                       />
                       <div className="grid grid-cols-2 gap-2">

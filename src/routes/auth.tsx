@@ -10,6 +10,7 @@ import { Shield, Loader2, Mail, Lock, Eye, EyeOff, Sparkles } from "lucide-react
 import { ForgotPasswordModal } from "@/components/ForgotPasswordModal";
 
 export const Route = createFileRoute("/auth")({
+  ssr: false,
   component: AuthPage,
 });
 

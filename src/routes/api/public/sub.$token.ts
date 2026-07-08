@@ -1,5 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
+
+const TEXT_HEADERS = {
+  "content-type": "text/plain; charset=utf-8",
+  "cache-control": "no-store",
+  "access-control-allow-origin": "*",
+};
 
 export const Route = createFileRoute("/api/public/sub/$token")({
   server: {
@@ -10,11 +15,9 @@ export const Route = createFileRoute("/api/public/sub/$token")({
           return new Response("Not found", { status: 404 });
         }
 
-        const url = process.env.SUPABASE_URL!;
-        const key = process.env.SUPABASE_PUBLISHABLE_KEY!;
-        const sb = createClient(url, key, { auth: { persistSession: false } });
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        const { data, error } = await sb
+        const { data, error } = await supabaseAdmin
           .from("issued_configs")
           .select("upstream_url")
           .eq("sub_token", token)
@@ -24,22 +27,35 @@ export const Route = createFileRoute("/api/public/sub/$token")({
         }
 
         let brand = "NetSpas";
-        const { data: setting } = await sb
+        const { data: sourceLink } = await supabaseAdmin
+          .from("vless_links")
+          .select("title")
+          .eq("url", data.upstream_url)
+          .maybeSingle();
+        if (sourceLink?.title?.trim()) brand = sourceLink.title.trim();
+
+        const { data: setting } = await supabaseAdmin
           .from("system_settings")
           .select("value")
           .eq("key", "config_name")
           .maybeSingle();
-        if (setting?.value && typeof setting.value === "string") brand = setting.value;
+        if (brand === "NetSpas" && setting?.value && typeof setting.value === "string") {
+          brand = setting.value;
+        }
 
         let upstreamBody: string;
-        try {
-          const r = await fetch(data.upstream_url, {
-            headers: { "User-Agent": "NetSpas/1.0" },
-          });
-          if (!r.ok) return new Response("Upstream error", { status: 502 });
-          upstreamBody = await r.text();
-        } catch {
-          return new Response("Upstream error", { status: 502 });
+        if (/^https?:\/\//i.test(data.upstream_url)) {
+          try {
+            const r = await fetch(data.upstream_url, {
+              headers: { "User-Agent": "NetSpas/1.0" },
+            });
+            if (!r.ok) return new Response("Upstream error", { status: 502, headers: TEXT_HEADERS });
+            upstreamBody = await r.text();
+          } catch {
+            return new Response("Upstream error", { status: 502, headers: TEXT_HEADERS });
+          }
+        } else {
+          upstreamBody = data.upstream_url;
         }
 
         const rewritten = rewriteSubscription(upstreamBody, brand);
@@ -47,8 +63,7 @@ export const Route = createFileRoute("/api/public/sub/$token")({
         return new Response(rewritten, {
           status: 200,
           headers: {
-            "content-type": "text/plain; charset=utf-8",
-            "cache-control": "no-store",
+            ...TEXT_HEADERS,
             "profile-update-interval": "24",
             "subscription-userinfo": "upload=0; download=0; total=0; expire=0",
           },
@@ -60,18 +75,11 @@ export const Route = createFileRoute("/api/public/sub/$token")({
 
 function rewriteSubscription(body: string, brand: string): string {
   const trimmed = body.trim();
-  // Xray/V2Ray JSON config (array or single object) — convert outbounds to vless://
   if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
     try {
       const parsed = JSON.parse(trimmed);
-      const arr = Array.isArray(parsed) ? parsed : [parsed];
-      const links: string[] = [];
-      let idx = 0;
-      for (const cfg of arr) {
-        const link = xrayJsonToVless(cfg, brand, ++idx, arr.length);
-        if (link) links.push(link);
-      }
-      if (links.length) return links.join("\n");
+      rewriteJsonConfigNames(parsed, brand);
+      return JSON.stringify(parsed, null, 2);
     } catch {
       // fall through
     }
@@ -80,7 +88,7 @@ function rewriteSubscription(body: string, brand: string): string {
   const decoded = tryBase64Decode(trimmed);
   if (decoded && /^(vless|vmess|trojan|ss):\/\//im.test(decoded)) {
     const rewritten = rewriteLines(decoded, brand);
-    return btoa(unescape(encodeURIComponent(rewritten)));
+    return Buffer.from(rewritten, "utf8").toString("base64");
   }
   // Plain-text list of links
   if (/^(vless|vmess|trojan|ss):\/\//im.test(trimmed)) {
@@ -89,70 +97,37 @@ function rewriteSubscription(body: string, brand: string): string {
   return body;
 }
 
-function xrayJsonToVless(cfg: unknown, brand: string, i: number, total: number): string | null {
+function tryBase64Decode(s: string): string | null {
   try {
-    const c = cfg as {
-      outbounds?: Array<{
-        protocol?: string;
-        settings?: { vnext?: Array<{ address?: string; port?: number; users?: Array<{ id?: string; encryption?: string; flow?: string }> }> };
-        streamSettings?: {
-          network?: string;
-          security?: string;
-          realitySettings?: { serverName?: string; publicKey?: string; shortId?: string; spiderX?: string; fingerprint?: string };
-          tlsSettings?: { serverName?: string; fingerprint?: string; alpn?: string[] };
-          wsSettings?: { path?: string; headers?: { Host?: string } };
-          grpcSettings?: { serviceName?: string };
-        };
-      }>;
-      remarks?: string;
-    };
-    const ob = (c.outbounds ?? []).find((o) => o?.protocol === "vless");
-    if (!ob) return null;
-    const vnext = ob.settings?.vnext?.[0];
-    const user = vnext?.users?.[0];
-    if (!vnext?.address || !vnext?.port || !user?.id) return null;
-    const stream = ob.streamSettings ?? {};
-    const params = new URLSearchParams();
-    params.set("encryption", user.encryption || "none");
-    const network = stream.network || "tcp";
-    params.set("type", network);
-    const security = stream.security || "none";
-    params.set("security", security);
-    if (user.flow) params.set("flow", user.flow);
-    if (security === "reality" && stream.realitySettings) {
-      const r = stream.realitySettings;
-      if (r.serverName) params.set("sni", r.serverName);
-      if (r.fingerprint) params.set("fp", r.fingerprint);
-      if (r.publicKey) params.set("pbk", r.publicKey);
-      if (r.shortId) params.set("sid", r.shortId);
-      if (r.spiderX) params.set("spx", r.spiderX);
-    } else if (security === "tls" && stream.tlsSettings) {
-      const t = stream.tlsSettings;
-      if (t.serverName) params.set("sni", t.serverName);
-      if (t.fingerprint) params.set("fp", t.fingerprint);
-      if (t.alpn?.length) params.set("alpn", t.alpn.join(","));
-    }
-    if (network === "ws" && stream.wsSettings) {
-      if (stream.wsSettings.path) params.set("path", stream.wsSettings.path);
-      if (stream.wsSettings.headers?.Host) params.set("host", stream.wsSettings.headers.Host);
-    } else if (network === "grpc" && stream.grpcSettings?.serviceName) {
-      params.set("serviceName", stream.grpcSettings.serviceName);
-    }
-    const remarks = c.remarks || (total > 1 ? `${brand}-${i}` : brand);
-    return `vless://${user.id}@${vnext.address}:${vnext.port}?${params.toString()}#${encodeURIComponent(remarks)}`;
+    const clean = s.replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
+    const pad = clean.length % 4 === 0 ? "" : "=".repeat(4 - (clean.length % 4));
+    return Buffer.from(clean + pad, "base64").toString("utf8");
   } catch {
     return null;
   }
 }
 
-function tryBase64Decode(s: string): string | null {
-  try {
-    const clean = s.replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
-    const pad = clean.length % 4 === 0 ? "" : "=".repeat(4 - (clean.length % 4));
-    const decoded = atob(clean + pad);
-    return decodeURIComponent(escape(decoded));
-  } catch {
-    return null;
+function rewriteJsonConfigNames(value: unknown, brand: string) {
+  let seen = 0;
+  const visit = (node: unknown) => {
+    if (Array.isArray(node)) {
+      node.forEach(visit);
+      return;
+    }
+    if (!node || typeof node !== "object") return;
+    const obj = node as Record<string, unknown>;
+    const nameKeys = ["remarks", "ps", "name", "title", "displayName", "remark"];
+    for (const key of nameKeys) {
+      if (typeof obj[key] === "string") {
+        seen += 1;
+        obj[key] = seen > 1 ? `${brand}-${seen}` : brand;
+      }
+    }
+    Object.values(obj).forEach(visit);
+  };
+  visit(value);
+  if (seen === 0 && value && typeof value === "object" && !Array.isArray(value)) {
+    (value as Record<string, unknown>).remarks = brand;
   }
 }
 
@@ -188,11 +163,11 @@ function rewriteFragment(link: string, brand: string, i: number): string {
 function rewriteVmess(link: string, brand: string, i: number): string {
   try {
     const payload = link.slice("vmess://".length);
-    const decoded = atob(payload);
+    const decoded = Buffer.from(payload, "base64").toString("utf8");
     const obj = JSON.parse(decoded);
     obj.ps = i > 1 ? `${brand}-${i}` : brand;
     const re = JSON.stringify(obj);
-    return "vmess://" + btoa(re);
+    return "vmess://" + Buffer.from(re, "utf8").toString("base64");
   } catch {
     return link;
   }

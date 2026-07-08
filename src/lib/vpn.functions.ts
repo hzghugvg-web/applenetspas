@@ -11,7 +11,7 @@ export const issueVpnConfig = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     const row = (rpc as Array<{ vless_url: string; upstream_url: string }> | null)?.[0];
     if (!row) throw new Error("no_result");
-    const link = row.upstream_url || row.vless_url;
+    const link = row.vless_url;
     return { links: link ? [link] : [], subscriptionUrl: link };
   });
 
@@ -42,7 +42,7 @@ export const getMyIssuedLinks = createServerFn({ method: "GET" })
     }
     const configs = list
       .map((r) => {
-        const link = r.upstream_url || r.vless_url;
+        const link = r.vless_url;
         if (!link) return null;
         return {
           id: r.id,

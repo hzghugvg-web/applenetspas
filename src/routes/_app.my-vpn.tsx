@@ -74,13 +74,41 @@ function MyVpnPage() {
 
   async function copy(text: string) {
     try {
-      await navigator.clipboard.writeText(text);
+      const copied = await copyText(text);
+      if (!copied) throw new Error("copy_failed");
       toast.success(
         "Конфигурация скопирована",
-        "Вставьте её в VPN-клиент: Happ, V2rayTun, Streisand и т.д.",
+        "Вставьте ссылку подписки в VPN-клиент: Happ, V2rayTun, Streisand и т.д.",
       );
     } catch {
       toast.error("Не удалось скопировать");
+    }
+  }
+
+  async function copyText(value: string) {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return true;
+      }
+    } catch {
+      // Telegram/webview can block the Clipboard API — use the legacy fallback below.
+    }
+    try {
+      const el = document.createElement("textarea");
+      el.value = value;
+      el.setAttribute("readonly", "");
+      el.style.position = "fixed";
+      el.style.left = "-9999px";
+      el.style.top = "0";
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(el);
+      return ok;
+    } catch {
+      return false;
     }
   }
 
