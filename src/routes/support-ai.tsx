@@ -304,25 +304,24 @@ function AiChatPage() {
       style={{ background: "var(--app-bg)" }}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {/* Header */}
-      <header className="safe-top tg-blur shrink-0 border-b border-border">
-        <div className="flex items-center gap-3 px-3 pb-2 pt-3">
+      <header className="safe-top shrink-0 border-b border-border" style={{ background: "var(--card-solid)" }}>
+        <div className="flex h-13 items-center gap-2 px-2">
           <Link
             to="/support"
-            className="tg-press grid h-10 w-10 place-items-center rounded-full text-muted-foreground"
+            className="tg-press grid h-11 w-11 place-items-center rounded-full text-primary"
             aria-label="Назад"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="h-6 w-6" />
           </Link>
           <div
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full"
             style={{ background: "var(--gradient-primary)" }}
           >
-            <Sparkles className="h-5 w-5 text-white" />
+            <Sparkles className="h-4.5 w-4.5 text-white" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-semibold text-foreground">ИИ-помощник</p>
-            <p className="truncate text-[11px] text-emerald-400">
+            <p className="truncate text-[16px] font-semibold leading-tight text-foreground">ИИ-помощник</p>
+            <p className="truncate text-[11px] leading-tight text-emerald-400">
               <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 align-middle" />
               онлайн · отвечает мгновенно
             </p>
@@ -330,7 +329,7 @@ function AiChatPage() {
           {messages.length > 1 && (
             <button
               onClick={() => setConfirmClear(true)}
-              className="tg-press grid h-10 w-10 place-items-center rounded-full text-muted-foreground hover:text-destructive"
+              className="tg-press grid h-11 w-11 place-items-center rounded-full text-muted-foreground hover:text-destructive"
               aria-label="Очистить чат"
               title="Очистить чат"
             >
@@ -342,7 +341,7 @@ function AiChatPage() {
 
       {/* Messages (scroll area) */}
       <div className="ns-scroll min-h-0 flex-1 overflow-y-auto px-3 pt-3">
-        <div className="mx-auto flex max-w-2xl flex-col gap-2 pb-4">
+        <div className="mx-auto flex max-w-2xl flex-col gap-2 pb-3">
           <AnimatePresence initial={false}>
             {messages.map((m) => (
               <MessageBubble key={m.id} m={m} anim={anim} />
@@ -408,8 +407,8 @@ function AiChatPage() {
 
       {/* Composer */}
       <div
-        className="tg-blur shrink-0 border-t border-border bg-background/85 px-3 pt-2"
-        style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+        className="shrink-0 border-t border-border px-3 pt-2"
+        style={{ background: "var(--card-solid)", paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
       >
         {escalated ? (
           <button
