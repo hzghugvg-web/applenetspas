@@ -317,7 +317,7 @@ function AiChatPage() {
             className="grid h-9 w-9 shrink-0 place-items-center rounded-full"
             style={{ background: "var(--gradient-primary)" }}
           >
-            <Sparkles className="h-4.5 w-4.5 text-white" />
+            <Sparkles className="h-[18px] w-[18px] text-white" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[16px] font-semibold leading-tight text-foreground">ИИ-помощник</p>
