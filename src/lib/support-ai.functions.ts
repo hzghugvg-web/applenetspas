@@ -8,7 +8,7 @@ import {
 
 export const askSupportAI = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => SupportAiInputSchema.parse(data))
+  .validator((data: unknown) => SupportAiInputSchema.parse(data))
   .handler(async ({ data }) => {
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) {
