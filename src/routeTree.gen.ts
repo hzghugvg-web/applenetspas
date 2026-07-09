@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppVpnRouteImport } from './routes/_app.vpn'
+import { Route as AppSupportRouteImport } from './routes/_app.support'
 import { Route as AppProfileRouteImport } from './routes/_app.profile'
 import { Route as AppMyVpnRouteImport } from './routes/_app.my-vpn'
 import { Route as AppFaqRouteImport } from './routes/_app.faq'
@@ -43,6 +44,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppVpnRoute = AppVpnRouteImport.update({
   id: '/vpn',
   path: '/vpn',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSupportRoute = AppSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
   getParentRoute: () => AppRoute,
 } as any)
 const AppProfileRoute = AppProfileRouteImport.update({
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/faq': typeof AppFaqRoute
   '/my-vpn': typeof AppMyVpnRoute
   '/profile': typeof AppProfileRoute
+  '/support': typeof AppSupportRoute
   '/vpn': typeof AppVpnRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
   '/api/public/sub/$token': typeof ApiPublicSubTokenRoute
@@ -96,6 +103,7 @@ export interface FileRoutesByTo {
   '/faq': typeof AppFaqRoute
   '/my-vpn': typeof AppMyVpnRoute
   '/profile': typeof AppProfileRoute
+  '/support': typeof AppSupportRoute
   '/vpn': typeof AppVpnRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
   '/api/public/sub/$token': typeof ApiPublicSubTokenRoute
@@ -110,6 +118,7 @@ export interface FileRoutesById {
   '/_app/faq': typeof AppFaqRoute
   '/_app/my-vpn': typeof AppMyVpnRoute
   '/_app/profile': typeof AppProfileRoute
+  '/_app/support': typeof AppSupportRoute
   '/_app/vpn': typeof AppVpnRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
   '/api/public/sub/$token': typeof ApiPublicSubTokenRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/my-vpn'
     | '/profile'
+    | '/support'
     | '/vpn'
     | '/api/public/sb/$'
     | '/api/public/sub/$token'
@@ -136,6 +146,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/my-vpn'
     | '/profile'
+    | '/support'
     | '/vpn'
     | '/api/public/sb/$'
     | '/api/public/sub/$token'
@@ -149,6 +160,7 @@ export interface FileRouteTypes {
     | '/_app/faq'
     | '/_app/my-vpn'
     | '/_app/profile'
+    | '/_app/support'
     | '/_app/vpn'
     | '/api/public/sb/$'
     | '/api/public/sub/$token'
@@ -198,6 +210,13 @@ declare module '@tanstack/react-router' {
       path: '/vpn'
       fullPath: '/vpn'
       preLoaderRoute: typeof AppVpnRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/support': {
+      id: '/_app/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof AppSupportRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/profile': {
@@ -250,6 +269,7 @@ interface AppRouteChildren {
   AppFaqRoute: typeof AppFaqRoute
   AppMyVpnRoute: typeof AppMyVpnRoute
   AppProfileRoute: typeof AppProfileRoute
+  AppSupportRoute: typeof AppSupportRoute
   AppVpnRoute: typeof AppVpnRoute
 }
 
@@ -258,6 +278,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFaqRoute: AppFaqRoute,
   AppMyVpnRoute: AppMyVpnRoute,
   AppProfileRoute: AppProfileRoute,
+  AppSupportRoute: AppSupportRoute,
   AppVpnRoute: AppVpnRoute,
 }
 
