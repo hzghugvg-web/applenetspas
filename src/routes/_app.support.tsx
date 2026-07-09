@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { alertDialog as toast } from "@/lib/alert";
 import { translateAuthError } from "@/lib/errors";
+import { stripComplaintAttachmentBlock } from "@/lib/complaint-attachments";
 import {
   Plus, Upload, X, Loader2, MessageCircle, Sparkles, Headphones, ArrowRight,
   Clock, CheckCircle2, XCircle, HelpCircle,
@@ -179,7 +180,7 @@ function MyComplaints({
           onClosed={load}
           beforeChat={
             <div className="space-y-2 rounded-xl bg-card p-2 text-[13px]">
-              <p className="whitespace-pre-wrap text-foreground/90">{c.description}</p>
+              <p className="whitespace-pre-wrap text-foreground/90">{stripComplaintAttachmentBlock(c.description)}</p>
               {c.phone && <p className="text-[12px] text-muted-foreground">📞 {c.phone}</p>}
               {c.video_url && <VideoPlayer path={c.video_url} />}
             </div>
@@ -252,7 +253,7 @@ function ComplaintRow({
           </span>
         </div>
         <p className="mt-0.5 line-clamp-2 text-[14px] font-medium leading-snug text-foreground">
-          {c.description}
+          {stripComplaintAttachmentBlock(c.description)}
         </p>
       </div>
       <MessageCircle className="h-4 w-4 shrink-0 text-muted-foreground" />

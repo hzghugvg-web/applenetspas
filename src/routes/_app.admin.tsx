@@ -4,8 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { Plus, Trash2, RotateCcw, Ban, CheckCircle2, MessageCircle, Megaphone, Send, Pencil, X, KeyRound, Loader2 } from "lucide-react";
+import {
+  Plus, Trash2, RotateCcw, Ban, CheckCircle2, MessageCircle, Megaphone, Send,
+  Pencil, X, KeyRound, Loader2, ImageIcon, Video,
+} from "lucide-react";
 import { ComplaintChatModal } from "@/components/ComplaintChat";
+import {
+  isAiEscalatedComplaint,
+  parseComplaintAttachments,
+  stripComplaintAttachmentBlock,
+  type StoredComplaintAttachment,
+} from "@/lib/complaint-attachments";
 
 export const Route = createFileRoute("/_app/admin")({ component: AdminPage });
 
@@ -662,15 +671,54 @@ function AdminComplaintCard({
   onToggle: () => void;
   onChanged: () => void;
 }) {
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<(StoredComplaintAttachment & { url: string })[]>([]);
   const [dirs, setDirs] = useState<{ id: string; name: string; flag: string | null }[]>([]);
   const [dir, setDir] = useState<string>("");
 
   useEffect(() => {
-    if (!open || !c.video_url) return;
-    supabase.storage.from("complaints").createSignedUrl(c.video_url, 3600)
-      .then(({ data }) => setVideoUrl(data?.signedUrl ?? null));
-  }, [open, c.video_url]);
+    let alive = true;
+    if (!open) {
+      setAttachments([]);
+      return () => { alive = false; };
+    }
+
+    async function loadAttachments() {
+      const byPath = new Map<string, StoredComplaintAttachment>();
+      if (c.video_url) byPath.set(c.video_url, { kind: "video", path: c.video_url, name: "Видео" });
+      for (const item of parseComplaintAttachments(c.description)) byPath.set(item.path, item);
+
+      if (isAiEscalatedComplaint(c.description) && byPath.size === 0) {
+        const folder = `${c.user_id}/ai-chat`;
+        const { data } = await supabase.storage
+          .from("complaints")
+          .list(folder, { limit: 30, sortBy: { column: "created_at", order: "desc" } });
+        const complaintAt = new Date(c.created_at).getTime();
+        const from = complaintAt - 60 * 60 * 1000;
+        const to = complaintAt + 60 * 1000;
+        for (const file of data ?? []) {
+          const createdAt = new Date(file.created_at ?? file.updated_at ?? 0).getTime();
+          if (!createdAt || createdAt < from || createdAt > to) continue;
+          const mime = String(file.metadata?.mimetype ?? "");
+          const isImage = mime.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(file.name);
+          const isVideo = mime.startsWith("video/") || /\.(mp4|mov|webm|m4v)$/i.test(file.name);
+          if (!isImage && !isVideo) continue;
+          const path = `${folder}/${file.name}`;
+          byPath.set(path, { kind: isImage ? "image" : "video", path, name: isImage ? "Скриншот" : "Видео" });
+        }
+      }
+
+      const signed = await Promise.all(
+        [...byPath.values()].map(async (item) => {
+          const { data } = await supabase.storage.from("complaints").createSignedUrl(item.path, 3600);
+          return data?.signedUrl ? { ...item, url: data.signedUrl } : null;
+        }),
+      );
+      if (alive) setAttachments(signed.filter((item): item is StoredComplaintAttachment & { url: string } => Boolean(item)));
+    }
+
+    loadAttachments();
+    return () => { alive = false; };
+  }, [open, c.id, c.user_id, c.description, c.video_url, c.created_at]);
 
   useEffect(() => {
     if (!open) return;
@@ -727,8 +775,34 @@ function AdminComplaintCard({
                 📞 {c.phone}
               </a>
             )}
-            <p className="whitespace-pre-wrap text-foreground/90">{c.description}</p>
-            {videoUrl && <video src={videoUrl} controls playsInline className="w-full rounded-lg bg-black" />}
+            <p className="whitespace-pre-wrap text-foreground/90">{stripComplaintAttachmentBlock(c.description)}</p>
+            {attachments.length > 0 && (
+              <div className="grid gap-2">
+                {attachments.map((attachment) => (
+                  <div key={attachment.path} className="overflow-hidden rounded-lg border border-border bg-muted">
+                    <a
+                      href={attachment.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1.5 border-b border-border px-2 py-1 text-[11px] text-primary"
+                    >
+                      {attachment.kind === "image" ? <ImageIcon className="h-3.5 w-3.5" /> : <Video className="h-3.5 w-3.5" />}
+                      {attachment.name ?? (attachment.kind === "image" ? "Фото" : "Видео")}
+                    </a>
+                    {attachment.kind === "image" ? (
+                      <img
+                        src={attachment.url}
+                        alt={attachment.name ?? "Фото из обращения"}
+                        loading="lazy"
+                        className="max-h-80 w-full object-contain"
+                      />
+                    ) : (
+                      <video src={attachment.url} controls playsInline className="w-full bg-black" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="space-y-2 rounded-lg bg-muted p-2">
               <p className="text-[11px] text-muted-foreground">Выдать конфигурацию (сбросит кулдаун):</p>
               <div className="flex gap-2">

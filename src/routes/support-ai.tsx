@@ -8,6 +8,7 @@ import { alertDialog as toast } from "@/lib/alert";
 import { translateAuthError } from "@/lib/errors";
 import { hasStoredSupabaseSession } from "@/lib/fast-auth";
 import { useTheme } from "@/lib/theme";
+import { appendComplaintAttachmentBlock } from "@/lib/complaint-attachments";
 import {
   Send, Loader2, Sparkles, Headphones, CheckCircle2, ChevronLeft,
   Paperclip, X, Play, Trash2,
@@ -306,14 +307,16 @@ function AiChatPage() {
           return `${m.role === "user" ? "Пользователь" : "ИИ"}: ${m.content}${att}`;
         })
         .join("\n\n");
-      const description =
+      const baseDescription =
         `Обращение из чата с ИИ.\n\nВопрос: ${lastUser.content}\n\n— История —\n${transcript}`.slice(
           0, 2000,
         );
-      const firstVideo = [...messages]
+      const forwardedAttachments = [...messages]
         .reverse()
         .flatMap((m) => m.attachments ?? [])
-        .find((a) => a.kind === "video");
+        .map((a) => ({ kind: a.kind, path: a.path, name: a.name }));
+      const description = appendComplaintAttachmentBlock(baseDescription, forwardedAttachments);
+      const firstVideo = forwardedAttachments.find((a) => a.kind === "video");
       const { error } = await supabase.from("complaints").insert({
         user_id: u.user.id,
         description,
