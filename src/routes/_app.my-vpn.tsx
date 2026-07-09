@@ -6,6 +6,7 @@ import { alertDialog as toast } from "@/lib/alert";
 import { getMyIssuedLinks } from "@/lib/vpn.functions";
 import { CalendarClock, Copy, ShieldCheck, Hourglass, Server, Radio } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
+import { readOfflineMyVpn, saveOfflineMyVpn } from "@/lib/offline-vpn-cache";
 
 export const Route = createFileRoute("/_app/my-vpn")({ component: MyVpnPage });
 
@@ -25,20 +26,34 @@ function MyVpnPage() {
     staleTime: 30_000,
     refetchInterval: 30_000,
     queryFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return { profile: null as Profile | null, configs: [] as Config[], dirs: {} as Record<string, Direction> };
-      const [{ data: p }, issued] = await Promise.all([
-        supabase.from("profiles").select("subscription_from,subscription_until").eq("id", u.user.id).maybeSingle(),
-        getLinks(),
-      ]);
-      const list = (issued.configs ?? []) as Config[];
-      const dirIds = Array.from(new Set(list.map((c) => c.directionId).filter(Boolean))) as string[];
-      let dirs: Record<string, Direction> = {};
-      if (dirIds.length) {
-        const { data: ds } = await supabase.from("directions").select("id,name,flag").in("id", dirIds);
-        for (const d of (ds ?? []) as Direction[]) dirs[d.id] = d;
+      try {
+        const { data: u } = await supabase.auth.getUser();
+        if (!u.user) return { profile: null as Profile | null, configs: [] as Config[], dirs: {} as Record<string, Direction> };
+        const [{ data: p }, issued] = await Promise.all([
+          supabase.from("profiles").select("subscription_from,subscription_until").eq("id", u.user.id).maybeSingle(),
+          getLinks(),
+        ]);
+        const list = (issued.configs ?? []) as Config[];
+        const dirIds = Array.from(new Set(list.map((c) => c.directionId).filter(Boolean))) as string[];
+        let dirs: Record<string, Direction> = {};
+        if (dirIds.length) {
+          const { data: ds } = await supabase.from("directions").select("id,name,flag").in("id", dirIds);
+          for (const d of (ds ?? []) as Direction[]) dirs[d.id] = d;
+        }
+        const result = { profile: (p ?? null) as Profile | null, configs: list, dirs };
+        saveOfflineMyVpn(result);
+        return result;
+      } catch (error) {
+        const cached = readOfflineMyVpn();
+        if (cached) {
+          return {
+            profile: cached.profile as Profile | null,
+            configs: cached.configs as Config[],
+            dirs: cached.dirs as Record<string, Direction>,
+          };
+        }
+        throw error;
       }
-      return { profile: (p ?? null) as Profile | null, configs: list, dirs };
     },
   });
   const profile = data?.profile ?? null;
