@@ -255,7 +255,10 @@ function AiChatPage() {
           role: m.role as "user" | "assistant",
           content: m.content,
           attachments: m.attachments?.map((a) => ({
-            kind: a.kind, url: a.url, name: a.name,
+            kind: a.kind,
+            // Prefer inline data URL for images so the AI actually sees them.
+            url: a.kind === "image" && a.dataUrl ? a.dataUrl : a.url,
+            name: a.name,
           })),
         }));
       const res = await ask({ data: { messages: history } });
