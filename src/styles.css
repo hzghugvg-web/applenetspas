@@ -282,17 +282,7 @@
   isolation: isolate;
 }
 
-.ns-auth-shell::after {
-  content: "";
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: calc(-1 * var(--ns-bottom-overscan));
-  height: calc(env(safe-area-inset-bottom, 0px) + var(--ns-bottom-overscan));
-  background: var(--card-solid);
-  pointer-events: none;
-  z-index: 0;
-}
+/* ::after overscan removed — was creating a visible taller strip on auth */
 
 @utility tg-blur {
   background-color: var(--nav-bg);
