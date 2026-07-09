@@ -37,7 +37,7 @@
   --nav-blur: saturate(180%) blur(24px);
   --ns-nav-button-height: 62px;
   --ns-bottom-fill: env(safe-area-inset-bottom, 0px);
-  --ns-control-bottom-fill: clamp(0px, calc(env(safe-area-inset-bottom, 0px) - 16px), 18px);
+  --ns-control-bottom-fill: clamp(0px, calc(env(safe-area-inset-bottom, 0px) - 24px), 10px);
   --ns-bottom-overscan: 28px;
   --pwa-background: #10131F;
   --primary-foreground: #FFFFFF;
@@ -556,6 +556,7 @@ html, body {
   border-left: 0;
   min-height: calc(var(--ns-nav-button-height) + var(--ns-control-bottom-fill));
   padding-bottom: var(--ns-control-bottom-fill);
+  align-items: end;
   box-shadow: 0 -14px 34px -26px rgba(0, 0, 0, 0.8);
   transform: translateZ(0);
 }
