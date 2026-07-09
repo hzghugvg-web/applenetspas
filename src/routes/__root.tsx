@@ -142,6 +142,10 @@ function RootComponent() {
   }, [pathname]);
 
   useEffect(() => {
+    import("@/lib/pwa-register").then((m) => m.registerPWA());
+  }, []);
+
+  useEffect(() => {
     const updateViewportHeight = () => {
       const height = window.visualViewport?.height ?? window.innerHeight;
       document.documentElement.style.setProperty("--ns-viewport-height", `${Math.ceil(height)}px`);
