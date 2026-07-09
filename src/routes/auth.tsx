@@ -74,7 +74,7 @@ function AuthPage() {
     <div
       onContextMenu={(e) => e.preventDefault()}
       className="ns-auth-shell fixed left-0 right-0 top-0 flex flex-col items-center justify-center overflow-hidden px-5"
-      style={{ background: "var(--pwa-background)", height: "var(--ns-viewport-height, 100dvh)" }}
+      style={{ background: "var(--pwa-background)", height: "100dvh" }}
     >
       {/* Ambient background glows */}
       <div
