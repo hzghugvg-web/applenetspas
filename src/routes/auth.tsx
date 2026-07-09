@@ -74,7 +74,7 @@ function AuthPage() {
     <div
       onContextMenu={(e) => e.preventDefault()}
       className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden px-5"
-      style={{ background: "var(--app-bg)" }}
+      style={{ background: "var(--card-solid)" }}
     >
       {/* Ambient background glows */}
       <div
