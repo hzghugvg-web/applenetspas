@@ -57,16 +57,16 @@ export function applyTheme(mode: ColorMode, theme: DesignTheme, motion: Motion =
 
   const mobileChromeColor: Record<ColorMode, Record<DesignTheme, string>> = {
     dark: {
-      midnight: "#10131F",
-      sunset: "#1A120C",
-      forest: "#0D1626",
-      candy: "#1D101A",
+      midnight: "#080B15",
+      sunset: "#100A08",
+      forest: "#060D19",
+      candy: "#120912",
     },
     light: {
-      midnight: "#FFFFFF",
-      sunset: "#FFFFFF",
-      forest: "#FFFFFF",
-      candy: "#FFFFFF",
+      midnight: "#F5F7FC",
+      sunset: "#FFFAF3",
+      forest: "#F2F6FD",
+      candy: "#FFF5FA",
     },
   };
   document
