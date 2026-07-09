@@ -537,7 +537,7 @@ html, body {
   position: relative;
   z-index: 2;
   align-items: start;
-  background: var(--app-bg);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--card-solid) 90%, transparent) 0%, var(--card-solid) 100%);
   backdrop-filter: none;
   border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
   border-right: 0;
@@ -554,9 +554,9 @@ html, body {
   position: absolute;
   top: 0;
   right: 0;
-  bottom: var(--ns-bottom-fill);
+  bottom: 0;
   left: 0;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--card-solid) 86%, transparent) 0%, color-mix(in srgb, var(--card-solid) 74%, transparent) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--card-solid) 86%, transparent) 0%, var(--card-solid) 100%);
   backdrop-filter: saturate(160%) blur(14px);
   pointer-events: none;
   z-index: 0;
@@ -568,8 +568,8 @@ html, body {
   left: 0;
   right: 0;
   bottom: calc(-1 * var(--ns-bottom-overscan));
-  height: calc(var(--ns-bottom-fill) + var(--ns-bottom-overscan));
-  background: var(--app-bg);
+  height: calc(var(--ns-bottom-fill) + var(--ns-bottom-overscan) + 2px);
+  background: var(--card-solid);
   pointer-events: none;
   z-index: 0;
 }
