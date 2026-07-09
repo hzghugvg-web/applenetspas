@@ -39,8 +39,7 @@ export function MobileShell({ title, children }: Props) {
     <div
       data-mobile-shell
       onContextMenu={(e) => e.preventDefault()}
-      className="fixed inset-x-0 top-0 flex flex-col overflow-hidden text-foreground"
-      style={{ background: "var(--app-bg)", height: "100dvh" }}
+      className="ns-mobile-shell fixed inset-0 flex flex-col overflow-hidden text-foreground"
     >
       <header className="safe-top tg-blur shrink-0">
         <div className="flex h-12 items-center justify-center px-4">
@@ -60,10 +59,9 @@ export function MobileShell({ title, children }: Props) {
         </div>
       </main>
       <nav
-        className="grid shrink-0 tg-mobile-nav"
+        className="grid shrink-0 glass tg-mobile-nav"
         style={{
           gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
-          paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >
         {tabs.map(({ to, label, icon: Icon }) => {
