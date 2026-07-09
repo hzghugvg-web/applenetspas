@@ -211,8 +211,8 @@
     min-height: 100dvh;
     min-height: 100svh;
     min-height: -webkit-fill-available;
-    background: var(--app-bg);
-    background-color: var(--background);
+    background: var(--card-solid);
+    background-color: var(--card-solid);
     overflow: hidden;
     overscroll-behavior: none;
     touch-action: pan-y;
@@ -224,8 +224,8 @@
   }
   body {
     margin: 0;
-    background: var(--app-bg);
-    background-color: var(--background);
+    background: var(--card-solid);
+    background-color: var(--card-solid);
     color: var(--color-foreground);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   }
@@ -269,7 +269,7 @@
   right: 0;
   bottom: calc(-1 * var(--ns-bottom-overscan));
   height: calc(var(--ns-bottom-fill) + var(--ns-bottom-overscan));
-  background: var(--app-bg);
+  background: var(--card-solid);
   pointer-events: none;
   z-index: 0;
 }

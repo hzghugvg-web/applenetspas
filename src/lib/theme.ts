@@ -20,16 +20,16 @@ export const THEMES: { id: DesignTheme; label: string; accent: string; hint: str
 
 export const MOBILE_CHROME_COLORS: Record<ColorMode, Record<DesignTheme, string>> = {
   dark: {
-    midnight: "#080B15",
-    sunset: "#100A08",
-    forest: "#060D19",
-    candy: "#120912",
+    midnight: "#10131F",
+    sunset: "#1A120C",
+    forest: "#0D1626",
+    candy: "#1D101A",
   },
   light: {
-    midnight: "#F5F7FC",
-    sunset: "#FFFAF3",
-    forest: "#F2F6FD",
-    candy: "#FFF5FA",
+    midnight: "#FFFFFF",
+    sunset: "#FFFFFF",
+    forest: "#FFFFFF",
+    candy: "#FFFFFF",
   },
 };
 
