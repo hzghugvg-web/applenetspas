@@ -18,6 +18,21 @@ export const THEMES: { id: DesignTheme; label: string; accent: string; hint: str
   { id: "candy",    label: "Rose Gold", accent: "#EC4899", hint: "Розовое золото и слива" },
 ];
 
+export const MOBILE_CHROME_COLORS: Record<ColorMode, Record<DesignTheme, string>> = {
+  dark: {
+    midnight: "#080B15",
+    sunset: "#100A08",
+    forest: "#060D19",
+    candy: "#120912",
+  },
+  light: {
+    midnight: "#F5F7FC",
+    sunset: "#FFFAF3",
+    forest: "#F2F6FD",
+    candy: "#FFF5FA",
+  },
+};
+
 const MODE_KEY = "ns_mode";
 const THEME_KEY = "ns_theme";
 const MOTION_KEY = "ns_motion";
@@ -55,23 +70,20 @@ export function applyTheme(mode: ColorMode, theme: DesignTheme, motion: Motion =
   document.documentElement.dataset.motion = motion;
   document.documentElement.classList.toggle("dark", mode === "dark");
 
-  const mobileChromeColor: Record<ColorMode, Record<DesignTheme, string>> = {
-    dark: {
-      midnight: "#080B15",
-      sunset: "#100A08",
-      forest: "#060D19",
-      candy: "#120912",
-    },
-    light: {
-      midnight: "#F5F7FC",
-      sunset: "#FFFAF3",
-      forest: "#F2F6FD",
-      candy: "#FFF5FA",
-    },
-  };
+  const mobileChromeColor = MOBILE_CHROME_COLORS[mode][theme];
   document
     .querySelector('meta[name="theme-color"]')
-    ?.setAttribute("content", mobileChromeColor[mode][theme]);
+    ?.setAttribute("content", mobileChromeColor);
+
+  const webApp = typeof window !== "undefined" ? (window as any).Telegram?.WebApp : undefined;
+  if (webApp) {
+    try { webApp.ready?.(); } catch {}
+    try { webApp.expand?.(); } catch {}
+    try { webApp.disableVerticalSwipes?.(); } catch {}
+    try { webApp.setBackgroundColor?.(mobileChromeColor); } catch {}
+    try { webApp.setHeaderColor?.(mobileChromeColor); } catch {}
+    try { webApp.setBottomBarColor?.(mobileChromeColor); } catch {}
+  }
 }
 
 const listeners = new Set<() => void>();

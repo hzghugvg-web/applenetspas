@@ -35,6 +35,9 @@
 :root {
   --radius: 1rem;
   --nav-blur: saturate(180%) blur(24px);
+  --ns-nav-button-height: 62px;
+  --ns-bottom-fill: max(12px, env(safe-area-inset-bottom, 0px));
+  --ns-bottom-overscan: 28px;
   --primary-foreground: #FFFFFF;
   --destructive-foreground: #FFFFFF;
 
@@ -206,8 +209,9 @@
   html, body, #root {
     height: 100%;
     min-height: 100dvh;
+    min-height: 100svh;
     min-height: -webkit-fill-available;
-    background: var(--background);
+    background: var(--app-bg);
     background-color: var(--background);
     overflow: hidden;
     overscroll-behavior: none;
@@ -220,7 +224,7 @@
   }
   body {
     margin: 0;
-    background: var(--background);
+    background: var(--app-bg);
     background-color: var(--background);
     color: var(--color-foreground);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
@@ -249,11 +253,25 @@
 }
 
 .ns-mobile-shell {
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: var(--ns-viewport-height, 100dvh);
+  min-height: var(--ns-viewport-height, 100dvh);
+  min-height: 100svh;
   min-height: -webkit-fill-available;
   background: var(--app-bg);
   isolation: isolate;
+  overflow: hidden;
+}
+
+.ns-mobile-shell::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(-1 * var(--ns-bottom-overscan));
+  height: calc(var(--ns-bottom-fill) + var(--ns-bottom-overscan));
+  background: var(--app-bg);
+  pointer-events: none;
+  z-index: 0;
 }
 
 @utility tg-blur {
@@ -516,13 +534,31 @@ html, body {
 }
 
 .tg-mobile-nav {
+  position: relative;
+  z-index: 2;
+  align-items: start;
   background: linear-gradient(180deg, color-mix(in srgb, var(--card-solid) 86%, transparent) 0%, color-mix(in srgb, var(--card-solid) 74%, transparent) 100%);
   backdrop-filter: saturate(160%) blur(14px);
   border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
   border-right: 0;
   border-bottom: 0;
   border-left: 0;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  min-height: calc(var(--ns-nav-button-height) + var(--ns-bottom-fill));
+  padding-bottom: var(--ns-bottom-fill);
+  box-shadow: 0 -14px 34px -26px rgba(0, 0, 0, 0.8);
+  transform: translateZ(0);
+}
+
+.tg-mobile-nav::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(-1 * var(--ns-bottom-overscan));
+  height: calc(var(--ns-bottom-fill) + var(--ns-bottom-overscan));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--card-solid) 80%, var(--background)) 0%, var(--background) 100%);
+  pointer-events: none;
+  z-index: -1;
 }
 
 @utility gradient-text {

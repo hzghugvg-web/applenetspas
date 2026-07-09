@@ -1,6 +1,6 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Globe, User, Settings, MessageCircle, ShieldCheck, type LucideIcon } from "lucide-react";
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useHasActiveVpn } from "@/hooks/useHasActiveVpn";
@@ -18,6 +18,26 @@ export function MobileShell({ title, children }: Props) {
   const showAdminTab = isAdmin === true || (pathname.startsWith("/admin") && adminLoading);
   const { data: activeVpn } = useHasActiveVpn();
   const showMyVpnTab = !!activeVpn || pathname.startsWith("/my-vpn");
+
+  useEffect(() => {
+    const updateViewportHeight = () => {
+      const height = window.visualViewport?.height ?? window.innerHeight;
+      document.documentElement.style.setProperty("--ns-viewport-height", `${height}px`);
+    };
+
+    updateViewportHeight();
+    window.visualViewport?.addEventListener("resize", updateViewportHeight);
+    window.visualViewport?.addEventListener("scroll", updateViewportHeight);
+    window.addEventListener("resize", updateViewportHeight);
+    window.addEventListener("orientationchange", updateViewportHeight);
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", updateViewportHeight);
+      window.visualViewport?.removeEventListener("scroll", updateViewportHeight);
+      window.removeEventListener("resize", updateViewportHeight);
+      window.removeEventListener("orientationchange", updateViewportHeight);
+    };
+  }, []);
 
   const tabs = useMemo<Tab[]>(() => {
     const items: Tab[] = [{ to: "/vpn", label: "VPN", icon: Globe }];
@@ -39,7 +59,7 @@ export function MobileShell({ title, children }: Props) {
     <div
       data-mobile-shell
       onContextMenu={(e) => e.preventDefault()}
-      className="ns-mobile-shell fixed inset-0 flex flex-col overflow-hidden text-foreground"
+      className="ns-mobile-shell fixed left-0 right-0 top-0 flex flex-col overflow-hidden text-foreground"
     >
       <header className="safe-top tg-blur shrink-0">
         <div className="flex h-12 items-center justify-center px-4">
