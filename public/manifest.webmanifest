@@ -4,8 +4,8 @@
   "description": "Бесплатные VPN-конфигурации VLESS",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1a1f2b",
-  "theme_color": "#1a1f2b",
+  "background_color": "#10131F",
+  "theme_color": "#10131F",
   "orientation": "portrait",
   "icons": [
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
