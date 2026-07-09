@@ -54,6 +54,24 @@ export function applyTheme(mode: ColorMode, theme: DesignTheme, motion: Motion =
   document.documentElement.dataset.theme = theme;
   document.documentElement.dataset.motion = motion;
   document.documentElement.classList.toggle("dark", mode === "dark");
+
+  const mobileChromeColor: Record<ColorMode, Record<DesignTheme, string>> = {
+    dark: {
+      midnight: "#10131F",
+      sunset: "#1A120C",
+      forest: "#0D1626",
+      candy: "#1D101A",
+    },
+    light: {
+      midnight: "#FFFFFF",
+      sunset: "#FFFFFF",
+      forest: "#FFFFFF",
+      candy: "#FFFFFF",
+    },
+  };
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", mobileChromeColor[mode][theme]);
 }
 
 const listeners = new Set<() => void>();
