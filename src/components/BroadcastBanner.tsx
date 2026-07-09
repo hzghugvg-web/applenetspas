@@ -82,23 +82,10 @@ export function BroadcastBanner() {
     }, 220);
   }
 
-  const topOnes = unread.filter((b) => (b.delivery_style ?? "imessage") === "top");
-  const imessageOnes = unread.filter((b) => (b.delivery_style ?? "imessage") === "imessage");
-  const current = topOnes[0];
-
-  // Auto-open first iMessage-style broadcast as a centered modal.
-  useEffect(() => {
-    if (opened) return;
-    const next = imessageOnes.find((b) => !seenIds.has(b.id));
-    if (next) {
-      setOpened(next);
-      setSeenIds((prev) => {
-        const s = new Set(prev);
-        s.add(next.id);
-        return s;
-      });
-    }
-  }, [imessageOnes, opened, seenIds]);
+  // Всегда показываем как плашку сверху; модалка открывается только по клику.
+  const current = unread[0];
+  void seenIds;
+  void setSeenIds;
 
   async function copyLinkValue(url: string) {
     try {
