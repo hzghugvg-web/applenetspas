@@ -207,12 +207,21 @@ function AiChatPage() {
           .from("complaints")
           .createSignedUrl(path, 3600);
         if (!signed?.signedUrl) { toast.error(`${f.name}: не удалось получить ссылку`); continue; }
+        let dataUrl: string | undefined;
+        if (isImage) {
+          try {
+            dataUrl = await imageFileToCompressedDataUrl(f);
+          } catch {
+            // Non-fatal — AI just won't see it, but оператор ещё увидит.
+          }
+        }
         uploaded.push({
           id: crypto.randomUUID(),
           kind: isImage ? "image" : "video",
           url: signed.signedUrl,
           path,
           name: f.name,
+          dataUrl,
         });
       }
       if (uploaded.length) setPending((p) => [...p, ...uploaded]);
