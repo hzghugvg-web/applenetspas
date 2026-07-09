@@ -74,6 +74,7 @@ export function applyTheme(mode: ColorMode, theme: DesignTheme, motion: Motion =
 
   const isAuthRoute = typeof window !== "undefined" && window.location.pathname.startsWith("/auth");
   const mobileChromeColor = isAuthRoute ? PWA_BACKGROUND_COLOR : MOBILE_CHROME_COLORS[mode][theme];
+  document.documentElement.style.setProperty("--pwa-background", mobileChromeColor);
   document
     .querySelectorAll('meta[name="theme-color"]')
     .forEach((meta) => meta.setAttribute("content", mobileChromeColor));
