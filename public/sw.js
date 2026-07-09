@@ -1,13 +1,9 @@
-const VERSION = "netspas-offline-2026-07-09-2";
+const VERSION = "netspas-offline-2026-07-09-3";
 const APP_CACHE = `${VERSION}-app`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const APP_SHELL = [
   "/",
   "/auth",
-  "/vpn",
-  "/my-vpn",
-  "/support",
-  "/profile",
   "/faq",
   "/manifest.webmanifest",
   "/icon.svg",
@@ -72,8 +68,10 @@ self.addEventListener("fetch", (event) => {
 async function networkFirstNavigation(request) {
   const cache = await caches.open(APP_CACHE);
   try {
-    const response = await withTimeout(fetch(request), 3500);
-    if (response.ok) await cache.put(normalizePath(request.url), response.clone());
+    const response = await fetch(request);
+    if (response.ok) {
+      cache.put(normalizePath(request.url), response.clone()).catch(() => {});
+    }
     return response;
   } catch {
     return (
