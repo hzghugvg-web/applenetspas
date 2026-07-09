@@ -73,8 +73,8 @@ function AuthPage() {
   return (
     <div
       onContextMenu={(e) => e.preventDefault()}
-      className="ns-auth-shell fixed inset-0 flex flex-col items-center justify-center overflow-hidden px-5"
-      style={{ background: "var(--card-solid)" }}
+      className="ns-auth-shell fixed left-0 right-0 top-0 flex flex-col items-center justify-center overflow-hidden px-5"
+      style={{ background: "var(--pwa-background)", height: "var(--ns-viewport-height, 100dvh)" }}
     >
       {/* Ambient background glows */}
       <div
@@ -82,12 +82,6 @@ function AuthPage() {
         className="pointer-events-none absolute -top-32 -left-24 h-72 w-72 rounded-full blur-3xl"
         style={{ background: "var(--gradient-primary)", opacity: 0.35 }}
       />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-32 -right-24 h-80 w-80 rounded-full blur-3xl"
-        style={{ background: "var(--gradient-primary)", opacity: 0.25 }}
-      />
-
       <motion.div
         initial={{ opacity: 0, y: 16, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
