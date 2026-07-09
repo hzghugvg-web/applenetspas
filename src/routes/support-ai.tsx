@@ -33,6 +33,10 @@ type Attachment = {
   url: string;
   path: string;
   name: string;
+  /** For images: downscaled JPEG data URL used to send to the AI (so the model
+   *  reliably sees the image instead of relying on the provider fetching our
+   *  signed Storage URL, which is often blocked/unreliable). */
+  dataUrl?: string;
 };
 
 type Msg = {
@@ -70,6 +74,33 @@ async function refreshAttachmentUrls(msgs: Msg[]): Promise<Msg[]> {
     out.push({ ...m, attachments: refreshed });
   }
   return out;
+}
+
+async function imageFileToCompressedDataUrl(
+  file: File,
+  maxSize = 1280,
+  quality = 0.82,
+): Promise<string> {
+  const bitmap = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+  try {
+    const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+    const w = Math.max(1, Math.round(bitmap.width * scale));
+    const h = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("no 2d context");
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    return canvas.toDataURL("image/jpeg", quality);
+  } finally {
+    if (bitmap.src.startsWith("blob:")) URL.revokeObjectURL(bitmap.src);
+  }
 }
 
 const GREETING =
