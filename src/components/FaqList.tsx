@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Search, HelpCircle, ChevronDown } from "lucide-react";
+import { Search, Plus, Sparkles } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { FAQ } from "@/lib/faq";
 
 function renderAnswer(text: string) {
@@ -41,53 +42,96 @@ export function FaqList() {
   }, [query]);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      {/* Hero */}
+      <div
+        className="relative overflow-hidden rounded-3xl p-5"
+        style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
+      >
+        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/15 blur-2xl" />
+        <div className="relative flex items-start gap-3">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/20 backdrop-blur">
+            <Sparkles className="h-5 w-5 text-white" />
+          </div>
+          <div className="min-w-0 flex-1 text-white">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-white/80">База знаний</p>
+            <h2 className="text-[18px] font-semibold leading-tight">Ответы на частые вопросы</h2>
+            <p className="mt-1 text-[12.5px] leading-snug text-white/85">
+              {FAQ.length} тем · подключение, оплата, поддержка
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Search */}
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Поиск по вопросам…"
-          className="h-10 w-full rounded-xl border border-border bg-input pl-9 pr-3 text-[15px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
+          className="h-11 w-full rounded-2xl border border-border bg-card pl-10 pr-3 text-[14.5px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60"
         />
       </div>
 
       {filtered.length === 0 && (
-        <p className="pt-4 text-center text-[14px] text-muted-foreground">Ничего не найдено</p>
+        <div className="rounded-2xl border border-dashed border-border bg-card/50 p-8 text-center">
+          <p className="text-[13.5px] text-muted-foreground">Ничего не найдено по запросу</p>
+          <p className="mt-1 text-[12px] text-muted-foreground/70">Попробуйте другие слова</p>
+        </div>
       )}
 
-      {filtered.map(({ q, a, i }) => {
-        const open = openIdx === i;
-        return (
-          <div key={i} className="overflow-hidden rounded-xl bg-card">
-            <button
-              type="button"
-              onClick={() => setOpenIdx(open ? null : i)}
-              className="tg-press flex w-full items-center gap-3 p-3 text-left"
-            >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <HelpCircle className="h-4 w-4" strokeWidth={2} />
-              </span>
-              <span className="flex-1 text-[16px] font-medium text-foreground">{q}</span>
-              <span
-                className={`text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : "rotate-0"}`}
+      {/* Grouped list */}
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        {filtered.map(({ q, a, i }, idx) => {
+          const open = openIdx === i;
+          const isLast = idx === filtered.length - 1;
+          return (
+            <div key={i} className={isLast ? "" : "border-b border-border/60"}>
+              <button
+                type="button"
+                onClick={() => setOpenIdx(open ? null : i)}
+                className="tg-press flex w-full items-center gap-3 px-4 py-3.5 text-left"
               >
-                <ChevronDown className="h-4 w-4" />
-              </span>
-            </button>
-            <div
-              className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-200 ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
-            >
-              <div className="min-h-0 overflow-hidden">
-                <p className="px-3 pb-3 pt-2 pl-14 text-[14px] leading-relaxed text-muted-foreground">
-                  {renderAnswer(a)}
-                </p>
-              </div>
+                <span
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[11px] font-semibold text-white"
+                  style={{ background: "var(--gradient-primary)" }}
+                >
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="flex-1 text-[14.5px] font-medium leading-snug text-foreground">
+                  {q}
+                </span>
+                <motion.span
+                  animate={{ rotate: open ? 45 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground"
+                >
+                  <Plus className="h-4 w-4" />
+                </motion.span>
+              </button>
+              <AnimatePresence initial={false}>
+                {open && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-4 pb-4 pl-[3.75rem] pr-4">
+                      <div className="rounded-xl bg-muted/60 p-3 text-[13.5px] leading-relaxed text-foreground/85">
+                        {renderAnswer(a)}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
