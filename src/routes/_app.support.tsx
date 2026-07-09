@@ -1,23 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Mail, Copy, Globe, HelpCircle, ArrowRight } from "lucide-react";
+import { Mail, HelpCircle, ArrowRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { alertDialog as toast } from "@/lib/alert";
 
 export const Route = createFileRoute("/_app/support")({ component: SupportPage });
 
 const EMAIL = "netspas@internet.ru";
-const SITE = "netspas.1c-umi.ru";
 
 function SupportPage() {
-  async function copy(text: string, label: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success(`${label} скопирован`, "Вставьте в нужное поле.");
-    } catch {
-      toast.error("Не удалось скопировать");
-    }
-  }
-
   return (
     <div className="space-y-5">
       {/* Hero */}
@@ -40,34 +29,18 @@ function SupportPage() {
 
           <a
             href={`mailto:${EMAIL}`}
-            className="tg-press mt-4 flex items-center justify-between gap-2 rounded-2xl bg-white/95 px-4 py-3 text-left text-foreground"
+            className="tg-press mt-4 flex items-center justify-between gap-2 rounded-2xl bg-white/15 px-4 py-3 text-left text-white backdrop-blur border border-white/20"
           >
             <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">E-mail</p>
+              <p className="text-[11px] uppercase tracking-wider text-white/70">E-mail</p>
               <p className="truncate text-[15px] font-semibold">{EMAIL}</p>
             </div>
             <span
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl"
-              style={{ background: "var(--gradient-primary)" }}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/25 backdrop-blur"
             >
-              <ArrowRight className="h-4 w-4 text-white" />
+              <Mail className="h-4 w-4 text-white" />
             </span>
           </a>
-
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <button
-              onClick={() => copy(EMAIL, "E-mail")}
-              className="tg-press flex items-center justify-center gap-1.5 rounded-xl bg-white/15 py-2.5 text-[12.5px] font-medium text-white backdrop-blur"
-            >
-              <Copy className="h-3.5 w-3.5" /> Копировать
-            </button>
-            <button
-              onClick={() => copy(SITE, "Сайт")}
-              className="tg-press flex items-center justify-center gap-1.5 rounded-xl bg-white/15 py-2.5 text-[12.5px] font-medium text-white backdrop-blur"
-            >
-              <Globe className="h-3.5 w-3.5" /> Копировать сайт
-            </button>
-          </div>
         </div>
       </section>
 
