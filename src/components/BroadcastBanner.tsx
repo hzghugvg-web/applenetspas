@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Megaphone, Copy, BookOpen, Mail } from "lucide-react";
+import { Megaphone, Copy, Mail, Sparkles, X, Globe, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { alertDialog } from "@/lib/alert";
 
@@ -158,33 +158,26 @@ export function BroadcastBanner() {
           >
             <button
               onClick={() => setOpened(current)}
-              className="tg-press flex w-full items-center gap-3 rounded-2xl p-3 glass text-left"
-              style={{ boxShadow: "var(--shadow-elegant)" }}
+              className="tg-press relative flex w-full items-center gap-3 overflow-hidden rounded-2xl p-3 text-left"
+              style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
             >
-              <div
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-full"
-                style={{ background: "var(--gradient-primary)" }}
-              >
-                <Megaphone className="h-4 w-4" style={{ color: "var(--primary-foreground)" }} />
+              <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/20 blur-2xl" />
+              <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/20 backdrop-blur">
+                <Megaphone className="h-4.5 w-4.5 text-white" />
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                  Рекомендуем прочитать
+              <div className="relative min-w-0 flex-1 text-white">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-white/80">
+                  Новое сообщение
                 </div>
-                <div className="truncate text-[13px] font-medium text-foreground">
+                <div className="truncate text-[13.5px] font-semibold">
                   {current.title?.trim() || "Сообщение от администратора"}
                 </div>
               </div>
-              <span
-                className="shrink-0 rounded-xl px-3 py-1.5 text-[12px] font-medium"
-                style={{ background: "var(--gradient-primary)", color: "var(--primary-foreground)" }}
-              >
-                Прочитать
-              </span>
+              <ChevronRight className="relative h-4 w-4 shrink-0 text-white/90" />
             </button>
             {unread.length > 1 && (
-              <div className="mt-1 text-center text-[10px] text-muted-foreground">
-                Ещё {unread.length - 1} {unread.length - 1 === 1 ? "сообщение" : "сообщений"}
+              <div className="mt-1.5 text-center text-[10.5px] font-medium text-muted-foreground">
+                +{unread.length - 1} ещё в очереди
               </div>
             )}
           </motion.div>
@@ -199,66 +192,119 @@ export function BroadcastBanner() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-[100] flex items-center justify-center px-6"
-            style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+            className="fixed inset-0 z-[100] flex items-center justify-center px-5"
+            style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}
             onClick={() => setOpened(null)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 260, damping: 26, mass: 0.9 }}
-              className="flex max-h-[80vh] w-full max-w-[340px] flex-col overflow-hidden rounded-2xl border border-border bg-card-solid shadow-2xl"
+              initial={{ scale: 0.92, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 280, damping: 28, mass: 0.9 }}
+              className="relative flex max-h-[82vh] w-full max-w-[360px] flex-col overflow-hidden rounded-3xl border border-border bg-card-solid shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center gap-2 px-5 pt-4 pb-2">
-                <BookOpen className="h-4 w-4 text-primary" />
-                <div className="text-[13px] font-semibold text-primary">
-                  {opened.title?.trim() || "Сообщение от администратора"}
+              {/* Header with gradient */}
+              <div
+                className="relative overflow-hidden px-5 pb-5 pt-6"
+                style={{ background: "var(--gradient-primary)" }}
+              >
+                <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/20 blur-2xl" />
+                <div className="pointer-events-none absolute -bottom-14 -left-8 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
+                <button
+                  onClick={() => setOpened(null)}
+                  aria-label="Закрыть"
+                  className="tg-press absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-white/20 text-white backdrop-blur"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                <div className="relative flex items-center gap-2.5">
+                  <div className="grid h-9 w-9 place-items-center rounded-xl bg-white/25 backdrop-blur">
+                    <Sparkles className="h-4.5 w-4.5 text-white" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-white/80">
+                      Уведомление
+                    </p>
+                    <h3 className="truncate text-[16px] font-semibold text-white">
+                      {opened.title?.trim() || "Сообщение от администратора"}
+                    </h3>
+                  </div>
                 </div>
               </div>
-              <div className="ns-scroll flex-1 overflow-y-auto px-5 pb-3">
+
+              {/* Body */}
+              <div className="ns-scroll flex-1 overflow-y-auto px-5 py-4">
                 <div className="whitespace-pre-wrap break-words text-[14px] leading-relaxed text-foreground">
                   {renderMessage(opened.message)}
                 </div>
-                {opened.link && (
-                  <button
-                    onClick={() => copyLinkValue(opened.link!)}
-                    className="tg-press mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium"
-                    style={{ background: "var(--gradient-primary)", color: "var(--primary-foreground)" }}
-                  >
-                    <Copy className="h-4 w-4" /> Копировать ссылку
-                  </button>
-                )}
-                {opened.website && (
-                  <button
-                    onClick={() => copyWebsite(opened.website!)}
-                    className="tg-press mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium"
-                    style={{ background: "var(--gradient-primary)", color: "var(--primary-foreground)" }}
-                  >
-                    <Copy className="h-4 w-4" /> Копировать сайт
-                  </button>
-                )}
-                {opened.email && (
-                  <a
-                    href={`mailto:${opened.email}`}
-                    className="tg-press mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-muted px-3 py-2.5 text-[13px] font-medium text-foreground"
-                  >
-                    <Mail className="h-4 w-4" /> Написать · {opened.email}
-                  </a>
-                )}
+                <div className="mt-4 space-y-2">
+                  {opened.link && (
+                    <button
+                      onClick={() => copyLinkValue(opened.link!)}
+                      className="tg-press flex w-full items-center gap-3 rounded-xl border border-border bg-muted/60 px-3.5 py-3 text-left"
+                    >
+                      <span
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
+                        style={{ background: "var(--gradient-primary)" }}
+                      >
+                        <Copy className="h-4 w-4 text-white" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[10.5px] uppercase tracking-wider text-muted-foreground">Ссылка</span>
+                        <span className="block truncate text-[13px] font-medium text-foreground">{opened.link}</span>
+                      </span>
+                    </button>
+                  )}
+                  {opened.website && (
+                    <button
+                      onClick={() => copyWebsite(opened.website!)}
+                      className="tg-press flex w-full items-center gap-3 rounded-xl border border-border bg-muted/60 px-3.5 py-3 text-left"
+                    >
+                      <span
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
+                        style={{ background: "var(--gradient-primary)" }}
+                      >
+                        <Globe className="h-4 w-4 text-white" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[10.5px] uppercase tracking-wider text-muted-foreground">Сайт</span>
+                        <span className="block truncate text-[13px] font-medium text-foreground">{opened.website}</span>
+                      </span>
+                    </button>
+                  )}
+                  {opened.email && (
+                    <a
+                      href={`mailto:${opened.email}`}
+                      className="tg-press flex w-full items-center gap-3 rounded-xl border border-border bg-muted/60 px-3.5 py-3 text-left"
+                    >
+                      <span
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
+                        style={{ background: "var(--gradient-primary)" }}
+                      >
+                        <Mail className="h-4 w-4 text-white" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[10.5px] uppercase tracking-wider text-muted-foreground">E-mail</span>
+                        <span className="block truncate text-[13px] font-medium text-foreground">{opened.email}</span>
+                      </span>
+                    </a>
+                  )}
+                </div>
               </div>
-              <div className="h-px w-full bg-border" />
-              <div className="flex">
+
+              {/* Footer */}
+              <div className="border-t border-border p-3">
                 <button
                   onClick={() => {
                     const b = opened;
                     setOpened(null);
                     ack(b);
                   }}
-                  className="h-11 flex-1 text-[15px] font-semibold text-primary tg-press"
+                  className="tg-press h-11 w-full rounded-xl text-[15px] font-semibold text-white"
+                  style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
                 >
-                  Хорошо
+                  Понятно
                 </button>
               </div>
             </motion.div>
