@@ -212,7 +212,6 @@
     min-height: 100vh;
     min-height: 100svh;
     min-height: 100dvh;
-    min-height: var(--ns-viewport-height, 100dvh);
     background: var(--pwa-background);
     background-color: var(--pwa-background);
     overflow: hidden;
@@ -255,9 +254,8 @@
 }
 
 .ns-mobile-shell {
-  height: var(--ns-viewport-height, 100dvh);
-  min-height: var(--ns-viewport-height, 100dvh);
-  min-height: 100svh;
+  height: 100dvh;
+  min-height: 100dvh;
   background: var(--app-bg);
   isolation: isolate;
   overflow: hidden;
@@ -276,14 +274,12 @@
 }
 
 .ns-auth-shell {
-  height: var(--ns-viewport-height, 100dvh);
   min-height: 100vh;
   min-height: 100svh;
   min-height: 100dvh;
-  min-height: var(--ns-viewport-height, 100dvh);
   background-color: var(--pwa-background);
   isolation: isolate;
-  contain: layout paint size;
+  contain: layout paint;
 }
 
 /* ::after overscan removed — was creating a visible taller strip on auth */
