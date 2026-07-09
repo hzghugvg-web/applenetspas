@@ -454,7 +454,7 @@ function AiChatPage() {
       {/* Composer */}
       <div
         className="shrink-0 border-t border-border px-3 pt-2"
-        style={{ background: "var(--card-solid)", paddingBottom: "max(0.5rem, var(--ns-control-bottom-fill))" }}
+        style={{ background: "var(--card-solid)", paddingBottom: "max(0.25rem, var(--ns-control-bottom-fill))" }}
       >
         {escalated ? (
           <button
