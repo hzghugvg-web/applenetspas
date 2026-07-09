@@ -291,7 +291,11 @@ export function ComplaintChatModal({
               className="flex min-h-0 flex-1 flex-col p-3"
               style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
             >
-              {beforeChat && <div className="mb-2 shrink-0">{beforeChat}</div>}
+              {beforeChat && (
+                <div className="ns-scroll mb-2 max-h-[40vh] shrink-0 overflow-y-auto pr-1">
+                  {beforeChat}
+                </div>
+              )}
               <ComplaintChat {...props} />
             </div>
           </motion.div>
