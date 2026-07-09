@@ -33,6 +33,8 @@ export const MOBILE_CHROME_COLORS: Record<ColorMode, Record<DesignTheme, string>
   },
 };
 
+export const PWA_BACKGROUND_COLOR = "#10131F";
+
 const MODE_KEY = "ns_mode";
 const THEME_KEY = "ns_theme";
 const MOTION_KEY = "ns_motion";
@@ -70,7 +72,9 @@ export function applyTheme(mode: ColorMode, theme: DesignTheme, motion: Motion =
   document.documentElement.dataset.motion = motion;
   document.documentElement.classList.toggle("dark", mode === "dark");
 
-  const mobileChromeColor = MOBILE_CHROME_COLORS[mode][theme];
+  const isAuthRoute = typeof window !== "undefined" && window.location.pathname.startsWith("/auth");
+  const mobileChromeColor = isAuthRoute ? PWA_BACKGROUND_COLOR : MOBILE_CHROME_COLORS[mode][theme];
+  document.documentElement.style.setProperty("--pwa-background", mobileChromeColor);
   document
     .querySelectorAll('meta[name="theme-color"]')
     .forEach((meta) => meta.setAttribute("content", mobileChromeColor));

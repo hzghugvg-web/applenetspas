@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -118,7 +119,7 @@ function RootShell({ children }: { children: ReactNode }) {
           suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html:
-              "try{var m=localStorage.getItem('ns_mode');var t=localStorage.getItem('ns_theme');var legacy=t;if(m!=='light'&&m!=='dark'){m=(legacy==='light')?'light':'dark';}if(t!=='midnight'&&t!=='sunset'&&t!=='forest'&&t!=='candy'){t=(legacy==='neon')?'candy':'midnight';}document.documentElement.dataset.mode=m;document.documentElement.dataset.theme=t;document.documentElement.classList.toggle('dark',m==='dark');var c={dark:{midnight:'#10131F',sunset:'#1A120C',forest:'#0D1626',candy:'#1D101A'},light:{midnight:'#FFFFFF',sunset:'#FFFFFF',forest:'#FFFFFF',candy:'#FFFFFF'}}[m][t];document.querySelectorAll('meta[name=\"theme-color\"]').forEach(function(meta){meta.setAttribute('content',c)});var tg=window.Telegram&&window.Telegram.WebApp;if(tg){try{tg.ready&&tg.ready()}catch(e){}try{tg.expand&&tg.expand()}catch(e){}try{tg.disableVerticalSwipes&&tg.disableVerticalSwipes()}catch(e){}try{tg.setBackgroundColor&&tg.setBackgroundColor(c)}catch(e){}try{tg.setHeaderColor&&tg.setHeaderColor(c)}catch(e){}try{tg.setBottomBarColor&&tg.setBottomBarColor(c)}catch(e){}}}catch(e){}",
+              "try{var m=localStorage.getItem('ns_mode');var t=localStorage.getItem('ns_theme');var legacy=t;if(m!=='light'&&m!=='dark'){m=(legacy==='light')?'light':'dark';}if(t!=='midnight'&&t!=='sunset'&&t!=='forest'&&t!=='candy'){t=(legacy==='neon')?'candy':'midnight';}document.documentElement.dataset.mode=m;document.documentElement.dataset.theme=t;document.documentElement.classList.toggle('dark',m==='dark');var c=(location.pathname.indexOf('/auth')===0)?'#10131F':{dark:{midnight:'#10131F',sunset:'#1A120C',forest:'#0D1626',candy:'#1D101A'},light:{midnight:'#FFFFFF',sunset:'#FFFFFF',forest:'#FFFFFF',candy:'#FFFFFF'}}[m][t];document.documentElement.style.setProperty('--pwa-background',c);document.querySelectorAll('meta[name=\"theme-color\"]').forEach(function(meta){meta.setAttribute('content',c)});var tg=window.Telegram&&window.Telegram.WebApp;if(tg){try{tg.ready&&tg.ready()}catch(e){}try{tg.expand&&tg.expand()}catch(e){}try{tg.disableVerticalSwipes&&tg.disableVerticalSwipes()}catch(e){}try{tg.setBackgroundColor&&tg.setBackgroundColor(c)}catch(e){}try{tg.setHeaderColor&&tg.setHeaderColor(c)}catch(e){}try{tg.setBottomBarColor&&tg.setBottomBarColor(c)}catch(e){}}}catch(e){}",
           }}
         />
         <HeadContent />
@@ -134,9 +135,30 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   useEffect(() => {
     import("@/lib/theme").then((m) => m.initThemeFromStorage());
+  }, [pathname]);
+
+  useEffect(() => {
+    const updateViewportHeight = () => {
+      const height = window.visualViewport?.height ?? window.innerHeight;
+      document.documentElement.style.setProperty("--ns-viewport-height", `${Math.ceil(height)}px`);
+    };
+
+    updateViewportHeight();
+    window.visualViewport?.addEventListener("resize", updateViewportHeight);
+    window.visualViewport?.addEventListener("scroll", updateViewportHeight);
+    window.addEventListener("resize", updateViewportHeight);
+    window.addEventListener("orientationchange", updateViewportHeight);
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", updateViewportHeight);
+      window.visualViewport?.removeEventListener("scroll", updateViewportHeight);
+      window.removeEventListener("resize", updateViewportHeight);
+      window.removeEventListener("orientationchange", updateViewportHeight);
+    };
   }, []);
 
   // Reset cached data whenever the signed-in user changes so a new account
