@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Mail, HelpCircle, ArrowRight } from "lucide-react";
+void ArrowRight;
 import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app/support")({ component: SupportPage });
