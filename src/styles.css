@@ -205,6 +205,7 @@
   }
   html, body, #root {
     height: 100%;
+    min-height: 100dvh;
     background: var(--app-bg);
     background-color: var(--color-background);
     overflow: hidden;
@@ -216,6 +217,7 @@
     overscroll-behavior-x: contain;
   }
   body {
+    margin: 0;
     background: var(--app-bg);
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -501,6 +503,15 @@ html, body {
   background: linear-gradient(180deg, color-mix(in srgb, var(--card-solid) 86%, transparent) 0%, color-mix(in srgb, var(--card-solid) 74%, transparent) 100%);
   backdrop-filter: saturate(160%) blur(14px);
   border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+}
+
+@utility tg-mobile-nav {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--card-solid) 88%, transparent) 0%, color-mix(in srgb, var(--card-solid) 82%, transparent) 100%);
+  backdrop-filter: saturate(160%) blur(14px);
+  border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
 }
 
 @utility gradient-text {
