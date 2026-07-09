@@ -274,6 +274,26 @@
   z-index: 0;
 }
 
+.ns-auth-shell {
+  min-height: 100dvh;
+  min-height: 100svh;
+  min-height: -webkit-fill-available;
+  background-color: var(--card-solid);
+  isolation: isolate;
+}
+
+.ns-auth-shell::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(-1 * var(--ns-bottom-overscan));
+  height: calc(env(safe-area-inset-bottom, 0px) + var(--ns-bottom-overscan));
+  background: var(--card-solid);
+  pointer-events: none;
+  z-index: 0;
+}
+
 @utility tg-blur {
   background-color: var(--nav-bg);
   backdrop-filter: var(--nav-blur);

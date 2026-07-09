@@ -73,7 +73,7 @@ function AuthPage() {
   return (
     <div
       onContextMenu={(e) => e.preventDefault()}
-      className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden px-5"
+      className="ns-auth-shell fixed inset-0 flex flex-col items-center justify-center overflow-hidden px-5"
       style={{ background: "var(--card-solid)" }}
     >
       {/* Ambient background glows */}

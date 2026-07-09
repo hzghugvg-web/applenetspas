@@ -72,8 +72,8 @@ export function applyTheme(mode: ColorMode, theme: DesignTheme, motion: Motion =
 
   const mobileChromeColor = MOBILE_CHROME_COLORS[mode][theme];
   document
-    .querySelector('meta[name="theme-color"]')
-    ?.setAttribute("content", mobileChromeColor);
+    .querySelectorAll('meta[name="theme-color"]')
+    .forEach((meta) => meta.setAttribute("content", mobileChromeColor));
 
   const webApp = typeof window !== "undefined" ? (window as any).Telegram?.WebApp : undefined;
   if (webApp) {
