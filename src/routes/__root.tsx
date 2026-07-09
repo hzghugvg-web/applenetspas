@@ -85,7 +85,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" },
       { title: "NetSpas — бесплатные VPN-конфигурации" },
       { name: "description", content: "NetSpas — менеджер бесплатных VPN-конфигураций VLESS." },
-      { name: "theme-color", content: "#10131F" },
+      { name: "theme-color", content: "#080B15" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { property: "og:title", content: "NetSpas — бесплатные VPN-конфигурации" },
@@ -118,7 +118,7 @@ function RootShell({ children }: { children: ReactNode }) {
           suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html:
-              "try{var m=localStorage.getItem('ns_mode');var t=localStorage.getItem('ns_theme');var legacy=t;if(m!=='light'&&m!=='dark'){m=(legacy==='light')?'light':'dark';}if(t!=='midnight'&&t!=='sunset'&&t!=='forest'&&t!=='candy'){t=(legacy==='neon')?'candy':'midnight';}document.documentElement.dataset.mode=m;document.documentElement.dataset.theme=t;document.documentElement.classList.toggle('dark',m==='dark');}catch(e){}",
+              "try{var m=localStorage.getItem('ns_mode');var t=localStorage.getItem('ns_theme');var legacy=t;if(m!=='light'&&m!=='dark'){m=(legacy==='light')?'light':'dark';}if(t!=='midnight'&&t!=='sunset'&&t!=='forest'&&t!=='candy'){t=(legacy==='neon')?'candy':'midnight';}document.documentElement.dataset.mode=m;document.documentElement.dataset.theme=t;document.documentElement.classList.toggle('dark',m==='dark');var c={dark:{midnight:'#080B15',sunset:'#100A08',forest:'#060D19',candy:'#120912'},light:{midnight:'#F5F7FC',sunset:'#FFFAF3',forest:'#F2F6FD',candy:'#FFF5FA'}}[m][t];var tg=window.Telegram&&window.Telegram.WebApp;if(tg){try{tg.ready&&tg.ready()}catch(e){}try{tg.expand&&tg.expand()}catch(e){}try{tg.disableVerticalSwipes&&tg.disableVerticalSwipes()}catch(e){}try{tg.setBackgroundColor&&tg.setBackgroundColor(c)}catch(e){}try{tg.setHeaderColor&&tg.setHeaderColor(c)}catch(e){}try{tg.setBottomBarColor&&tg.setBottomBarColor(c)}catch(e){}}}catch(e){}",
           }}
         />
         <HeadContent />
