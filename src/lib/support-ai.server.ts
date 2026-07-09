@@ -2,7 +2,14 @@ import { z } from "zod";
 
 const AttachmentSchema = z.object({
   kind: z.enum(["image", "video"]),
-  url: z.string().url().max(2000),
+  // Accepts either a signed https URL or an inline data: URL for images
+  // (downscaled JPEG, typically <500 KB). Cap at ~4 MB base64.
+  url: z
+    .string()
+    .max(6_000_000)
+    .refine((v) => v.startsWith("http://") || v.startsWith("https://") || v.startsWith("data:"), {
+      message: "url must be http(s) or data URL",
+    }),
   name: z.string().max(200).optional(),
 });
 
