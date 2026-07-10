@@ -25,7 +25,20 @@ function MyVpnPage() {
     queryKey: ["my-vpn"],
     staleTime: 30_000,
     refetchInterval: 30_000,
+    retry: false,
     queryFn: async () => {
+      // Offline short-circuit: don't hang on failing network calls.
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        const cached = readOfflineMyVpn();
+        if (cached) {
+          return {
+            profile: cached.profile as Profile | null,
+            configs: cached.configs as Config[],
+            dirs: cached.dirs as Record<string, Direction>,
+          };
+        }
+        return { profile: null as Profile | null, configs: [] as Config[], dirs: {} as Record<string, Direction> };
+      }
       try {
         const { data: u } = await supabase.auth.getUser();
         if (!u.user) return { profile: null as Profile | null, configs: [] as Config[], dirs: {} as Record<string, Direction> };
