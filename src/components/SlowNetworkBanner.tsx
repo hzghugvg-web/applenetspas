@@ -21,7 +21,7 @@ export function SlowNetworkBanner() {
       >
         <WifiOff className="h-4 w-4 shrink-0" />
         <div className="flex-1 leading-snug">
-          Медленная загрузка. Если что-то не открывается — включите VPN.
+          Слабый интернет. Возможно, вы в офлайн-режиме или соединение нестабильно — проверьте подключение.
         </div>
         <button
           type="button"
