@@ -145,7 +145,7 @@ async function sendDirectionPicker(chatId: number) {
   });
 }
 
-async function issueKeyForDirection(chatId: number, directionId: string) {
+async function issueKeyForDirection(chatId: number, directionId: string, telegramUserId: number) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   // Clean up expired links first (mirrors app logic)
@@ -201,7 +201,7 @@ async function issueKeyForDirection(chatId: number, directionId: string) {
 
   if (updErr || !reserved) {
     // Someone else grabbed it — retry once
-    await issueKeyForDirection(chatId, directionId);
+    await issueKeyForDirection(chatId, directionId, telegramUserId);
     return;
   }
 
@@ -214,7 +214,7 @@ async function issueKeyForDirection(chatId: number, directionId: string) {
 
   // Persist the issued key so the user can see it later under "My VPN"
   await supabaseAdmin.from("telegram_issued_keys").insert({
-    telegram_user_id: chatId,
+    telegram_user_id: telegramUserId,
     chat_id: chatId,
     direction_id: directionId,
     direction_name: dir?.name ?? null,
