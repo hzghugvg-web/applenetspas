@@ -20,6 +20,7 @@ import { Route as AppProfileRouteImport } from './routes/_app.profile'
 import { Route as AppMyVpnRouteImport } from './routes/_app.my-vpn'
 import { Route as AppFaqRouteImport } from './routes/_app.faq'
 import { Route as AppAdminRouteImport } from './routes/_app.admin'
+import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 import { Route as ApiPublicSubTokenRouteImport } from './routes/api/public/sub.$token'
 import { Route as ApiPublicSbSplatRouteImport } from './routes/api/public/sb.$'
 
@@ -77,6 +78,12 @@ const AppAdminRoute = AppAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicTelegramWebhookRoute =
+  ApiPublicTelegramWebhookRouteImport.update({
+    id: '/api/public/telegram/webhook',
+    path: '/api/public/telegram/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicSubTokenRoute = ApiPublicSubTokenRouteImport.update({
   id: '/api/public/sub/$token',
   path: '/api/public/sub/$token',
@@ -101,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/vpn': typeof AppVpnRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
   '/api/public/sub/$token': typeof ApiPublicSubTokenRoute
+  '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -115,6 +123,7 @@ export interface FileRoutesByTo {
   '/vpn': typeof AppVpnRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
   '/api/public/sub/$token': typeof ApiPublicSubTokenRoute
+  '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -131,6 +140,7 @@ export interface FileRoutesById {
   '/_app/vpn': typeof AppVpnRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
   '/api/public/sub/$token': typeof ApiPublicSubTokenRoute
+  '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/vpn'
     | '/api/public/sb/$'
     | '/api/public/sub/$token'
+    | '/api/public/telegram/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/vpn'
     | '/api/public/sb/$'
     | '/api/public/sub/$token'
+    | '/api/public/telegram/webhook'
   id:
     | '__root__'
     | '/'
@@ -176,6 +188,7 @@ export interface FileRouteTypes {
     | '/_app/vpn'
     | '/api/public/sb/$'
     | '/api/public/sub/$token'
+    | '/api/public/telegram/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -186,6 +199,7 @@ export interface RootRouteChildren {
   SupportAiRoute: typeof SupportAiRoute
   ApiPublicSbSplatRoute: typeof ApiPublicSbSplatRoute
   ApiPublicSubTokenRoute: typeof ApiPublicSubTokenRoute
+  ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -267,6 +281,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/public/telegram/webhook': {
+      id: '/api/public/telegram/webhook'
+      path: '/api/public/telegram/webhook'
+      fullPath: '/api/public/telegram/webhook'
+      preLoaderRoute: typeof ApiPublicTelegramWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/sub/$token': {
       id: '/api/public/sub/$token'
       path: '/api/public/sub/$token'
@@ -312,6 +333,7 @@ const rootRouteChildren: RootRouteChildren = {
   SupportAiRoute: SupportAiRoute,
   ApiPublicSbSplatRoute: ApiPublicSbSplatRoute,
   ApiPublicSubTokenRoute: ApiPublicSubTokenRoute,
+  ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
