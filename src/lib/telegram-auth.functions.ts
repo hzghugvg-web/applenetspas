@@ -44,7 +44,7 @@ export const startLinkTelegram = createServerFn({ method: "POST" })
 /** Poll status of a link attempt — signed in. */
 export const pollLinkTelegram = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { code: string }) => data)
+  .inputValidator((data: { code: string }) => data)
   .handler(async ({ context, data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row } = await supabaseAdmin
@@ -130,7 +130,7 @@ export const startTelegramLogin = createServerFn({ method: "POST" }).handler(asy
 
 /** Public: poll Telegram login. When confirmed by bot, returns a magic-link URL. */
 export const pollTelegramLogin = createServerFn({ method: "POST" })
-  .validator((data: { code: string }) => data)
+  .inputValidator((data: { code: string }) => data)
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row } = await supabaseAdmin
