@@ -630,10 +630,45 @@ async function handleLoginPayload(
     return;
   }
 
+  const { data: userRes, error: getUserErr } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+  if (getUserErr || !userRes?.user?.email) {
+    await supabaseAdmin
+      .from("telegram_auth_codes")
+      .update({ status: "rejected", error: "user_missing" })
+      .eq("code", code);
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: "⚠️ Не удалось подготовить вход. Напиши в поддержку или войди по email.",
+      reply_markup: BACK_MENU,
+    });
+    return;
+  }
+
+  const origin = process.env.PUBLIC_SITE_URL ?? "https://netspas.lovable.app";
+  const { data: link, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+    type: "magiclink",
+    email: userRes.user.email,
+    options: { redirectTo: `${origin}/vpn` },
+  });
+  const actionLink = link?.properties?.action_link;
+  if (linkErr || !actionLink) {
+    await supabaseAdmin
+      .from("telegram_auth_codes")
+      .update({ status: "rejected", error: linkErr?.message ?? "link_failed" })
+      .eq("code", code);
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: "⚠️ Не удалось подготовить вход. Попробуй ещё раз или войди по email.",
+      reply_markup: BACK_MENU,
+    });
+    return;
+  }
+
   await supabaseAdmin
     .from("telegram_auth_codes")
     .update({
       status: "confirmed",
+      action_link: actionLink,
       user_id: profile.id,
       telegram_user_id: tgUserId,
       telegram_username: msg.from?.username ?? null,
