@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { alertDialog as toast } from "@/lib/alert";
 import { getMyIssuedLinks } from "@/lib/vpn.functions";
-import { CalendarClock, Copy, ShieldCheck, Hourglass, Server, Radio } from "lucide-react";
+import { CalendarClock, Copy, ShieldCheck, Hourglass, Server, Radio, WifiOff, Sparkles } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { readOfflineMyVpn, saveOfflineMyVpn } from "@/lib/offline-vpn-cache";
 
@@ -18,14 +18,39 @@ function MyVpnPage() {
   const qc = useQueryClient();
   const getLinks = useServerFn(getMyIssuedLinks);
   const [now, setNow] = useState(Date.now());
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine !== false,
+  );
 
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+
+  useEffect(() => {
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
+  }, []);
+
+  const initialCached = (() => {
+    const c = readOfflineMyVpn();
+    if (!c) return undefined;
+    return {
+      profile: c.profile as Profile | null,
+      configs: c.configs as Config[],
+      dirs: c.dirs as Record<string, Direction>,
+    };
+  })();
 
   const { data } = useQuery({
     queryKey: ["my-vpn"],
     staleTime: 30_000,
     refetchInterval: 30_000,
     retry: false,
+    initialData: initialCached,
     queryFn: async () => {
       // Offline short-circuit: don't hang on failing network calls.
       if (typeof navigator !== "undefined" && navigator.onLine === false) {
