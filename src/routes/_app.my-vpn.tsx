@@ -127,13 +127,36 @@ function MyVpnPage() {
   const dirs = data?.dirs ?? {};
 
   useEffect(() => {
-    const ch = supabase
-      .channel("my_vpn_issued_changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "issued_configs" }, () => {
-        qc.invalidateQueries({ queryKey: ["my-vpn"] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    let cancelled = false;
+    let issuedCh: ReturnType<typeof supabase.channel> | null = null;
+    let profileCh: ReturnType<typeof supabase.channel> | null = null;
+    const invalidate = () => {
+      qc.invalidateQueries({ queryKey: ["my-vpn"] });
+      qc.invalidateQueries({ queryKey: ["has-active-vpn"] });
+    };
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (cancelled) return;
+      issuedCh = supabase
+        .channel("my_vpn_issued_changes")
+        .on("postgres_changes", { event: "*", schema: "public", table: "issued_configs" }, invalidate)
+        .subscribe();
+      if (data.user) {
+        profileCh = supabase
+          .channel("my_vpn_profile_changes")
+          .on(
+            "postgres_changes",
+            { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${data.user.id}` },
+            invalidate,
+          )
+          .subscribe();
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (issuedCh) supabase.removeChannel(issuedCh);
+      if (profileCh) supabase.removeChannel(profileCh);
+    };
   }, [qc]);
 
   const untilMs = profile?.subscription_until ? new Date(profile.subscription_until).getTime() - now : 0;
