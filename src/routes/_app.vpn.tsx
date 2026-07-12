@@ -6,7 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { issueVpnConfig } from "@/lib/vpn.functions";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { Clock, Loader2, ShieldCheck, Zap, Globe, ArrowRight, Check } from "lucide-react";
+import { Clock, Loader2, ShieldCheck, Zap, Globe, ArrowRight, Check, Sparkles, Wifi, Radio } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app/vpn")({ component: VpnPage });
