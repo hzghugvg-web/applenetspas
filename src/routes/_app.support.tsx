@@ -1,85 +1,94 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Mail, HelpCircle, ArrowRight } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowRight, Headphones } from "lucide-react";
 
 export const Route = createFileRoute("/_app/support")({ component: SupportPage });
 
 const EMAIL = "netspas@internet.ru";
 
+const ISSUES: { n: number; label: string; href: string }[] = [
+  { n: 1, label: "VPN не подключается", href: "/faq" },
+  { n: 2, label: "Как установить VPN?", href: "/faq" },
+  { n: 3, label: "Интернет стал медленнее", href: "/faq" },
+  { n: 4, label: "Нашли баг или ошибку?", href: `mailto:${EMAIL}?subject=Баг/ошибка` },
+];
+
+function IssueButton({ n, label, href }: { n: number; label: string; href: string }) {
+  const isExternal = href.startsWith("mailto:") || href.startsWith("http");
+  const inner = (
+    <>
+      <span
+        className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[14px] font-semibold"
+        style={{
+          background: "color-mix(in srgb, var(--accent) 18%, transparent)",
+          color: "var(--accent)",
+          boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent)",
+        }}
+      >
+        {n}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-foreground">
+        {label}
+      </span>
+      <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+    </>
+  );
+  const className =
+    "tg-press flex w-full items-center gap-3 rounded-2xl border px-3 py-3 transition-colors hover:bg-muted/40";
+  const style = {
+    background: "var(--card-solid)",
+    borderColor: "var(--border)",
+    boxShadow: "var(--shadow-card)",
+  } as const;
+  return isExternal ? (
+    <a href={href} className={className} style={style}>{inner}</a>
+  ) : (
+    <Link to={href} className={className} style={style}>{inner}</Link>
+  );
+}
+
 function SupportPage() {
   return (
-    <div className="space-y-5">
-      {/* Hero */}
+    <div className="space-y-3 pb-4">
+      {ISSUES.map((it) => (
+        <IssueButton key={it.n} {...it} />
+      ))}
+
       <section
-        className="relative overflow-hidden rounded-3xl p-6"
-        style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
+        className="relative mt-2 overflow-hidden rounded-3xl border p-5"
+        style={{
+          background: "var(--card-solid)",
+          borderColor: "var(--border)",
+          boxShadow: "var(--shadow-card)",
+        }}
       >
-        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/15 blur-3xl" />
-        <div className="absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
-        <div className="relative">
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wider text-white backdrop-blur">
-            <Mail className="h-3 w-3" /> Новый способ связи
-          </div>
-          <h2 className="mt-3 text-[22px] font-semibold leading-tight text-white">
-            Теперь пишите нам на почту
-          </h2>
-          <p className="mt-1.5 text-[13px] leading-snug text-white/85">
-            Мы убрали чат обращений внутри приложения. Все вопросы, баги и предложения — по e-mail.
-          </p>
-
-          <a
-            href={`mailto:${EMAIL}`}
-            className="tg-press mt-4 flex items-center justify-between gap-2 rounded-2xl bg-white/15 px-4 py-3 text-left text-white backdrop-blur border border-white/20"
-          >
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wider text-white/70">E-mail</p>
-              <p className="truncate text-[15px] font-semibold">{EMAIL}</p>
-            </div>
-            <span
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/25 backdrop-blur"
+        <div
+          className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full"
+          style={{ background: "color-mix(in srgb, var(--accent) 30%, transparent)", filter: "blur(40px)" }}
+        />
+        <div className="relative flex items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[18px] font-semibold text-foreground">Нужна помощь?</h2>
+            <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
+              Напишите нам на почту, если возникли проблемы или вопросы
+            </p>
+            <a
+              href={`mailto:${EMAIL}`}
+              className="tg-press mt-3 inline-flex items-center gap-1.5 text-[14px] font-semibold text-accent"
             >
-              <Mail className="h-4 w-4 text-white" />
-            </span>
-          </a>
+              Написать <ArrowRight className="h-4 w-4" />
+            </a>
+          </div>
+          <div
+            className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl"
+            style={{
+              background: "linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, transparent), color-mix(in srgb, var(--primary) 18%, transparent))",
+              boxShadow: "0 8px 24px -12px color-mix(in srgb, var(--accent) 60%, transparent)",
+            }}
+          >
+            <Headphones className="h-8 w-8" style={{ color: "var(--accent)" }} strokeWidth={1.8} />
+          </div>
         </div>
       </section>
-
-      {/* How to write */}
-      <section className="space-y-2">
-        <h3 className="px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Что указать в письме
-        </h3>
-        <ul className="space-y-1.5 rounded-2xl border border-border bg-card p-4 text-[13.5px] leading-relaxed text-foreground/90">
-          <li className="flex gap-2"><span className="text-primary">•</span> ваш ник или e-mail из приложения;</li>
-          <li className="flex gap-2"><span className="text-primary">•</span> суть вопроса или описание проблемы;</li>
-          <li className="flex gap-2"><span className="text-primary">•</span> если это баг — что делали, что ожидали, что случилось;</li>
-          <li className="flex gap-2"><span className="text-primary">•</span> при необходимости — скриншот или короткое видео.</li>
-        </ul>
-      </section>
-
-      {/* FAQ link */}
-      <Link
-        to="/faq"
-        className="tg-press flex items-center gap-3 rounded-2xl border border-border bg-card p-4"
-      >
-        <span
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl"
-          style={{ background: "var(--gradient-primary)" }}
-        >
-          <HelpCircle className="h-5 w-5 text-white" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[14px] font-semibold text-foreground">Частые вопросы</p>
-          <p className="text-[12px] text-muted-foreground">
-            Возможно, ответ уже есть — загляните в FAQ.
-          </p>
-        </div>
-        <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-      </Link>
-
-      <p className="px-2 pt-1 text-center text-[11px] leading-relaxed text-muted-foreground">
-        Отвечаем обычно в течение 24 часов. По будням — быстрее.
-      </p>
     </div>
   );
 }
