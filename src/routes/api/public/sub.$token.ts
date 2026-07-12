@@ -26,7 +26,7 @@ export const Route = createFileRoute("/api/public/sub/$token")({
           return new Response("Not found", { status: 404 });
         }
 
-        let brand = "NetSpas";
+        let brand = "VPNSUS";
         const { data: sourceLink } = await supabaseAdmin
           .from("vless_links")
           .select("title")
@@ -39,7 +39,7 @@ export const Route = createFileRoute("/api/public/sub/$token")({
           .select("value")
           .eq("key", "config_name")
           .maybeSingle();
-        if (brand === "NetSpas" && setting?.value && typeof setting.value === "string") {
+        if (brand === "VPNSUS" && setting?.value && typeof setting.value === "string") {
           brand = setting.value;
         }
 
@@ -47,7 +47,7 @@ export const Route = createFileRoute("/api/public/sub/$token")({
         if (/^https?:\/\//i.test(data.upstream_url)) {
           try {
             const r = await fetch(data.upstream_url, {
-              headers: { "User-Agent": "NetSpas/1.0" },
+              headers: { "User-Agent": "VPNSUS/1.0" },
             });
             if (!r.ok) return new Response("Upstream error", { status: 502, headers: TEXT_HEADERS });
             upstreamBody = await r.text();

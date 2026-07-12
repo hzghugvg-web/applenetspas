@@ -35,7 +35,7 @@ function IndexRoute() {
           <Shield className="h-8 w-8 text-primary-foreground" />
         </div>
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold">NetSpas</h1>
+          <h1 className="text-2xl font-semibold">VPNSUS</h1>
           <p className="text-sm text-muted-foreground">Открываем приложение</p>
         </div>
         <Loader2 className="h-5 w-5 animate-spin text-primary" />

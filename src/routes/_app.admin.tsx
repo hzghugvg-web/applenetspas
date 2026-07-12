@@ -384,7 +384,7 @@ function CatalogTab() {
                   <input
                     value={titleDraft[d.id] ?? ""}
                     onChange={(e) => setTitleDraft((s) => ({ ...s, [d.id]: e.target.value }))}
-                    placeholder="Название внутри конфига (например NetSpas)"
+                    placeholder="Название внутри конфига (например VPNSUS)"
                     className="h-10 w-full rounded-xl border border-border bg-input px-3 text-xs outline-none focus:border-primary"
                   />
                   <div className="grid grid-cols-2 gap-2">

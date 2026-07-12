@@ -50,7 +50,7 @@ export function PlatformGate({ children }: { children: ReactNode }) {
             >
               <Shield className="h-8 w-8 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-semibold">Установите NetSpas</h1>
+            <h1 className="text-2xl font-semibold">Установите VPNSUS</h1>
             <p className="text-sm text-muted-foreground">
               Для продолжения установите приложение на iPhone.
             </p>
@@ -76,7 +76,7 @@ export function PlatformGate({ children }: { children: ReactNode }) {
               <div className="flex items-start gap-3">
                 <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-secondary text-xs font-semibold">4</div>
                 <div className="flex-1">
-                  Откройте <span className="font-medium">NetSpas</span> с экрана «Домой»
+                  Откройте <span className="font-medium">VPNSUS</span> с экрана «Домой»
                 </div>
               </div>
             </div>
@@ -92,7 +92,7 @@ export function PlatformGate({ children }: { children: ReactNode }) {
             >
               <Shield className="h-8 w-8 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-semibold">Установите NetSpas</h1>
+            <h1 className="text-2xl font-semibold">Установите VPNSUS</h1>
             <p className="text-sm text-muted-foreground">
               Для продолжения установите приложение на Android.
             </p>
@@ -118,7 +118,7 @@ export function PlatformGate({ children }: { children: ReactNode }) {
               <div className="flex items-start gap-3">
                 <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-secondary text-xs font-semibold">4</div>
                 <div className="flex-1">
-                  Откройте <span className="font-medium">NetSpas</span> с главного экрана
+                  Откройте <span className="font-medium">VPNSUS</span> с главного экрана
                 </div>
               </div>
             </div>

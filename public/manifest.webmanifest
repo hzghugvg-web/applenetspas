@@ -1,6 +1,6 @@
 {
-  "name": "NetSpas",
-  "short_name": "NetSpas",
+  "name": "VPNSUS",
+  "short_name": "VPNSUS",
   "description": "Бесплатные VPN-конфигурации VLESS",
   "start_url": "/",
   "display": "standalone",
@@ -8,6 +8,8 @@
   "theme_color": "#10131F",
   "orientation": "portrait",
   "icons": [
+    { "src": "/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]
 }

@@ -21,8 +21,8 @@ export const Route = createFileRoute("/support-ai")({
   },
   head: () => ({
     meta: [
-      { title: "Чат с ИИ-помощником · NetSpas" },
-      { name: "description", content: "Задайте вопрос ИИ-помощнику NetSpas — быстрые ответы 24/7." },
+      { title: "Чат с ИИ-помощником · VPNSUS" },
+      { name: "description", content: "Задайте вопрос ИИ-помощнику VPNSUS — быстрые ответы 24/7." },
     ],
   }),
   component: AiChatPage,
@@ -105,7 +105,7 @@ async function imageFileToCompressedDataUrl(
 }
 
 const GREETING =
-  "Привет! Я ИИ-помощник NetSpas. Спросите про подключение, кулдаун, подписку — постараюсь ответить сразу. Можно прикрепить скриншот 📎 — я его увижу. Если не смогу помочь, передам оператору.";
+  "Привет! Я ИИ-помощник VPNSUS. Спросите про подключение, кулдаун, подписку — постараюсь ответить сразу. Можно прикрепить скриншот 📎 — я его увижу. Если не смогу помочь, передам оператору.";
 
 function AiChatPage() {
   const navigate = useNavigate();
