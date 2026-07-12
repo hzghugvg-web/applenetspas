@@ -30,7 +30,7 @@ export const startLinkTelegram = createServerFn({ method: "POST" })
       }
       return "netspas_bot";
     };
-    const { data: rows, error } = await context.supabase.rpc("create_telegram_auth_code", {
+    const { data: rows, error } = await (context.supabase as any).rpc("create_telegram_auth_code", {
       _purpose: "link",
     });
     if (error) throw new Error(error.message);
@@ -51,7 +51,7 @@ export const pollLinkTelegram = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: { code: string }) => data)
   .handler(async ({ context, data }) => {
-    const { data: rows, error } = await context.supabase.rpc("get_telegram_link_status", {
+    const { data: rows, error } = await (context.supabase as any).rpc("get_telegram_link_status", {
       _code: data.code,
     });
     if (error) throw new Error(error.message);
@@ -72,7 +72,7 @@ export const pollLinkTelegram = createServerFn({ method: "POST" })
 export const unlinkTelegram = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { error } = await context.supabase.rpc("unlink_my_telegram");
+    const { error } = await (context.supabase as any).rpc("unlink_my_telegram");
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -81,7 +81,7 @@ export const unlinkTelegram = createServerFn({ method: "POST" })
 export const getTelegramBinding = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: rows, error } = await context.supabase.rpc("get_my_telegram_binding");
+    const { data: rows, error } = await (context.supabase as any).rpc("get_my_telegram_binding");
     if (error) throw new Error(error.message);
     const data = (rows as Array<{ linked: boolean; telegram_username: string | null; telegram_linked_at: string | null }> | null)?.[0];
     return {
@@ -117,12 +117,12 @@ export const startTelegramLogin = createServerFn({ method: "POST" }).handler(asy
     return "netspas_bot";
   };
   const supabasePublic = createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
+    process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL!,
+    process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY!,
     { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
   );
 
-  const { data: rows, error } = await supabasePublic.rpc("create_telegram_auth_code", {
+  const { data: rows, error } = await (supabasePublic as any).rpc("create_telegram_auth_code", {
     _purpose: "login",
   });
   if (error) throw new Error(error.message);
@@ -143,11 +143,11 @@ export const pollTelegramLogin = createServerFn({ method: "POST" })
   .validator((data: { code: string }) => data)
   .handler(async ({ data }) => {
     const supabasePublic = createClient<Database>(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_PUBLISHABLE_KEY!,
+      process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY!,
       { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
     );
-    const { data: rows, error } = await supabasePublic.rpc("get_telegram_login_status", {
+    const { data: rows, error } = await (supabasePublic as any).rpc("get_telegram_login_status", {
       _code: data.code,
     });
     if (error) throw new Error(error.message);
