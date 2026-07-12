@@ -1,0 +1,1 @@
+UPDATE public.system_settings SET value = to_jsonb('VPNSUS'::text) WHERE key = 'config_name';
