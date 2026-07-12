@@ -6,8 +6,10 @@ import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
 import {
   Plus, Trash2, RotateCcw, Ban, CheckCircle2, MessageCircle, Megaphone, Send,
-  Pencil, X, KeyRound, Loader2, ImageIcon, Video,
+  Pencil, X, KeyRound, Loader2, ImageIcon, Video, ShieldOff, UserX,
 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { adminDeleteUser } from "@/lib/admin.functions";
 import { ComplaintChatModal } from "@/components/ComplaintChat";
 import {
   isAiEscalatedComplaint,
@@ -20,7 +22,7 @@ export const Route = createFileRoute("/_app/admin")({ component: AdminPage });
 
 type Direction = { id: string; name: string; flag: string | null; is_active: boolean };
 type VlessLink = { id: string; url: string; direction_id: string; is_active: boolean; available_from: string | null; expires_at: string | null; title: string | null };
-type UserRow = { id: string; email: string; is_blocked: boolean; cooldown_until: string | null; subscription_from: string | null; subscription_until: string | null };
+type UserRow = { id: string; email: string; is_blocked: boolean; cooldown_until: string | null; subscription_from: string | null; subscription_until: string | null; blocked_until: string | null; blocked_reason: string | null };
 type IssuedConfig = { id: string; vless_url: string; issued_at: string; direction_id: string | null };
 
 function AdminPage() {
