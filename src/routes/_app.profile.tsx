@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { translateAuthError, isOffline, OFFLINE_MESSAGE } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
@@ -9,6 +10,8 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { TelegramLinkModal } from "@/components/TelegramLinkModal";
+import { getTelegramBinding, unlinkTelegram } from "@/lib/telegram-auth.functions";
 
 function SettingsCard({
   title, children,
@@ -83,6 +86,42 @@ function ProfilePage() {
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [tgLinked, setTgLinked] = useState<null | { username: string | null }>(null);
+  const [tgLoading, setTgLoading] = useState(true);
+  const [tgOpen, setTgOpen] = useState(false);
+  const [tgUnlinkBusy, setTgUnlinkBusy] = useState(false);
+  const fetchBinding = useServerFn(getTelegramBinding);
+  const doUnlink = useServerFn(unlinkTelegram);
+
+  async function refreshBinding() {
+    try {
+      const r = await fetchBinding({});
+      setTgLinked(r.linked ? { username: r.username } : null);
+    } catch {
+      setTgLinked(null);
+    } finally {
+      setTgLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void refreshBinding();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function unlinkTg() {
+    if (tgUnlinkBusy) return;
+    setTgUnlinkBusy(true);
+    try {
+      await doUnlink({});
+      setTgLinked(null);
+      toast.success("Telegram отвязан");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Не удалось отвязать");
+    } finally {
+      setTgUnlinkBusy(false);
+    }
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -185,12 +224,42 @@ function ProfilePage() {
             icon={Send}
             iconBg="color-mix(in srgb, #38BDF8 22%, transparent)"
             iconColor="#38BDF8"
-            label="Не привязан"
+            label={
+              tgLoading
+                ? "…"
+                : tgLinked
+                  ? tgLinked.username
+                    ? `@${tgLinked.username}`
+                    : "Привязан"
+                  : "Не привязан"
+            }
             sub="Telegram"
+            onClick={
+              tgLoading
+                ? undefined
+                : tgLinked
+                  ? undefined
+                  : () => setTgOpen(true)
+            }
             right={
-              <span className="text-[13px] font-semibold text-accent opacity-60">
-                Скоро
-              </span>
+              tgLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              ) : tgLinked ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void unlinkTg();
+                  }}
+                  disabled={tgUnlinkBusy}
+                  className="tg-press rounded-full border border-border px-3 py-1 text-[12px] font-medium text-destructive hover:bg-destructive/10 disabled:opacity-60"
+                >
+                  {tgUnlinkBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : "Отвязать"}
+                </button>
+              ) : (
+                <span className="text-[13px] font-semibold" style={{ color: "#38BDF8" }}>
+                  Привязать
+                </span>
+              )
             }
           />
         </SettingsCard>
@@ -234,6 +303,18 @@ function ProfilePage() {
           <Trash2 className="h-4 w-4" /> Удалить аккаунт
         </button>
       </div>
+
+      <TelegramLinkModal
+        open={tgOpen}
+        onClose={() => {
+          setTgOpen(false);
+          void refreshBinding();
+        }}
+        onLinked={(username) => {
+          setTgLinked({ username });
+          toast.success("Telegram привязан");
+        }}
+      />
 
       {passwordOpen && (
         <div
