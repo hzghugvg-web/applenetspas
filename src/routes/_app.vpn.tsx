@@ -80,9 +80,17 @@ function VpnPage() {
       .channel("issued_configs_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "issued_configs" }, () => { reloadAll(); })
       .subscribe();
+    const ch3 = supabase
+      .channel("directions_changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "directions" }, () => reloadAll())
+      .subscribe();
+    const onVis = () => { if (document.visibilityState === "visible") reloadAll(); };
+    document.addEventListener("visibilitychange", onVis);
     return () => {
       supabase.removeChannel(ch);
       supabase.removeChannel(ch2);
+      supabase.removeChannel(ch3);
+      document.removeEventListener("visibilitychange", onVis);
     };
   }, []); // eslint-disable-line
 
