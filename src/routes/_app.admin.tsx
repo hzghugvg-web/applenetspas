@@ -6,8 +6,10 @@ import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
 import {
   Plus, Trash2, RotateCcw, Ban, CheckCircle2, MessageCircle, Megaphone, Send,
-  Pencil, X, KeyRound, Loader2, ImageIcon, Video,
+  Pencil, X, KeyRound, Loader2, ImageIcon, Video, ShieldOff, UserX,
 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { adminDeleteUser } from "@/lib/admin.functions";
 import { ComplaintChatModal } from "@/components/ComplaintChat";
 import {
   isAiEscalatedComplaint,
@@ -20,7 +22,7 @@ export const Route = createFileRoute("/_app/admin")({ component: AdminPage });
 
 type Direction = { id: string; name: string; flag: string | null; is_active: boolean };
 type VlessLink = { id: string; url: string; direction_id: string; is_active: boolean; available_from: string | null; expires_at: string | null; title: string | null };
-type UserRow = { id: string; email: string; is_blocked: boolean; cooldown_until: string | null; subscription_from: string | null; subscription_until: string | null };
+type UserRow = { id: string; email: string; is_blocked: boolean; cooldown_until: string | null; subscription_from: string | null; subscription_until: string | null; blocked_until: string | null; blocked_reason: string | null };
 type IssuedConfig = { id: string; vless_url: string; issued_at: string; direction_id: string | null };
 
 function AdminPage() {
@@ -467,8 +469,12 @@ function CatalogTab() {
 
 function UsersTab() {
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [blockingUser, setBlockingUser] = useState<UserRow | null>(null);
+  const deleteUserFn = useServerFn(adminDeleteUser);
   async function load() {
-    const { data } = await supabase.from("profiles").select("id,email,is_blocked,cooldown_until,subscription_from,subscription_until").order("created_at", { ascending: false });
+    const { data } = await supabase.from("profiles")
+      .select("id,email,is_blocked,cooldown_until,subscription_from,subscription_until,blocked_until,blocked_reason")
+      .order("created_at", { ascending: false });
     setUsers((data ?? []) as UserRow[]);
   }
   useEffect(() => { load(); }, []);
@@ -476,9 +482,20 @@ function UsersTab() {
     const { error } = await supabase.rpc("admin_reset_cooldown", { _target: id });
     if (error) toast.error(translateAuthError(error.message)); else { toast.success("Кулдаун сброшен"); load(); }
   }
-  async function toggleBlock(u: UserRow) {
-    const { error } = await supabase.rpc("admin_toggle_block", { _target: u.id, _block: !u.is_blocked });
-    if (error) toast.error(translateAuthError(error.message)); else { load(); }
+  async function unblock(u: UserRow) {
+    const { error } = await (supabase as any).rpc("admin_unblock_user", { _target: u.id });
+    if (error) toast.error(translateAuthError(error.message));
+    else { toast.success("Аккаунт разблокирован"); load(); }
+  }
+  async function deleteUser(u: UserRow) {
+    if (!confirm(`Удалить аккаунт ${u.email}? Действие необратимо.`)) return;
+    try {
+      await deleteUserFn({ data: { userId: u.id } });
+      toast.success("Аккаунт удалён");
+      load();
+    } catch (e: any) {
+      toast.error(translateAuthError(e?.message));
+    }
   }
   return (
     <div className="space-y-2">
@@ -488,21 +505,122 @@ function UsersTab() {
             <span className="flex-1 truncate text-sm font-medium">{u.email}</span>
             {u.is_blocked && <span className="rounded bg-destructive/20 px-2 py-0.5 text-xs text-destructive">Блок</span>}
           </div>
+          {u.is_blocked && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-[11px] text-destructive">
+              <div>
+                {u.blocked_until
+                  ? `Заблокирован до ${new Date(u.blocked_until).toLocaleString("ru-RU")}`
+                  : "Заблокирован бессрочно"}
+              </div>
+              {u.blocked_reason && <div className="mt-0.5 opacity-90">Причина: {u.blocked_reason}</div>}
+            </div>
+          )}
           <div className="text-xs text-muted-foreground">
             CD: {u.cooldown_until ? new Date(u.cooldown_until).toLocaleString("ru-RU") : "—"}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button onClick={() => resetCd(u.id)} className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-secondary py-2 text-xs">
               <RotateCcw className="h-3.5 w-3.5" /> Сброс CD
             </button>
-            <button onClick={() => toggleBlock(u)} className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-secondary py-2 text-xs">
-              {u.is_blocked ? <><CheckCircle2 className="h-3.5 w-3.5" /> Разблок</> : <><Ban className="h-3.5 w-3.5" /> Блок</>}
+            {u.is_blocked ? (
+              <button onClick={() => unblock(u)} className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-secondary py-2 text-xs">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Разблок
+              </button>
+            ) : (
+              <button onClick={() => setBlockingUser(u)} className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-secondary py-2 text-xs">
+                <Ban className="h-3.5 w-3.5" /> Блок
+              </button>
+            )}
+            <button onClick={() => deleteUser(u)} className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-destructive/15 py-2 text-xs text-destructive">
+              <UserX className="h-3.5 w-3.5" /> Удалить
             </button>
           </div>
           <UserDetails user={u} onChanged={load} />
         </div>
       ))}
       {!users.length && <div className="text-center text-sm text-muted-foreground">Нет пользователей</div>}
+      {blockingUser && (
+        <BlockUserModal
+          user={blockingUser}
+          onClose={() => setBlockingUser(null)}
+          onDone={() => { setBlockingUser(null); load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function BlockUserModal({ user, onClose, onDone }: { user: UserRow; onClose: () => void; onDone: () => void }) {
+  const [days, setDays] = useState<string>("7");
+  const [permanent, setPermanent] = useState(false);
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function submit() {
+    setSaving(true);
+    try {
+      let until: string | null = null;
+      if (!permanent) {
+        const d = Number(days);
+        if (!Number.isFinite(d) || d <= 0) {
+          toast.error("Укажите корректное число дней");
+          setSaving(false);
+          return;
+        }
+        until = new Date(Date.now() + d * 24 * 60 * 60 * 1000).toISOString();
+      }
+      const { error } = await (supabase as any).rpc("admin_block_user", {
+        _target: user.id,
+        _until: until,
+        _reason: reason.trim() || null,
+      });
+      if (error) throw error;
+      toast.success("Аккаунт заблокирован");
+      onDone();
+    } catch (e: any) {
+      toast.error(translateAuthError(e?.message));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
+      <div className="w-full max-w-sm space-y-3 rounded-2xl border border-border bg-card p-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2">
+          <ShieldOff className="h-5 w-5 text-destructive" />
+          <div className="text-sm font-semibold">Блокировка</div>
+        </div>
+        <div className="truncate text-xs text-muted-foreground">{user.email}</div>
+
+        <label className="flex items-center gap-2 text-xs">
+          <input type="checkbox" checked={permanent} onChange={(e) => setPermanent(e.target.checked)} />
+          Бессрочно
+        </label>
+        {!permanent && (
+          <div className="space-y-1">
+            <div className="text-[11px] text-muted-foreground">На сколько дней</div>
+            <input
+              type="number" min={1} value={days} onChange={(e) => setDays(e.target.value)}
+              className="h-10 w-full rounded-lg border border-border bg-input px-3 text-sm outline-none"
+            />
+          </div>
+        )}
+        <div className="space-y-1">
+          <div className="text-[11px] text-muted-foreground">Причина (покажется пользователю)</div>
+          <textarea
+            value={reason} onChange={(e) => setReason(e.target.value)} rows={3}
+            placeholder="Например: нарушение правил"
+            className="w-full resize-none rounded-lg border border-border bg-input p-2 text-sm outline-none"
+          />
+        </div>
+        <div className="flex gap-2 pt-1">
+          <button onClick={onClose} className="flex-1 rounded-lg bg-secondary py-2 text-sm">Отмена</button>
+          <button onClick={submit} disabled={saving} className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-destructive py-2 text-sm text-destructive-foreground disabled:opacity-60">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Ban className="h-4 w-4" /> Заблокировать</>}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
