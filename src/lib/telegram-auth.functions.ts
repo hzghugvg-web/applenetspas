@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
+import { createClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
 
 /** Start "link Telegram" — must be signed in. Returns a code + deep link. */
 export const startLinkTelegram = createServerFn({ method: "POST" })
@@ -30,32 +32,19 @@ export const startLinkTelegram = createServerFn({ method: "POST" })
       }
       return "netspas_bot";
     };
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    // Housekeeping: purge stale codes
-    await supabaseAdmin
-      .from("telegram_auth_codes")
-      .delete()
-      .lt("expires_at", new Date().toISOString());
-
-    const code = genCode();
-    const expiresAt = new Date(Date.now() + codeTtlMs).toISOString();
-
-    const { error } = await supabaseAdmin.from("telegram_auth_codes").insert({
-      code,
-      purpose: "link",
-      user_id: context.userId,
-      status: "pending",
-      expires_at: expiresAt,
+    const { data: rows, error } = await context.supabase.rpc("create_telegram_auth_code", {
+      _purpose: "link",
     });
     if (error) throw new Error(error.message);
+    const row = (rows as Array<{ code: string; expires_at: string }> | null)?.[0];
+    if (!row) throw new Error("code_failed");
 
     const botUsername = await getBotUsername();
     return {
-      code,
+      code: row.code,
       botUsername,
-      deepLink: `https://t.me/${botUsername}?start=link_${code}`,
-      expiresAt,
+      deepLink: `https://t.me/${botUsername}?start=link_${row.code}`,
+      expiresAt: row.expires_at,
     };
   });
 
@@ -64,13 +53,12 @@ export const pollLinkTelegram = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: { code: string }) => data)
   .handler(async ({ context, data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: row } = await supabaseAdmin
-      .from("telegram_auth_codes")
-      .select("status, telegram_username, expires_at, user_id, purpose")
-      .eq("code", data.code)
-      .maybeSingle();
-    if (!row || row.user_id !== context.userId || row.purpose !== "link") {
+    const { data: rows, error } = await context.supabase.rpc("get_telegram_link_status", {
+      _code: data.code,
+    });
+    if (error) throw new Error(error.message);
+    const row = (rows as Array<{ status: string; telegram_username: string | null; expires_at: string }> | null)?.[0];
+    if (!row) {
       return { status: "expired" as const };
     }
     if (row.status === "pending" && new Date(row.expires_at) < new Date()) {
@@ -86,16 +74,7 @@ export const pollLinkTelegram = createServerFn({ method: "POST" })
 export const unlinkTelegram = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
-      .from("profiles")
-      .update({
-        telegram_user_id: null,
-        telegram_username: null,
-        telegram_linked_at: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", context.userId);
+    const { error } = await context.supabase.rpc("unlink_my_telegram");
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -104,14 +83,11 @@ export const unlinkTelegram = createServerFn({ method: "POST" })
 export const getTelegramBinding = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await supabaseAdmin
-      .from("profiles")
-      .select("telegram_user_id, telegram_username, telegram_linked_at")
-      .eq("id", context.userId)
-      .maybeSingle();
+    const { data: rows, error } = await context.supabase.rpc("get_my_telegram_binding");
+    if (error) throw new Error(error.message);
+    const data = (rows as Array<{ linked: boolean; telegram_username: string | null; telegram_linked_at: string | null }> | null)?.[0];
     return {
-      linked: Boolean(data?.telegram_user_id),
+      linked: Boolean(data?.linked),
       username: data?.telegram_username ?? null,
       linkedAt: data?.telegram_linked_at ?? null,
     };
@@ -144,30 +120,25 @@ export const startTelegramLogin = createServerFn({ method: "POST" }).handler(asy
     }
     return "netspas_bot";
   };
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const supabasePublic = createClient<Database>(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
+  );
 
-  await supabaseAdmin
-    .from("telegram_auth_codes")
-    .delete()
-    .lt("expires_at", new Date().toISOString());
-
-  const code = genCode();
-  const expiresAt = new Date(Date.now() + codeTtlMs).toISOString();
-
-  const { error } = await supabaseAdmin.from("telegram_auth_codes").insert({
-    code,
-    purpose: "login",
-    status: "pending",
-    expires_at: expiresAt,
+  const { data: rows, error } = await supabasePublic.rpc("create_telegram_auth_code", {
+    _purpose: "login",
   });
   if (error) throw new Error(error.message);
+  const row = (rows as Array<{ code: string; expires_at: string }> | null)?.[0];
+  if (!row) throw new Error("code_failed");
 
   const botUsername = await getBotUsername();
   return {
-    code,
+    code: row.code,
     botUsername,
-    deepLink: `https://t.me/${botUsername}?start=login_${code}`,
-    expiresAt,
+    deepLink: `https://t.me/${botUsername}?start=login_${row.code}`,
+    expiresAt: row.expires_at,
   };
 });
 
@@ -175,14 +146,24 @@ export const startTelegramLogin = createServerFn({ method: "POST" }).handler(asy
 export const pollTelegramLogin = createServerFn({ method: "POST" })
   .validator((data: { code: string }) => data)
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: row } = await supabaseAdmin
-      .from("telegram_auth_codes")
-      .select("status, user_id, action_link, expires_at, purpose, error")
-      .eq("code", data.code)
-      .maybeSingle();
+    const supabasePublic = createClient<Database>(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_PUBLISHABLE_KEY!,
+      { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
+    );
+    const { data: rows, error } = await supabasePublic.rpc("get_telegram_login_status", {
+      _code: data.code,
+    });
+    if (error) throw new Error(error.message);
+    const row = (rows as Array<{
+      status: string;
+      user_id: string | null;
+      action_link: string | null;
+      expires_at: string;
+      error: string | null;
+    }> | null)?.[0];
 
-    if (!row || row.purpose !== "login") return { status: "expired" as const };
+    if (!row) return { status: "expired" as const };
     if (row.status === "pending" && new Date(row.expires_at) < new Date()) {
       return { status: "expired" as const };
     }
@@ -192,6 +173,9 @@ export const pollTelegramLogin = createServerFn({ method: "POST" })
 
     if (row.status === "confirmed" && row.user_id) {
       // Generate a one-time magic link (action_link) that logs the user in.
+      if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        return { status: "rejected" as const, error: "server_key_missing" };
+      }
       const { data: userRes, error: getUserErr } = await supabaseAdmin.auth.admin.getUserById(
         row.user_id,
       );
