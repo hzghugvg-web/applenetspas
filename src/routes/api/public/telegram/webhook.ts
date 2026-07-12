@@ -83,24 +83,53 @@ const SUPPORT_PROMPT_PLAIN = "Напиши свой вопрос ответом 
 
 async function sendDirectionPicker(chatId: number) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: directions, error } = await supabaseAdmin
-    .from("directions")
-    .select("id, name, flag")
-    .eq("is_active", true)
-    .order("name", { ascending: true });
 
-  if (error || !directions || directions.length === 0) {
+  // Clean up expired links so we don't offer directions whose only links are expired
+  await supabaseAdmin
+    .from("vless_links")
+    .delete()
+    .eq("is_active", true)
+    .lt("expires_at", new Date().toISOString());
+
+  const nowIso = new Date().toISOString();
+
+  const [dirRes, linksRes] = await Promise.all([
+    supabaseAdmin
+      .from("directions")
+      .select("id, name, flag")
+      .eq("is_active", true)
+      .order("name", { ascending: true }),
+    supabaseAdmin
+      .from("vless_links")
+      .select("direction_id, available_from, expires_at")
+      .eq("is_active", true),
+  ]);
+
+  const directions = dirRes.data ?? [];
+  const availableDirIds = new Set(
+    (linksRes.data ?? [])
+      .filter((l) => {
+        if (l.available_from && l.available_from > nowIso) return false;
+        if (l.expires_at && l.expires_at <= nowIso) return false;
+        return true;
+      })
+      .map((l) => l.direction_id),
+  );
+
+  const usable = directions.filter((d) => availableDirIds.has(d.id));
+
+  if (dirRes.error || linksRes.error || usable.length === 0) {
     await tg("sendMessage", {
       chat_id: chatId,
-      text: "😕 Пока нет доступных направлений. Загляни позже.",
+      text: "😕 Сейчас нет свободных направлений — все ключи разобрали. Загляни позже.",
       reply_markup: BACK_MENU,
     });
     return;
   }
 
   const keyboard: { text: string; callback_data: string }[][] = [];
-  for (let i = 0; i < directions.length; i += 2) {
-    const row = directions.slice(i, i + 2).map((d) => ({
+  for (let i = 0; i < usable.length; i += 2) {
+    const row = usable.slice(i, i + 2).map((d) => ({
       text: `${d.flag ?? "🌐"} ${d.name}`,
       callback_data: `dir:${d.id}`,
     }));
