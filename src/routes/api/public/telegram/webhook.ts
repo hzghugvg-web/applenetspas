@@ -81,20 +81,112 @@ const SUPPORT_PROMPT =
 
 const SUPPORT_PROMPT_PLAIN = "Напиши свой вопрос ответом на это сообщение";
 
-function getVpnMessage(): string {
-  const key = process.env.VPN_ACCESS_KEY;
-  if (!key) {
-    return (
-      "🚀 <b>Твой ключ доступа</b>\n\n" +
-      "Ключи ещё не настроены. Напиши в поддержку — админ выдаст ключ вручную."
-    );
+async function sendDirectionPicker(chatId: number) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: directions, error } = await supabaseAdmin
+    .from("directions")
+    .select("id, name, flag")
+    .eq("is_active", true)
+    .order("name", { ascending: true });
+
+  if (error || !directions || directions.length === 0) {
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: "😕 Пока нет доступных направлений. Загляни позже.",
+      reply_markup: BACK_MENU,
+    });
+    return;
   }
-  return (
-    "🚀 <b>Твой ключ доступа</b>\n\n" +
-    `<code>${key}</code>\n\n` +
-    "📱 Скачай <b>Outline Client</b>, добавь этот ключ — готово!\n" +
-    "Подробная инструкция — в разделе «📖 Как установить и настроить»."
-  );
+
+  const keyboard: { text: string; callback_data: string }[][] = [];
+  for (let i = 0; i < directions.length; i += 2) {
+    const row = directions.slice(i, i + 2).map((d) => ({
+      text: `${d.flag ?? "🌐"} ${d.name}`,
+      callback_data: `dir:${d.id}`,
+    }));
+    keyboard.push(row);
+  }
+  keyboard.push([{ text: "⬅️ В меню", callback_data: "menu" }]);
+
+  await tg("sendMessage", {
+    chat_id: chatId,
+    text: "🚀 <b>Выбери направление:</b>",
+    parse_mode: "HTML",
+    reply_markup: { inline_keyboard: keyboard },
+  });
+}
+
+async function issueKeyForDirection(chatId: number, directionId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  // Clean up expired links first (mirrors app logic)
+  await supabaseAdmin
+    .from("vless_links")
+    .delete()
+    .eq("is_active", true)
+    .lt("expires_at", new Date().toISOString());
+
+  const nowIso = new Date().toISOString();
+  const { data: links, error } = await supabaseAdmin
+    .from("vless_links")
+    .select("id, url, title, available_from, expires_at")
+    .eq("direction_id", directionId)
+    .eq("is_active", true)
+    .limit(50);
+
+  if (error) {
+    console.error("[bot] fetch links failed", error);
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: "⚠️ Ошибка при получении ключа. Попробуй ещё раз или напиши в поддержку.",
+      reply_markup: BACK_MENU,
+    });
+    return;
+  }
+
+  const available = (links ?? []).filter((l) => {
+    if (l.available_from && l.available_from > nowIso) return false;
+    if (l.expires_at && l.expires_at <= nowIso) return false;
+    return true;
+  });
+
+  if (available.length === 0) {
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: "😔 Для этого направления сейчас нет свободных ключей. Попробуй другое или загляни позже.",
+      reply_markup: BACK_MENU,
+    });
+    return;
+  }
+
+  const picked = available[Math.floor(Math.random() * available.length)];
+
+  // Reserve the link by marking inactive (only if still active — prevents double-issue)
+  const { data: reserved, error: updErr } = await supabaseAdmin
+    .from("vless_links")
+    .update({ is_active: false })
+    .eq("id", picked.id)
+    .eq("is_active", true)
+    .select("id")
+    .maybeSingle();
+
+  if (updErr || !reserved) {
+    // Someone else grabbed it — retry once
+    await issueKeyForDirection(chatId, directionId);
+    return;
+  }
+
+  await tg("sendMessage", {
+    chat_id: chatId,
+    text:
+      "🚀 <b>Твой ключ доступа</b>\n\n" +
+      `<code>${picked.url}</code>\n\n` +
+      "📱 Скачай приложение (Outline / v2rayNG / Hiddify), добавь этот ключ — готово!\n" +
+      "Подробная инструкция — в разделе «📖 Как установить и настроить».",
+    parse_mode: "HTML",
+    reply_markup: BACK_MENU,
+    disable_web_page_preview: true,
+  });
 }
 
 async function sendMenu(chatId: number, text = WELCOME) {
@@ -123,13 +215,11 @@ async function handleCallback(cb: {
     return;
   }
   if (data === "get_vpn") {
-    await tg("sendMessage", {
-      chat_id: chatId,
-      text: getVpnMessage(),
-      parse_mode: "HTML",
-      reply_markup: BACK_MENU,
-      disable_web_page_preview: true,
-    });
+    await sendDirectionPicker(chatId);
+    return;
+  }
+  if (data.startsWith("dir:")) {
+    await issueKeyForDirection(chatId, data.slice(4));
     return;
   }
   if (data === "howto") {
