@@ -1,6 +1,6 @@
 {
-  "name": "NetSpas",
-  "short_name": "NetSpas",
+  "name": "VPNSUS",
+  "short_name": "VPNSUS",
   "description": "Бесплатные VPN-конфигурации VLESS",
   "start_url": "/",
   "display": "standalone",

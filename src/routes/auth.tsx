@@ -115,7 +115,7 @@ function AuthPage() {
               </h1>
               <p className="mt-1 text-[13px] text-muted-foreground">
                 {mode === "signup"
-                  ? "Создайте аккаунт NetSpas за 10 секунд."
+                  ? "Создайте аккаунт VPNSUS за 10 секунд."
                   : "Войдите, чтобы продолжить."}
               </p>
             </div>

@@ -273,7 +273,7 @@ function ActiveHero({ onOpen }: { onOpen: () => void }) {
           VPN активен
         </div>
         <div className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.14em] opacity-85">
-          <Sparkles className="h-3 w-3" /> NetSpas
+          <Sparkles className="h-3 w-3" /> VPNSUS
         </div>
       </div>
 
@@ -351,7 +351,7 @@ function HeroCard({
           <Radio className="h-3 w-3" /> Готово к подключению
         </div>
         <div className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.14em] opacity-80">
-          <Sparkles className="h-3 w-3" /> NetSpas
+          <Sparkles className="h-3 w-3" /> VPNSUS
         </div>
       </div>
 
