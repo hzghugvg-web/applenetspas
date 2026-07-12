@@ -167,37 +167,12 @@ export const pollTelegramLogin = createServerFn({ method: "POST" })
       return { status: "rejected" as const, error: row.error ?? null };
     }
 
-    if (row.status === "confirmed" && row.user_id) {
-      // Generate a one-time magic link (action_link) that logs the user in.
-      if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-        return { status: "rejected" as const, error: "server_key_missing" };
-      }
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: userRes, error: getUserErr } = await supabaseAdmin.auth.admin.getUserById(
-        row.user_id,
-      );
-      if (getUserErr || !userRes?.user?.email) {
-        return { status: "rejected" as const, error: "user_missing" };
-      }
-      const origin = process.env.PUBLIC_SITE_URL ?? "https://netspas.lovable.app";
-      const { data: link, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
-        type: "magiclink",
-        email: userRes.user.email,
-        options: { redirectTo: `${origin}/vpn` },
-      });
-      if (linkErr || !link?.properties?.action_link) {
-        return { status: "rejected" as const, error: linkErr?.message ?? "link_failed" };
-      }
-      const actionLink = link.properties.action_link;
-      await supabaseAdmin
-        .from("telegram_auth_codes")
-        .update({
-          status: "consumed",
-          action_link: actionLink,
-          consumed_at: new Date().toISOString(),
-        })
-        .eq("code", data.code);
-      return { status: "ready" as const, actionLink };
+    if ((row.status === "confirmed" || row.status === "consumed") && row.action_link) {
+      return { status: "ready" as const, actionLink: row.action_link };
+    }
+
+    if (row.status === "confirmed" && !row.action_link) {
+      return { status: "rejected" as const, error: "link_failed" };
     }
 
     return { status: row.status as "pending" | "consumed" };
