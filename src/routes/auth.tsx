@@ -26,7 +26,7 @@ function AuthPage() {
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
-        const blocked = await checkBlockedAndSignOut(session.user.id);
+        const blocked = await checkBlockedAndRedirect(session.user.id, navigate);
         if (blocked) return;
         sessionStorage.removeItem("ns_is_admin");
         navigate({ to: "/vpn" });
@@ -266,7 +266,10 @@ function getAuthErrorMessage(err: unknown): string {
   return "Не удалось подключиться к серверу. Попробуйте ещё раз.";
 }
 
-async function checkBlockedAndSignOut(userId: string): Promise<boolean> {
+async function checkBlockedAndRedirect(
+  userId: string,
+  navigate: ReturnType<typeof useNavigate>,
+): Promise<boolean> {
   try {
     const { data } = await supabase
       .from("profiles")
@@ -275,18 +278,8 @@ async function checkBlockedAndSignOut(userId: string): Promise<boolean> {
       .maybeSingle();
     if (!data?.is_blocked) return false;
     const until = data.blocked_until ? new Date(data.blocked_until) : null;
-    // Автоматическая разблокировка, если срок истёк
     if (until && until.getTime() <= Date.now()) return false;
-    await supabase.auth.signOut();
-    try { sessionStorage.clear(); localStorage.removeItem("ns_offline_my_vpn_v1"); } catch {}
-    const reason = data.blocked_reason?.trim();
-    const untilText = until
-      ? `до ${until.toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" })}`
-      : "бессрочно";
-    toast.error(
-      "Ваш аккаунт заблокирован",
-      `Блокировка ${untilText}${reason ? `\nПричина: ${reason}` : ""}`,
-    );
+    navigate({ to: "/blocked", replace: true });
     return true;
   } catch {
     return false;
