@@ -694,6 +694,39 @@ export type Database = {
       bootstrap_user: { Args: never; Returns: undefined }
       cleanup_expired_vless_links: { Args: never; Returns: number }
       close_own_complaint: { Args: { _id: string }; Returns: undefined }
+      create_telegram_auth_code: {
+        Args: { _purpose: string }
+        Returns: {
+          code: string
+          expires_at: string
+        }[]
+      }
+      get_my_telegram_binding: {
+        Args: never
+        Returns: {
+          linked: boolean
+          telegram_linked_at: string
+          telegram_username: string
+        }[]
+      }
+      get_telegram_link_status: {
+        Args: { _code: string }
+        Returns: {
+          expires_at: string
+          status: string
+          telegram_username: string
+        }[]
+      }
+      get_telegram_login_status: {
+        Args: { _code: string }
+        Returns: {
+          action_link: string
+          error: string
+          expires_at: string
+          status: string
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -718,6 +751,7 @@ export type Database = {
         Returns: undefined
       }
       submit_amnesty: { Args: { _message: string }; Returns: string }
+      unlink_my_telegram: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "user"
