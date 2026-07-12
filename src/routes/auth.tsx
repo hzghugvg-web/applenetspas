@@ -26,6 +26,8 @@ function AuthPage() {
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
+        const blocked = await checkBlockedAndSignOut(session.user.id);
+        if (blocked) return;
         sessionStorage.removeItem("ns_is_admin");
         navigate({ to: "/vpn" });
         void bootstrapUser();
