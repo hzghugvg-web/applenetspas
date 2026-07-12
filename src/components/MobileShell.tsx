@@ -73,15 +73,21 @@ export function MobileShell({ title, children }: Props) {
       <main className="min-h-0 flex-1 overflow-hidden">
         <div
           className="ns-scroll h-full px-4 pt-4"
-          style={{ paddingBottom: "12px" }}
+          style={{ paddingBottom: "16px" }}
         >
           <div className="space-y-3 pb-2">{children}</div>
         </div>
       </main>
       <nav
-        className="grid shrink-0 glass tg-mobile-nav"
+        className="ns-nav-dock relative mx-3 mb-3 grid shrink-0 gap-1 rounded-[24px] p-1.5"
         style={{
           gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
+          background: "color-mix(in srgb, var(--card-solid) 88%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--border) 90%, transparent)",
+          boxShadow: "0 18px 40px -18px rgba(0,0,0,0.5), 0 4px 12px -6px rgba(0,0,0,0.25)",
+          backdropFilter: "blur(18px) saturate(140%)",
+          WebkitBackdropFilter: "blur(18px) saturate(140%)",
+          marginBottom: "max(12px, env(safe-area-inset-bottom))",
         }}
       >
         {tabs.map(({ to, label, icon: Icon }) => {
@@ -98,21 +104,34 @@ export function MobileShell({ title, children }: Props) {
                 e.preventDefault();
                 openTab(to);
               }}
-              className={`tg-press relative flex h-[62px] flex-col items-center justify-end gap-1 pb-2 text-[11px] font-medium transition-colors ${
-                active ? "text-foreground" : "text-muted-foreground"
+              className={`tg-press relative flex h-[54px] flex-col items-center justify-center gap-0.5 rounded-[18px] text-[10.5px] font-semibold transition-colors ${
+                active ? "" : "text-muted-foreground"
               }`}
-              style={{ touchAction: "manipulation" }}
+              style={{
+                touchAction: "manipulation",
+                color: active ? "var(--primary-foreground)" : undefined,
+              }}
             >
               {active && (
                 <motion.span
                   layoutId="ns-nav-indicator"
                   transition={{ type: "spring", stiffness: 320, damping: 32, mass: 0.9 }}
-                  className="absolute inset-1 rounded-xl"
-                  style={{ background: "var(--gradient-primary)", opacity: 0.22 }}
+                  className="absolute inset-0 rounded-[18px]"
+                  style={{
+                    background: "var(--gradient-primary)",
+                    boxShadow: "0 8px 20px -10px color-mix(in srgb, var(--primary) 70%, transparent)",
+                  }}
                 />
               )}
-              <Icon className="relative z-10 h-[22px] w-[22px]" strokeWidth={2} />
-              <span className="relative z-10 tracking-tight">{label}</span>
+              <Icon
+                className="relative z-10 transition-all"
+                style={{
+                  width: active ? 22 : 20,
+                  height: active ? 22 : 20,
+                }}
+                strokeWidth={active ? 2.4 : 2}
+              />
+              <span className="relative z-10 tracking-tight leading-none">{label}</span>
             </button>
           );
         })}
