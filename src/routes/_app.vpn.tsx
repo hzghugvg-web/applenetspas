@@ -6,8 +6,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { issueVpnConfig } from "@/lib/vpn.functions";
 import { translateAuthError } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
-import { Clock, Loader2, ShieldCheck, Zap, Globe, ArrowRight, Check, Sparkles, Wifi, Radio } from "lucide-react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Clock, Loader2, ShieldCheck, Zap, Globe, ArrowRight, Check, Sparkles, Radio, Rocket } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app/vpn")({ component: VpnPage });
 
@@ -131,7 +131,7 @@ function VpnPage() {
 
   return (
     <>
-      <div className="space-y-5">
+      <div className="space-y-4">
         {onCooldown && (
           <div
             className="relative flex items-center gap-2.5 overflow-hidden rounded-2xl px-3.5 py-3 text-sm"
@@ -150,67 +150,87 @@ function VpnPage() {
           </div>
         )}
 
-        {/* Hero: selected direction */}
-        <HeroCard
-          selected={directions.find((d) => d.id === selected)}
-          totalCount={directions.length}
-          loading={loading}
-          onIssue={handleIssue}
-          disabled={loading || onCooldown || hasActiveSubscription || profile?.is_blocked || !selected}
-          buttonLabel={
-            hasActiveSubscription ? "VPN уже активен"
-              : onCooldown ? "Кулдаун активен"
-              : "Получить конфигурацию"
-          }
-        />
+        {/* Hero — active subscription state: whole card becomes a big CTA to Мой VPN */}
+        {hasActiveSubscription ? (
+          <ActiveHero onOpen={() => navigate({ to: "/my-vpn" })} />
+        ) : (
+          <HeroCard
+            selected={directions.find((d) => d.id === selected)}
+            totalCount={directions.length}
+            loading={loading}
+            onIssue={handleIssue}
+            disabled={loading || onCooldown || profile?.is_blocked || !selected}
+            buttonLabel={onCooldown ? "Кулдаун активен" : "Получить конфигурацию"}
+          />
+        )}
 
-        {/* Directions grid */}
-        {directions.length > 0 ? (
+        {/* Directions list — vertical cards, richer info */}
+        {directions.length > 0 && !hasActiveSubscription ? (
           <section className="space-y-2.5">
             <div className="flex items-center justify-between px-1">
-              <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                Направления
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                <Globe className="h-3 w-3" /> Направления
               </div>
-              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                <Globe className="h-3 w-3" /> {directions.length} доступно
+              <div className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground">
+                {directions.length}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2.5">
-              {directions.map((d) => {
+            <div className="space-y-2">
+              {directions.map((d, i) => {
                 const active = selected === d.id;
                 return (
                   <button
                     key={d.id}
                     onClick={() => setSelected(d.id)}
-                    className="tg-press group relative flex flex-col gap-2 overflow-hidden rounded-2xl p-3 text-left transition-colors"
+                    className="tg-press ns-fade group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl p-3 text-left transition-all"
                     style={{
                       background: active ? "var(--gradient-surface)" : "var(--card-solid)",
                       border: "1.5px solid " + (active ? "color-mix(in srgb, var(--primary) 70%, transparent)" : "var(--border)"),
-                      boxShadow: active ? "0 8px 22px -14px var(--primary)" : "0 4px 14px -10px rgba(0,0,0,0.35)",
+                      boxShadow: active
+                        ? "0 10px 26px -14px var(--primary)"
+                        : "0 4px 14px -10px rgba(0,0,0,0.25)",
+                      animationDelay: `${i * 30}ms`,
                     }}
                   >
                     {active && (
                       <div
-                        className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full"
-                        style={{ background: "var(--gradient-primary)", color: "var(--primary-foreground)" }}
-                      >
-                        <Check className="h-3 w-3" strokeWidth={3} />
-                      </div>
+                        aria-hidden
+                        className="pointer-events-none absolute inset-y-0 left-0 w-[3px]"
+                        style={{ background: "var(--gradient-primary)" }}
+                      />
                     )}
-                    <div className="text-[28px] leading-none">{d.flag ?? "🌐"}</div>
-                    <div className="min-w-0">
-                      <div className="truncate text-[13px] font-semibold text-foreground">{d.name}</div>
-                      <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        Доступно
+                    <div
+                      className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-[24px]"
+                      style={{
+                        background: active ? "rgba(255,255,255,0.12)" : "var(--muted)",
+                        border: "1px solid " + (active ? "color-mix(in srgb, var(--primary) 40%, transparent)" : "var(--border)"),
+                      }}
+                    >
+                      {d.flag ?? "🌐"}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[14px] font-semibold text-foreground">{d.name}</div>
+                      <div className="mt-0.5 flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
+                        <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        Онлайн · низкая задержка
                       </div>
+                    </div>
+                    <div
+                      className="grid h-6 w-6 place-items-center rounded-full text-primary-foreground transition-all"
+                      style={{
+                        background: active ? "var(--gradient-primary)" : "transparent",
+                        border: active ? "none" : "1.5px solid var(--border)",
+                        color: active ? "var(--primary-foreground)" : "transparent",
+                      }}
+                    >
+                      <Check className="h-3.5 w-3.5" strokeWidth={3} />
                     </div>
                   </button>
                 );
               })}
             </div>
           </section>
-        ) : (
+        ) : !hasActiveSubscription ? (
           <div
             className="rounded-2xl border border-dashed p-6 text-center"
             style={{ borderColor: "var(--border)" }}
@@ -219,34 +239,77 @@ function VpnPage() {
             <p className="mt-2 text-sm text-muted-foreground">Нет активных направлений</p>
             <p className="mt-1 text-[11px] text-muted-foreground/70">Загляните позже — новые серверы добавляются регулярно</p>
           </div>
-        )}
-
-        {hasActiveSubscription && (
-          <Link
-            to="/my-vpn"
-            className="ns-fade flex items-center gap-3 rounded-2xl p-4"
-            style={{
-              background: "var(--gradient-surface)",
-              border: "1px solid color-mix(in srgb, var(--primary) 40%, var(--border))",
-            }}
-          >
-            <div
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
-              style={{ background: "var(--gradient-primary)" }}
-            >
-              <ShieldCheck className="h-5 w-5" style={{ color: "var(--primary-foreground)" }} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium">VPN активен</div>
-              <div className="text-[12px] text-muted-foreground">
-                Конфигурация и срок — во вкладке «Мой VPN»
-              </div>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground" />
-          </Link>
-        )}
+        ) : null}
       </div>
     </>
+  );
+}
+
+function ActiveHero({ onOpen }: { onOpen: () => void }) {
+  return (
+    <button
+      onClick={onOpen}
+      className="ns-fade tg-press relative flex w-full flex-col overflow-hidden rounded-[28px] p-5 text-left"
+      style={{
+        background: "var(--gradient-primary)",
+        boxShadow: "var(--shadow-elegant)",
+        color: "var(--primary-foreground)",
+      }}
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full"
+        style={{ background: "radial-gradient(closest-side, rgba(255,255,255,0.4), transparent 70%)" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-10 bottom-[-40px] h-40 w-40 rounded-full"
+        style={{ background: "radial-gradient(closest-side, rgba(255,255,255,0.2), transparent 70%)" }}
+      />
+
+      <div className="relative flex items-center justify-between">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-white/18 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] backdrop-blur">
+          <span className="ns-live inline-flex h-1.5 w-1.5 rounded-full bg-emerald-300" />
+          VPN активен
+        </div>
+        <div className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.14em] opacity-85">
+          <Sparkles className="h-3 w-3" /> NetSpas
+        </div>
+      </div>
+
+      <div className="relative mt-5 flex items-center gap-3.5">
+        <div
+          className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl ring-1 ring-white/25"
+          style={{ background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)" }}
+        >
+          <ShieldCheck className="h-8 w-8" strokeWidth={2.4} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-85">
+            Ваша подписка
+          </div>
+          <div className="mt-0.5 truncate text-[20px] font-bold leading-tight">
+            Всё готово к работе
+          </div>
+          <div className="mt-1 text-[11.5px] opacity-85">
+            Конфигурация и срок — во вкладке «Мой VPN»
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="relative mt-5 flex h-[52px] items-center justify-center gap-2 rounded-2xl text-[15px] font-semibold"
+        style={{
+          background: "rgba(255,255,255,0.98)",
+          color: "var(--primary)",
+          boxShadow: "0 10px 30px -12px rgba(0,0,0,0.35)",
+        }}
+      >
+        <ShieldCheck className="h-4 w-4" />
+        Перейти в «Мой VPN»
+        <ArrowRight className="h-4 w-4" />
+      </div>
+    </button>
   );
 }
 
@@ -326,7 +389,7 @@ function HeroCard({
       >
         {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
           <>
-            <ShieldCheck className="h-4 w-4" />
+            <Rocket className="h-4 w-4" />
             {buttonLabel}
           </>
         )}
