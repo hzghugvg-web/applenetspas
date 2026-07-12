@@ -7,8 +7,6 @@ import type { Database } from "@/integrations/supabase/types";
 export const startLinkTelegram = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const genCode = () => Math.floor(100000 + Math.random() * 900000).toString();
-    const codeTtlMs = 10 * 60 * 1000;
     const getBotUsername = async () => {
       const lovableKey = process.env.LOVABLE_API_KEY;
       const tgKey = process.env.TELEGRAM_API_KEY;
@@ -95,8 +93,6 @@ export const getTelegramBinding = createServerFn({ method: "GET" })
 
 /** Public: start Telegram login flow (no auth). Returns code + deep link. */
 export const startTelegramLogin = createServerFn({ method: "POST" }).handler(async () => {
-  const genCode = () => Math.floor(100000 + Math.random() * 900000).toString();
-  const codeTtlMs = 10 * 60 * 1000;
   const getBotUsername = async () => {
     const lovableKey = process.env.LOVABLE_API_KEY;
     const tgKey = process.env.TELEGRAM_API_KEY;
@@ -176,6 +172,7 @@ export const pollTelegramLogin = createServerFn({ method: "POST" })
       if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
         return { status: "rejected" as const, error: "server_key_missing" };
       }
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: userRes, error: getUserErr } = await supabaseAdmin.auth.admin.getUserById(
         row.user_id,
       );
