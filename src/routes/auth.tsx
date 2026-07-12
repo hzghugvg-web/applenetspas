@@ -8,6 +8,8 @@ import { alertDialog as toast } from "@/lib/alert";
 import { hasStoredSupabaseSession } from "@/lib/fast-auth";
 import { Shield, Loader2, Mail, Lock, Eye, EyeOff, Sparkles } from "lucide-react";
 import { ForgotPasswordModal } from "@/components/ForgotPasswordModal";
+import { TelegramLoginPanel } from "@/components/TelegramLoginPanel";
+import { Send } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -71,6 +73,7 @@ function AuthPage() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
+  const [tgLoginOpen, setTgLoginOpen] = useState(false);
 
   return (
     <div
@@ -212,6 +215,20 @@ function AuthPage() {
             </button>
           </form>
 
+          <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />
+            или
+            <span className="h-px flex-1 bg-border" />
+          </div>
+          <button
+            type="button"
+            onClick={() => setTgLoginOpen(true)}
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl text-[14px] font-semibold text-white transition-transform active:scale-[0.98]"
+            style={{ background: "linear-gradient(135deg,#38BDF8,#0EA5E9)" }}
+          >
+            <Send className="h-4 w-4" /> Войти через Telegram
+          </button>
+
           {mode === "signup" ? (
             <p className="mt-4 text-center text-[11px] leading-snug text-muted-foreground/80">
               Регистрируясь, вы соглашаетесь с правилами сервиса.
@@ -233,6 +250,8 @@ function AuthPage() {
         onClose={() => setForgotOpen(false)}
         initialEmail={email}
       />
+
+      <TelegramLoginPanel open={tgLoginOpen} onClose={() => setTgLoginOpen(false)} />
     </div>
   );
 }
