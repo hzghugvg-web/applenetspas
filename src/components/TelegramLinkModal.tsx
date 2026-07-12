@@ -18,7 +18,7 @@ export function TelegramLinkModal({
   const [code, setCode] = useState<string | null>(null);
   const [deepLink, setDeepLink] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<"pending" | "confirmed" | "expired" | "rejected">("pending");
+  const [status, setStatus] = useState<"pending" | "confirmed" | "consumed" | "expired" | "rejected">("pending");
 
   useEffect(() => {
     if (!open) return;
