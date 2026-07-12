@@ -3,9 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { alertDialog as toast } from "@/lib/alert";
-import { getMyIssuedLinks } from "@/lib/vpn.functions";
-import { CalendarClock, Copy, ShieldCheck, Hourglass, Server, Radio, WifiOff, Sparkles } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
+import { CalendarClock, Copy, ShieldCheck, Hourglass, Server, Radio, WifiOff, Sparkles, Zap } from "lucide-react";
 import { readOfflineMyVpn, saveOfflineMyVpn } from "@/lib/offline-vpn-cache";
 
 export const Route = createFileRoute("/_app/my-vpn")({ component: MyVpnPage });
@@ -16,7 +14,6 @@ type Direction = { id: string; name: string; flag: string | null };
 
 function MyVpnPage() {
   const qc = useQueryClient();
-  const getLinks = useServerFn(getMyIssuedLinks);
   const [now, setNow] = useState(Date.now());
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === "undefined" ? true : navigator.onLine !== false,
@@ -47,8 +44,10 @@ function MyVpnPage() {
 
   const { data } = useQuery({
     queryKey: ["my-vpn"],
-    staleTime: 30_000,
-    refetchInterval: 30_000,
+    staleTime: 15_000,
+    refetchInterval: 20_000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     retry: false,
     initialData: initialCached,
     queryFn: async () => {
@@ -67,11 +66,40 @@ function MyVpnPage() {
       try {
         const { data: u } = await supabase.auth.getUser();
         if (!u.user) return { profile: null as Profile | null, configs: [] as Config[], dirs: {} as Record<string, Direction> };
-        const [{ data: p }, issued] = await Promise.all([
+        const [{ data: p }, { data: rows }] = await Promise.all([
           supabase.from("profiles").select("subscription_from,subscription_until").eq("id", u.user.id).maybeSingle(),
-          getLinks(),
+          supabase
+            .from("issued_configs")
+            .select("id, vless_url, upstream_url, issued_at, direction_id")
+            .eq("user_id", u.user.id)
+            .order("issued_at", { ascending: false }),
         ]);
-        const list = (issued.configs ?? []) as Config[];
+        const rawList = (rows ?? []) as Array<{
+          id: string; vless_url: string | null; upstream_url: string | null;
+          issued_at: string; direction_id: string | null;
+        }>;
+        const upstreams = Array.from(new Set(rawList.map((r) => r.upstream_url).filter(Boolean))) as string[];
+        let titleByUrl: Record<string, string | null> = {};
+        if (upstreams.length) {
+          const { data: linkRows } = await supabase
+            .from("vless_links").select("url,title").in("url", upstreams);
+          for (const l of (linkRows ?? []) as Array<{ url: string; title: string | null }>) {
+            titleByUrl[l.url] = l.title;
+          }
+        }
+        const list: Config[] = rawList
+          .map((r) => {
+            const link = r.upstream_url || r.vless_url;
+            if (!link) return null;
+            return {
+              id: r.id,
+              link,
+              title: (r.upstream_url && titleByUrl[r.upstream_url]) || null,
+              issuedAt: r.issued_at,
+              directionId: r.direction_id ?? null,
+            } as Config;
+          })
+          .filter(Boolean) as Config[];
         const dirIds = Array.from(new Set(list.map((c) => c.directionId).filter(Boolean))) as string[];
         let dirs: Record<string, Direction> = {};
         if (dirIds.length) {
