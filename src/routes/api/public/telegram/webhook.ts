@@ -413,6 +413,22 @@ async function handleMessage(msg: {
     return;
   }
 
+  // /start <payload> — deep links from the web app
+  if (text.startsWith("/start ")) {
+    const payload = text.slice(7).trim();
+    if (payload.startsWith("link_")) {
+      await handleLinkPayload(msg, payload.slice(5));
+      return;
+    }
+    if (payload.startsWith("login_")) {
+      await handleLoginPayload(msg, payload.slice(6));
+      return;
+    }
+    // Unknown payload — fall back to menu
+    await sendMenu(msg.chat.id);
+    return;
+  }
+
   if (text === "/start" || text === "/menu") {
     await sendMenu(msg.chat.id);
     return;
@@ -424,6 +440,186 @@ async function handleMessage(msg: {
 
   // Default fallback
   await sendMenu(msg.chat.id, "Не понял 🤔 Вот что я умею:");
+}
+
+async function handleLinkPayload(
+  msg: { chat: { id: number }; from?: { id: number; username?: string; first_name?: string } },
+  code: string,
+) {
+  const chatId = msg.chat.id;
+  const tgUserId = msg.from?.id;
+  const tgUsername = msg.from?.username ?? null;
+  if (!tgUserId) {
+    await tg("sendMessage", { chat_id: chatId, text: "⚠️ Не удалось определить твой Telegram-аккаунт." });
+    return;
+  }
+
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: row } = await supabaseAdmin
+    .from("telegram_auth_codes")
+    .select("code, purpose, user_id, status, expires_at")
+    .eq("code", code)
+    .maybeSingle();
+
+  if (!row || row.purpose !== "link" || !row.user_id) {
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: "❌ Код привязки не найден. Запроси новый в приложении: Настройки → Способы входа → Telegram.",
+      reply_markup: BACK_MENU,
+    });
+    return;
+  }
+  if (row.status !== "pending") {
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: "ℹ️ Этот код уже был использован. Запроси новый в приложении.",
+      reply_markup: BACK_MENU,
+    });
+    return;
+  }
+  if (new Date(row.expires_at) < new Date()) {
+    await supabaseAdmin.from("telegram_auth_codes").update({ status: "expired" }).eq("code", code);
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: "⌛ Код истёк. Запроси новый в приложении.",
+      reply_markup: BACK_MENU,
+    });
+    return;
+  }
+
+  // Ensure this Telegram account is not already linked to another user
+  const { data: existing } = await supabaseAdmin
+    .from("profiles")
+    .select("id")
+    .eq("telegram_user_id", tgUserId)
+    .neq("id", row.user_id)
+    .maybeSingle();
+  if (existing) {
+    await supabaseAdmin
+      .from("telegram_auth_codes")
+      .update({ status: "rejected", error: "telegram_already_linked" })
+      .eq("code", code);
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: "⚠️ Этот Telegram уже привязан к другому аккаунту VPNSUS. Сначала отвяжи его в старом профиле.",
+      reply_markup: BACK_MENU,
+    });
+    return;
+  }
+
+  const nowIso = new Date().toISOString();
+  const { error: updErr } = await supabaseAdmin
+    .from("profiles")
+    .update({
+      telegram_user_id: tgUserId,
+      telegram_username: tgUsername,
+      telegram_linked_at: nowIso,
+      updated_at: nowIso,
+    })
+    .eq("id", row.user_id);
+
+  if (updErr) {
+    console.error("[bot] link update failed", updErr);
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: "⚠️ Не удалось сохранить привязку. Попробуй ещё раз.",
+      reply_markup: BACK_MENU,
+    });
+    return;
+  }
+
+  await supabaseAdmin
+    .from("telegram_auth_codes")
+    .update({
+      status: "confirmed",
+      telegram_user_id: tgUserId,
+      telegram_username: tgUsername,
+      confirmed_at: nowIso,
+    })
+    .eq("code", code);
+
+  await tg("sendMessage", {
+    chat_id: chatId,
+    text:
+      "✅ <b>Telegram привязан!</b>\n\nТеперь ты можешь входить в VPNSUS одним нажатием — прямо через Telegram.",
+    parse_mode: "HTML",
+    reply_markup: MAIN_MENU,
+  });
+}
+
+async function handleLoginPayload(
+  msg: { chat: { id: number }; from?: { id: number; username?: string } },
+  code: string,
+) {
+  const chatId = msg.chat.id;
+  const tgUserId = msg.from?.id;
+  if (!tgUserId) {
+    await tg("sendMessage", { chat_id: chatId, text: "⚠️ Не удалось определить твой Telegram-аккаунт." });
+    return;
+  }
+
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: row } = await supabaseAdmin
+    .from("telegram_auth_codes")
+    .select("code, purpose, status, expires_at")
+    .eq("code", code)
+    .maybeSingle();
+
+  if (!row || row.purpose !== "login") {
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: "❌ Код входа не найден. Открой страницу входа VPNSUS и запроси новый.",
+    });
+    return;
+  }
+  if (row.status !== "pending") {
+    await tg("sendMessage", { chat_id: chatId, text: "ℹ️ Этот код уже использован." });
+    return;
+  }
+  if (new Date(row.expires_at) < new Date()) {
+    await supabaseAdmin.from("telegram_auth_codes").update({ status: "expired" }).eq("code", code);
+    await tg("sendMessage", { chat_id: chatId, text: "⌛ Код истёк. Запроси новый на странице входа." });
+    return;
+  }
+
+  // Find linked profile for this Telegram user
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("id")
+    .eq("telegram_user_id", tgUserId)
+    .maybeSingle();
+
+  if (!profile) {
+    await supabaseAdmin
+      .from("telegram_auth_codes")
+      .update({ status: "rejected", error: "not_linked" })
+      .eq("code", code);
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text:
+        "⚠️ Твой Telegram ещё не привязан к аккаунту VPNSUS.\n\n" +
+        "Сначала войди в приложение по email и в разделе «Настройки → Telegram» нажми «Привязать Telegram».",
+      reply_markup: BACK_MENU,
+    });
+    return;
+  }
+
+  await supabaseAdmin
+    .from("telegram_auth_codes")
+    .update({
+      status: "confirmed",
+      user_id: profile.id,
+      telegram_user_id: tgUserId,
+      telegram_username: msg.from?.username ?? null,
+      confirmed_at: new Date().toISOString(),
+    })
+    .eq("code", code);
+
+  await tg("sendMessage", {
+    chat_id: chatId,
+    text: "✅ Вход подтверждён! Возвращайся на вкладку VPNSUS — она войдёт автоматически.",
+    reply_markup: BACK_MENU,
+  });
 }
 
 export const Route = createFileRoute("/api/public/telegram/webhook")({
