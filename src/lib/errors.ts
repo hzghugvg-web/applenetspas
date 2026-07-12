@@ -29,3 +29,10 @@ export function translateAuthError(msg?: string | null): string {
   if (m.includes("forbidden") || m.includes("unauthorized")) return "Недостаточно прав";
   return msg;
 }
+
+export function isOffline(): boolean {
+  return typeof navigator !== "undefined" && navigator.onLine === false;
+}
+
+export const OFFLINE_MESSAGE =
+  "Отсутствует интернет. Возможно, вы в офлайн-режиме или у вас медленный интернет — проверьте подключение.";
