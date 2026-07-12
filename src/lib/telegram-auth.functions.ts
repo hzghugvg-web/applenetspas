@@ -1,17 +1,35 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-function genCode(): string {
-  // 6-digit numeric code, easy to type on mobile
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-const CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes
-
 /** Start "link Telegram" — must be signed in. Returns a code + deep link. */
 export const startLinkTelegram = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const genCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+    const codeTtlMs = 10 * 60 * 1000;
+    const getBotUsername = async () => {
+      const lovableKey = process.env.LOVABLE_API_KEY;
+      const tgKey = process.env.TELEGRAM_API_KEY;
+      if (!lovableKey || !tgKey) return "netspas_bot";
+      try {
+        const res = await fetch("https://connector-gateway.lovable.dev/telegram/getMe", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${lovableKey}`,
+            "X-Connection-Api-Key": tgKey,
+            "Content-Type": "application/json",
+          },
+          body: "{}",
+        });
+        if (res.ok) {
+          const j = (await res.json()) as { ok?: boolean; result?: { username?: string } };
+          if (j?.result?.username) return j.result.username;
+        }
+      } catch (err) {
+        console.error("[tg] getMe failed", err);
+      }
+      return "netspas_bot";
+    };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Housekeeping: purge stale codes
@@ -21,7 +39,7 @@ export const startLinkTelegram = createServerFn({ method: "POST" })
       .lt("expires_at", new Date().toISOString());
 
     const code = genCode();
-    const expiresAt = new Date(Date.now() + CODE_TTL_MS).toISOString();
+    const expiresAt = new Date(Date.now() + codeTtlMs).toISOString();
 
     const { error } = await supabaseAdmin.from("telegram_auth_codes").insert({
       code,
@@ -44,7 +62,7 @@ export const startLinkTelegram = createServerFn({ method: "POST" })
 /** Poll status of a link attempt — signed in. */
 export const pollLinkTelegram = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { code: string }) => data)
+  .validator((data: { code: string }) => data)
   .handler(async ({ context, data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row } = await supabaseAdmin
@@ -101,6 +119,31 @@ export const getTelegramBinding = createServerFn({ method: "GET" })
 
 /** Public: start Telegram login flow (no auth). Returns code + deep link. */
 export const startTelegramLogin = createServerFn({ method: "POST" }).handler(async () => {
+  const genCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+  const codeTtlMs = 10 * 60 * 1000;
+  const getBotUsername = async () => {
+    const lovableKey = process.env.LOVABLE_API_KEY;
+    const tgKey = process.env.TELEGRAM_API_KEY;
+    if (!lovableKey || !tgKey) return "netspas_bot";
+    try {
+      const res = await fetch("https://connector-gateway.lovable.dev/telegram/getMe", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableKey}`,
+          "X-Connection-Api-Key": tgKey,
+          "Content-Type": "application/json",
+        },
+        body: "{}",
+      });
+      if (res.ok) {
+        const j = (await res.json()) as { ok?: boolean; result?: { username?: string } };
+        if (j?.result?.username) return j.result.username;
+      }
+    } catch (err) {
+      console.error("[tg] getMe failed", err);
+    }
+    return "netspas_bot";
+  };
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   await supabaseAdmin
@@ -109,7 +152,7 @@ export const startTelegramLogin = createServerFn({ method: "POST" }).handler(asy
     .lt("expires_at", new Date().toISOString());
 
   const code = genCode();
-  const expiresAt = new Date(Date.now() + CODE_TTL_MS).toISOString();
+  const expiresAt = new Date(Date.now() + codeTtlMs).toISOString();
 
   const { error } = await supabaseAdmin.from("telegram_auth_codes").insert({
     code,
@@ -130,7 +173,7 @@ export const startTelegramLogin = createServerFn({ method: "POST" }).handler(asy
 
 /** Public: poll Telegram login. When confirmed by bot, returns a magic-link URL. */
 export const pollTelegramLogin = createServerFn({ method: "POST" })
-  .inputValidator((data: { code: string }) => data)
+  .validator((data: { code: string }) => data)
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row } = await supabaseAdmin
@@ -178,35 +221,3 @@ export const pollTelegramLogin = createServerFn({ method: "POST" })
 
     return { status: row.status as "pending" | "consumed" };
   });
-
-/**
- * Get the bot username (cached in the module). Uses the connector gateway.
- */
-let cachedBotUsername: string | null = null;
-async function getBotUsername(): Promise<string> {
-  if (cachedBotUsername) return cachedBotUsername;
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const tgKey = process.env.TELEGRAM_API_KEY;
-  if (!lovableKey || !tgKey) return "netspas_bot";
-  try {
-    const res = await fetch("https://connector-gateway.lovable.dev/telegram/getMe", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        "X-Connection-Api-Key": tgKey,
-        "Content-Type": "application/json",
-      },
-      body: "{}",
-    });
-    if (res.ok) {
-      const j = (await res.json()) as { ok?: boolean; result?: { username?: string } };
-      if (j?.result?.username) {
-        cachedBotUsername = j.result.username;
-        return cachedBotUsername;
-      }
-    }
-  } catch (err) {
-    console.error("[tg] getMe failed", err);
-  }
-  return "netspas_bot";
-}
