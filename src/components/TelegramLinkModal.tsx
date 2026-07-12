@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Copy, ExternalLink, Loader2, Send, X, Check } from "lucide-react";
 import { startLinkTelegram, pollLinkTelegram } from "@/lib/telegram-auth.functions";
@@ -19,11 +19,19 @@ export function TelegramLinkModal({
   const [deepLink, setDeepLink] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<"pending" | "confirmed" | "consumed" | "expired" | "rejected">("pending");
+  const onLinkedRef = useRef(onLinked);
+  const pollRef = useRef(poll);
+  useEffect(() => {
+    onLinkedRef.current = onLinked;
+    pollRef.current = poll;
+  });
+  const firedRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
     setStatus("pending");
+    firedRef.current = false;
     start({})
       .then((r) => {
         setCode(r.code);
@@ -38,12 +46,13 @@ export function TelegramLinkModal({
     let cancelled = false;
     const interval = window.setInterval(async () => {
       try {
-        const r = await poll({ data: { code } });
+        const r = await pollRef.current({ data: { code } });
         if (cancelled) return;
         setStatus(r.status);
-        if (r.status === "confirmed") {
+        if (r.status === "confirmed" && !firedRef.current) {
+          firedRef.current = true;
           window.clearInterval(interval);
-          onLinked(r.telegramUsername);
+          onLinkedRef.current(r.telegramUsername);
         } else if (r.status === "expired" || r.status === "rejected") {
           window.clearInterval(interval);
         }
@@ -55,7 +64,7 @@ export function TelegramLinkModal({
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [open, code, poll, onLinked]);
+  }, [open, code]);
 
   if (!open) return null;
 
