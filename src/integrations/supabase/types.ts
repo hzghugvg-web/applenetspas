@@ -41,6 +41,48 @@ export type Database = {
         }
         Relationships: []
       }
+      amnesty_requests: {
+        Row: {
+          admin_id: string | null
+          admin_reply: string | null
+          blocked_reason: string | null
+          created_at: string
+          email: string | null
+          id: string
+          message: string
+          reviewed_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_id?: string | null
+          admin_reply?: string | null
+          blocked_reason?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          message: string
+          reviewed_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_id?: string | null
+          admin_reply?: string | null
+          blocked_reason?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          message?: string
+          reviewed_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       broadcast_reads: {
         Row: {
           broadcast_id: string
@@ -477,6 +519,10 @@ export type Database = {
         Args: { _target: string }
         Returns: undefined
       }
+      admin_review_amnesty: {
+        Args: { _approve: boolean; _id: string; _reply: string }
+        Returns: undefined
+      }
       admin_send_broadcast:
         | { Args: { _message: string }; Returns: string }
         | { Args: { _message: string; _title?: string }; Returns: string }
@@ -572,6 +618,7 @@ export type Database = {
         Args: { _config_id: string; _vless_url: string }
         Returns: undefined
       }
+      submit_amnesty: { Args: { _message: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "user"

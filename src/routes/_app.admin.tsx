@@ -26,7 +26,7 @@ type UserRow = { id: string; email: string; is_blocked: boolean; cooldown_until:
 type IssuedConfig = { id: string; vless_url: string; issued_at: string; direction_id: string | null };
 
 function AdminPage() {
-  const [tab, setTab] = useState<"catalog" | "users" | "complaints" | "broadcast" | "recovery">("catalog");
+  const [tab, setTab] = useState<"catalog" | "users" | "complaints" | "broadcast" | "recovery" | "amnesty">("catalog");
   const { data: isAdmin, isLoading } = useIsAdmin();
 
   if (isLoading || isAdmin === undefined)
@@ -36,16 +36,17 @@ function AdminPage() {
 
   return (
     <>
-      <div className="mb-4 grid grid-cols-5 gap-1 rounded-2xl bg-muted p-1">
+      <div className="mb-4 grid grid-cols-6 gap-1 rounded-2xl bg-muted p-1">
         {([
           ["catalog", "Каталог"],
           ["users", "Пользователи"],
           ["complaints", "Обращения"],
           ["broadcast", "Рассылка"],
           ["recovery", "Пароли"],
+          ["amnesty", "Амнистии"],
         ] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`tg-press rounded-xl py-2 text-xs font-medium transition-colors ${tab === k ? "bg-card-solid text-foreground shadow" : "text-muted-foreground"}`}
+            className={`tg-press rounded-xl py-2 text-[10px] font-medium transition-colors ${tab === k ? "bg-card-solid text-foreground shadow" : "text-muted-foreground"}`}
             style={tab === k ? { background: "var(--card-solid)" } : undefined}>
             {l}
           </button>
@@ -56,6 +57,7 @@ function AdminPage() {
       {tab === "complaints" && <ComplaintsTab />}
       {tab === "broadcast" && <BroadcastTab />}
       {tab === "recovery" && <RecoveryTab />}
+      {tab === "amnesty" && <AmnestyTab />}
     </>
   );
 }
@@ -1149,6 +1151,148 @@ function InfoRow({ k, children }: { k: string; children: React.ReactNode }) {
     <div>
       <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{k}</div>
       <div className="mt-0.5 text-foreground/90">{children}</div>
+    </div>
+  );
+}
+
+type AmnestyReq = {
+  id: string;
+  user_id: string;
+  email: string | null;
+  blocked_reason: string | null;
+  message: string;
+  status: string;
+  admin_reply: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+};
+
+function AmnestyTab() {
+  const [list, setList] = useState<AmnestyReq[]>([]);
+  const [filter, setFilter] = useState<"pending" | "all">("pending");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [replyFor, setReplyFor] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+
+  async function load() {
+    let q = supabase
+      .from("amnesty_requests")
+      .select("id,user_id,email,blocked_reason,message,status,admin_reply,created_at,reviewed_at")
+      .order("created_at", { ascending: false });
+    if (filter === "pending") q = q.eq("status", "pending");
+    const { data } = await q;
+    setList((data as AmnestyReq[]) ?? []);
+  }
+  useEffect(() => {
+    load();
+    const ch = supabase
+      .channel("admin_amnesty")
+      .on("postgres_changes", { event: "*", schema: "public", table: "amnesty_requests" }, () => load())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter]);
+
+  async function review(id: string, approve: boolean, reply: string) {
+    setBusy(id);
+    try {
+      const { error } = await supabase.rpc("admin_review_amnesty", {
+        _id: id, _approve: approve, _reply: reply || "",
+      });
+      if (error) throw error;
+      toast.success(approve ? "Амнистия одобрена" : "Заявка отклонена");
+      setReplyFor(null); setReplyText("");
+      load();
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : String(e);
+      toast.error(translateAuthError(m));
+    } finally { setBusy(null); }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-1 rounded-full bg-muted p-1">
+        {([
+          ["pending", "Новые"],
+          ["all", "Все"],
+        ] as const).map(([k, l]) => (
+          <button key={k} onClick={() => setFilter(k)}
+            className={`tg-press flex-1 rounded-full px-3 py-1 text-xs font-medium ${filter === k ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {list.length === 0 && <p className="text-center text-sm text-muted-foreground">Заявок нет</p>}
+
+      {list.map((r) => (
+        <div key={r.id} className="rounded-xl bg-card p-3 space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium text-foreground">{r.email ?? "—"}</div>
+              <div className="text-[11px] text-muted-foreground">
+                {new Date(r.created_at).toLocaleString("ru-RU")}
+              </div>
+            </div>
+            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+              r.status === "pending" ? "bg-yellow-500/20 text-yellow-500" :
+              r.status === "approved" ? "bg-emerald-500/20 text-emerald-500" :
+              "bg-red-500/20 text-red-500"
+            }`}>
+              {r.status === "pending" ? "Ожидает" : r.status === "approved" ? "Одобрена" : "Отклонена"}
+            </span>
+          </div>
+          {r.blocked_reason && (
+            <div className="text-[12px] text-muted-foreground">
+              <span className="text-foreground/70">Причина блокировки:</span> {r.blocked_reason}
+            </div>
+          )}
+          <p className="whitespace-pre-wrap text-[13px] text-foreground/90">{r.message}</p>
+          {r.admin_reply && (
+            <div className="rounded-lg border border-border/60 p-2 text-[12px]">
+              <div className="text-muted-foreground">Ответ администратора:</div>
+              <div className="text-foreground">{r.admin_reply}</div>
+            </div>
+          )}
+          {r.status === "pending" && (
+            <>
+              {replyFor === r.id && (
+                <textarea
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  rows={2}
+                  maxLength={500}
+                  placeholder="Ответ (необязательно)"
+                  className="w-full resize-none rounded-lg border border-border bg-transparent p-2 text-[13px] outline-none focus:border-primary/60"
+                />
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    if (replyFor !== r.id) { setReplyFor(r.id); setReplyText(""); return; }
+                    review(r.id, true, replyText);
+                  }}
+                  disabled={busy === r.id}
+                  className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-500 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+                >
+                  {busy === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                  Одобрить
+                </button>
+                <button
+                  onClick={() => {
+                    if (replyFor !== r.id) { setReplyFor(r.id); setReplyText(""); return; }
+                    review(r.id, false, replyText);
+                  }}
+                  disabled={busy === r.id}
+                  className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-red-500 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+                >
+                  <Ban className="h-3.5 w-3.5" /> Отклонить
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

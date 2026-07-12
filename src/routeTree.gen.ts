@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SupportAiRouteImport } from './routes/support-ai'
+import { Route as BlockedRouteImport } from './routes/blocked'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
@@ -25,6 +26,11 @@ import { Route as ApiPublicSbSplatRouteImport } from './routes/api/public/sb.$'
 const SupportAiRoute = SupportAiRouteImport.update({
   id: '/support-ai',
   path: '/support-ai',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlockedRoute = BlockedRouteImport.update({
+  id: '/blocked',
+  path: '/blocked',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -85,6 +91,7 @@ const ApiPublicSbSplatRoute = ApiPublicSbSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/blocked': typeof BlockedRoute
   '/support-ai': typeof SupportAiRoute
   '/admin': typeof AppAdminRoute
   '/faq': typeof AppFaqRoute
@@ -98,6 +105,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/blocked': typeof BlockedRoute
   '/support-ai': typeof SupportAiRoute
   '/admin': typeof AppAdminRoute
   '/faq': typeof AppFaqRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/blocked': typeof BlockedRoute
   '/support-ai': typeof SupportAiRoute
   '/_app/admin': typeof AppAdminRoute
   '/_app/faq': typeof AppFaqRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/blocked'
     | '/support-ai'
     | '/admin'
     | '/faq'
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/blocked'
     | '/support-ai'
     | '/admin'
     | '/faq'
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/auth'
+    | '/blocked'
     | '/support-ai'
     | '/_app/admin'
     | '/_app/faq'
@@ -170,6 +182,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
+  BlockedRoute: typeof BlockedRoute
   SupportAiRoute: typeof SupportAiRoute
   ApiPublicSbSplatRoute: typeof ApiPublicSbSplatRoute
   ApiPublicSubTokenRoute: typeof ApiPublicSubTokenRoute
@@ -182,6 +195,13 @@ declare module '@tanstack/react-router' {
       path: '/support-ai'
       fullPath: '/support-ai'
       preLoaderRoute: typeof SupportAiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blocked': {
+      id: '/blocked'
+      path: '/blocked'
+      fullPath: '/blocked'
+      preLoaderRoute: typeof BlockedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -288,6 +308,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
+  BlockedRoute: BlockedRoute,
   SupportAiRoute: SupportAiRoute,
   ApiPublicSbSplatRoute: ApiPublicSbSplatRoute,
   ApiPublicSubTokenRoute: ApiPublicSubTokenRoute,

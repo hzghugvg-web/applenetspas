@@ -29,26 +29,49 @@ function AppLayout() {
           .select("is_blocked, blocked_until, blocked_reason")
           .eq("id", u.user.id)
           .maybeSingle();
-        if (cancelled || !data?.is_blocked) return;
+        if (cancelled) return;
+        // Profile row missing => account deleted server-side. Kick out immediately.
+        if (!data) {
+          await supabase.auth.signOut();
+          try { sessionStorage.clear(); localStorage.removeItem("ns_offline_my_vpn_v1"); } catch {}
+          toast.error("Ваш аккаунт удалён", "Обратитесь в поддержку, если это ошибка.");
+          navigate({ to: "/auth", replace: true });
+          return;
+        }
+        if (!data.is_blocked) return;
         const until = data.blocked_until ? new Date(data.blocked_until) : null;
         if (until && until.getTime() <= Date.now()) return;
-        await supabase.auth.signOut();
-        try { sessionStorage.clear(); localStorage.removeItem("ns_offline_my_vpn_v1"); } catch {}
-        const untilText = until
-          ? `до ${until.toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" })}`
-          : "бессрочно";
-        toast.error(
-          "Ваш аккаунт заблокирован",
-          `Блокировка ${untilText}${data.blocked_reason ? `\nПричина: ${data.blocked_reason}` : ""}`,
-        );
-        navigate({ to: "/auth", replace: true });
+        navigate({ to: "/blocked", replace: true });
       } catch {
         /* offline — skip */
       }
     }
     check();
     const t = setInterval(check, 30_000);
-    return () => { cancelled = true; clearInterval(t); };
+
+    // Realtime — instantly react to block / delete
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user || cancelled) return;
+      const uid = u.user.id;
+      channel = supabase
+        .channel(`profile_self_${uid}`)
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${uid}` }, () => check())
+        .on("postgres_changes", { event: "DELETE", schema: "public", table: "profiles", filter: `id=eq.${uid}` }, async () => {
+          await supabase.auth.signOut();
+          try { sessionStorage.clear(); localStorage.removeItem("ns_offline_my_vpn_v1"); } catch {}
+          toast.error("Ваш аккаунт удалён", "Обратитесь в поддержку, если это ошибка.");
+          navigate({ to: "/auth", replace: true });
+        })
+        .subscribe();
+    })();
+
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [navigate]);
   return (
     <MobileShell title={titleFor(pathname)}>
