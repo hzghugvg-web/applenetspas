@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { FaqList } from "@/components/FaqList";
-import { translateAuthError } from "@/lib/errors";
+import { translateAuthError, isOffline, OFFLINE_MESSAGE } from "@/lib/errors";
 import { alertDialog as toast } from "@/lib/alert";
 import { useTheme, THEMES, MOTIONS, type ColorMode, type DesignTheme, type Motion } from "@/lib/theme";
 import {
@@ -254,6 +254,7 @@ function ProfilePage() {
   }, []);
 
   async function updatePassword() {
+    if (isOffline()) { toast.error(OFFLINE_MESSAGE); return; }
     if (!oldPassword) { toast.error("Введите текущий пароль"); return; }
     if (newPassword.length < 6) { toast.error("Новый пароль минимум 6 символов"); return; }
     if (oldPassword === newPassword) { toast.error("Новый пароль совпадает с текущим"); return; }
@@ -273,18 +274,22 @@ function ProfilePage() {
 
   async function logout() {
     if (loggingOut) return;
+    if (isOffline()) { toast.error(OFFLINE_MESSAGE); return; }
     setLoggingOut(true);
     try {
       sessionStorage.removeItem("ns_is_admin");
       await supabase.auth.signOut();
       setLogoutOpen(false);
       navigate({ to: "/auth" });
+    } catch (e: any) {
+      toast.error(translateAuthError(e?.message));
     } finally {
       setLoggingOut(false);
     }
   }
 
   async function confirmDeleteAccount() {
+    if (isOffline()) { toast.error(OFFLINE_MESSAGE); return; }
     if (!confirmPassword) { toast.error("Введите пароль"); return; }
     setDeleting(true);
     try {
