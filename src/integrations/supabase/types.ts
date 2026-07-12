@@ -434,6 +434,48 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_issued_keys: {
+        Row: {
+          chat_id: number
+          created_at: string
+          direction_flag: string | null
+          direction_id: string | null
+          direction_name: string | null
+          id: string
+          issued_at: string
+          telegram_user_id: number
+          updated_at: string
+          vless_link_id: string | null
+          vless_url: string
+        }
+        Insert: {
+          chat_id: number
+          created_at?: string
+          direction_flag?: string | null
+          direction_id?: string | null
+          direction_name?: string | null
+          id?: string
+          issued_at?: string
+          telegram_user_id: number
+          updated_at?: string
+          vless_link_id?: string | null
+          vless_url: string
+        }
+        Update: {
+          chat_id?: number
+          created_at?: string
+          direction_flag?: string | null
+          direction_id?: string | null
+          direction_name?: string | null
+          id?: string
+          issued_at?: string
+          telegram_user_id?: number
+          updated_at?: string
+          vless_link_id?: string | null
+          vless_url?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
