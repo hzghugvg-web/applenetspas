@@ -26,7 +26,7 @@ type UserRow = { id: string; email: string; is_blocked: boolean; cooldown_until:
 type IssuedConfig = { id: string; vless_url: string; issued_at: string; direction_id: string | null };
 
 function AdminPage() {
-  const [tab, setTab] = useState<"catalog" | "users" | "complaints" | "broadcast" | "recovery">("catalog");
+  const [tab, setTab] = useState<"catalog" | "users" | "complaints" | "broadcast" | "recovery" | "amnesty">("catalog");
   const { data: isAdmin, isLoading } = useIsAdmin();
 
   if (isLoading || isAdmin === undefined)
@@ -36,16 +36,17 @@ function AdminPage() {
 
   return (
     <>
-      <div className="mb-4 grid grid-cols-5 gap-1 rounded-2xl bg-muted p-1">
+      <div className="mb-4 grid grid-cols-6 gap-1 rounded-2xl bg-muted p-1">
         {([
           ["catalog", "Каталог"],
           ["users", "Пользователи"],
           ["complaints", "Обращения"],
           ["broadcast", "Рассылка"],
           ["recovery", "Пароли"],
+          ["amnesty", "Амнистии"],
         ] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`tg-press rounded-xl py-2 text-xs font-medium transition-colors ${tab === k ? "bg-card-solid text-foreground shadow" : "text-muted-foreground"}`}
+            className={`tg-press rounded-xl py-2 text-[10px] font-medium transition-colors ${tab === k ? "bg-card-solid text-foreground shadow" : "text-muted-foreground"}`}
             style={tab === k ? { background: "var(--card-solid)" } : undefined}>
             {l}
           </button>
@@ -56,6 +57,7 @@ function AdminPage() {
       {tab === "complaints" && <ComplaintsTab />}
       {tab === "broadcast" && <BroadcastTab />}
       {tab === "recovery" && <RecoveryTab />}
+      {tab === "amnesty" && <AmnestyTab />}
     </>
   );
 }
