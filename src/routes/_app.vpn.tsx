@@ -134,12 +134,19 @@ function VpnPage() {
       <div className="space-y-5">
         {onCooldown && (
           <div
-            className="flex items-center gap-2 rounded-2xl px-3 py-2.5 text-sm"
-            style={{ background: "color-mix(in srgb, var(--primary) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)" }}
+            className="relative flex items-center gap-2.5 overflow-hidden rounded-2xl px-3.5 py-3 text-sm"
+            style={{ background: "color-mix(in srgb, var(--primary) 12%, transparent)", border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)" }}
           >
-            <Clock className="h-4 w-4 text-primary" />
-            <span className="text-muted-foreground">До следующей выдачи</span>
-            <span className="ml-auto font-semibold tabular-nums">{fmtCooldown(cooldownMs)}</span>
+            <div
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-xl"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              <Clock className="h-4 w-4" style={{ color: "var(--primary-foreground)" }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">До следующей выдачи</div>
+              <div className="mt-0.5 text-[15px] font-bold tabular-nums text-foreground">{fmtCooldown(cooldownMs)}</div>
+            </div>
           </div>
         )}
 
@@ -255,38 +262,52 @@ function HeroCard({
 }) {
   return (
     <div
-      className="relative overflow-hidden rounded-3xl p-5"
+      className="relative overflow-hidden rounded-[28px] p-5"
       style={{
-        background: "var(--gradient-surface)",
-        border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-card)",
+        background: "var(--gradient-primary)",
+        boxShadow: "var(--shadow-elegant)",
       }}
     >
-      {/* Ambient glow */}
       <div
+        aria-hidden
         className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-60"
-        style={{ background: "var(--gradient-primary)", filter: "blur(60px)" }}
+        style={{ background: "radial-gradient(closest-side, rgba(255,255,255,0.35), transparent 70%)" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-10 bottom-[-30px] h-36 w-36 rounded-full"
+        style={{ background: "radial-gradient(closest-side, rgba(255,255,255,0.18), transparent 70%)" }}
       />
 
-      <div className="relative flex items-center gap-3">
+      <div
+        className="relative flex items-center justify-between"
+        style={{ color: "var(--primary-foreground)" }}
+      >
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] backdrop-blur">
+          <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-300 ns-live" />
+          <Radio className="h-3 w-3" /> Готово к подключению
+        </div>
+        <div className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.14em] opacity-80">
+          <Sparkles className="h-3 w-3" /> NetSpas
+        </div>
+      </div>
+
+      <div className="relative mt-4 flex items-center gap-3.5" style={{ color: "var(--primary-foreground)" }}>
         <div
-          className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-[28px]"
-          style={{
-            background: "color-mix(in srgb, var(--card-solid) 70%, transparent)",
-            border: "1px solid var(--border)",
-          }}
+          className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl text-[32px] ring-1 ring-white/20"
+          style={{ background: "rgba(255,255,255,0.16)", backdropFilter: "blur(8px)" }}
         >
           {selected?.flag ?? "🌐"}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-            Выбранное направление
+          <div className="text-[10px] uppercase tracking-[0.14em] opacity-80">
+            Направление
           </div>
-          <div className="mt-0.5 truncate text-[17px] font-semibold text-foreground">
+          <div className="mt-0.5 truncate text-[19px] font-bold leading-tight">
             {selected?.name ?? "Выберите ниже"}
           </div>
-          <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
-            <Zap className="h-3 w-3 text-primary" />
+          <div className="mt-1 flex items-center gap-1 text-[11px] opacity-85">
+            <Zap className="h-3 w-3" />
             {totalCount > 0 ? `${totalCount} серверов онлайн` : "Ожидание серверов"}
           </div>
         </div>
@@ -295,10 +316,20 @@ function HeroCard({
       <button
         onClick={onIssue}
         disabled={disabled}
-        className="tg-btn mt-4 h-13 w-full text-[15px]"
-        style={{ height: 52 }}
+        className="relative mt-5 flex w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-semibold transition-transform active:scale-[0.98] disabled:opacity-60"
+        style={{
+          height: 54,
+          background: "rgba(255,255,255,0.98)",
+          color: "var(--primary)",
+          boxShadow: "0 10px 30px -12px rgba(0,0,0,0.35)",
+        }}
       >
-        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : buttonLabel}
+        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
+          <>
+            <ShieldCheck className="h-4 w-4" />
+            {buttonLabel}
+          </>
+        )}
       </button>
     </div>
   );
