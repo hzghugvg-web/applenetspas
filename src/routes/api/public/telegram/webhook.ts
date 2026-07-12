@@ -36,6 +36,7 @@ async function tg(method: string, payload: Record<string, unknown>) {
 const MAIN_MENU = {
   inline_keyboard: [
     [{ text: "🚀 Получить VPN-доступ", callback_data: "get_vpn" }],
+    [{ text: "🔐 Мой VPN", callback_data: "my_vpn" }],
     [{ text: "📖 Как установить и настроить", callback_data: "howto" }],
     [{ text: "❓ Частые вопросы", callback_data: "faq" }],
     [{ text: "📩 Связаться с поддержкой", callback_data: "support" }],
@@ -204,13 +205,83 @@ async function issueKeyForDirection(chatId: number, directionId: string) {
     return;
   }
 
+  // Look up direction details for "My VPN" tab
+  const { data: dir } = await supabaseAdmin
+    .from("directions")
+    .select("name, flag")
+    .eq("id", directionId)
+    .maybeSingle();
+
+  // Persist the issued key so the user can see it later under "My VPN"
+  await supabaseAdmin.from("telegram_issued_keys").insert({
+    telegram_user_id: chatId,
+    chat_id: chatId,
+    direction_id: directionId,
+    direction_name: dir?.name ?? null,
+    direction_flag: dir?.flag ?? null,
+    vless_url: picked.url,
+    vless_link_id: picked.id,
+  });
+
   await tg("sendMessage", {
     chat_id: chatId,
     text:
       "🚀 <b>Твой ключ доступа</b>\n\n" +
       `<code>${picked.url}</code>\n\n` +
-      "📱 Скачай приложение (Outline / v2rayNG / Hiddify), добавь этот ключ — готово!\n" +
-      "Подробная инструкция — в разделе «📖 Как установить и настроить».",
+      "📱 Скачай VLESS-клиент (v2rayNG / Hiddify / FoXray), добавь этот ключ — готово!\n" +
+      "Ключ всегда можно посмотреть снова в разделе «🔐 Мой VPN».",
+    parse_mode: "HTML",
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "🔐 Мой VPN", callback_data: "my_vpn" }],
+        [{ text: "⬅️ В меню", callback_data: "menu" }],
+      ],
+    },
+    disable_web_page_preview: true,
+  });
+}
+
+async function sendMyVpn(chatId: number, telegramUserId: number) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin
+    .from("telegram_issued_keys")
+    .select("direction_name, direction_flag, vless_url, issued_at")
+    .eq("telegram_user_id", telegramUserId)
+    .order("issued_at", { ascending: false })
+    .limit(10);
+
+  if (error) {
+    console.error("[bot] my_vpn fetch failed", error);
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: "⚠️ Не удалось загрузить твои ключи. Попробуй ещё раз.",
+      reply_markup: BACK_MENU,
+    });
+    return;
+  }
+
+  const rows = data ?? [];
+  if (rows.length === 0) {
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text:
+        "🔐 <b>Мой VPN</b>\n\nУ тебя пока нет выданных ключей. Нажми «🚀 Получить VPN-доступ», чтобы выбрать направление.",
+      parse_mode: "HTML",
+      reply_markup: BACK_MENU,
+    });
+    return;
+  }
+
+  const blocks = rows.map((r) => {
+    const flag = r.direction_flag ?? "🌐";
+    const name = r.direction_name ?? "Направление";
+    const date = r.issued_at ? new Date(r.issued_at).toLocaleDateString("ru-RU") : "";
+    return `${flag} <b>${name}</b>${date ? ` — ${date}` : ""}\n<code>${r.vless_url}</code>`;
+  });
+
+  await tg("sendMessage", {
+    chat_id: chatId,
+    text: `🔐 <b>Мой VPN</b>\n\n${blocks.join("\n\n")}`,
     parse_mode: "HTML",
     reply_markup: BACK_MENU,
     disable_web_page_preview: true,
@@ -246,8 +317,12 @@ async function handleCallback(cb: {
     await sendDirectionPicker(chatId);
     return;
   }
+  if (data === "my_vpn") {
+    await sendMyVpn(chatId, cb.from.id);
+    return;
+  }
   if (data.startsWith("dir:")) {
-    await issueKeyForDirection(chatId, data.slice(4));
+    await issueKeyForDirection(chatId, data.slice(4), cb.from.id);
     return;
   }
   if (data === "howto") {
