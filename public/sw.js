@@ -1,4 +1,4 @@
-const VERSION = "netspas-offline-2026-07-09-3";
+const VERSION = "vpnsus-offline-2026-07-12-1";
 const APP_CACHE = `${VERSION}-app`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const APP_SHELL = [
@@ -34,7 +34,11 @@ self.addEventListener("activate", (event) => {
       const names = await caches.keys();
       await Promise.all(
         names
-          .filter((name) => name.startsWith("netspas-offline-") && !name.startsWith(VERSION))
+          .filter(
+            (name) =>
+              (name.startsWith("netspas-offline-") || name.startsWith("vpnsus-offline-")) &&
+              !name.startsWith(VERSION),
+          )
           .map((name) => caches.delete(name)),
       );
       await self.clients.claim();
