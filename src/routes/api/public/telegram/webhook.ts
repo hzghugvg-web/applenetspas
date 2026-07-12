@@ -438,6 +438,32 @@ async function handleMessage(msg: {
     return;
   }
 
+  // Bare 6-digit code — treat as link/login code
+  const digits = text.match(/^\s*(\d{6})\s*$/);
+  if (digits) {
+    const code = digits[1];
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row } = await supabaseAdmin
+      .from("telegram_auth_codes")
+      .select("purpose")
+      .eq("code", code)
+      .maybeSingle();
+    if (row?.purpose === "login") {
+      await handleLoginPayload(msg, code);
+      return;
+    }
+    if (row?.purpose === "link") {
+      await handleLinkPayload(msg, code);
+      return;
+    }
+    await tg("sendMessage", {
+      chat_id: msg.chat.id,
+      text: "❌ Такой код не найден или уже использован. Запроси новый в приложении VPNSUS.",
+      reply_markup: BACK_MENU,
+    });
+    return;
+  }
+
   // Default fallback
   await sendMenu(msg.chat.id, "Не понял 🤔 Вот что я умею:");
 }
