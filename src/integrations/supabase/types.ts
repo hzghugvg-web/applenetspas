@@ -310,6 +310,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          blocked_reason: string | null
+          blocked_until: string | null
           cooldown_until: string | null
           created_at: string
           device_count: number
@@ -321,6 +323,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          blocked_reason?: string | null
+          blocked_until?: string | null
           cooldown_until?: string | null
           created_at?: string
           device_count?: number
@@ -332,6 +336,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          blocked_reason?: string | null
+          blocked_until?: string | null
           cooldown_until?: string | null
           created_at?: string
           device_count?: number
@@ -453,6 +459,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_block_user: {
+        Args: { _reason: string; _target: string; _until: string }
+        Returns: undefined
+      }
       admin_delete_broadcast: { Args: { _id: string }; Returns: undefined }
       admin_delete_issued_config: {
         Args: { _config_id: string }
@@ -503,6 +513,7 @@ export type Database = {
         Args: { _block: boolean; _target: string }
         Returns: undefined
       }
+      admin_unblock_user: { Args: { _target: string }; Returns: undefined }
       admin_update_broadcast:
         | {
             Args: {
