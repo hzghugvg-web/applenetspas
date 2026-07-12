@@ -362,6 +362,9 @@ export type Database = {
           is_blocked: boolean
           subscription_from: string | null
           subscription_until: string | null
+          telegram_linked_at: string | null
+          telegram_user_id: number | null
+          telegram_username: string | null
           updated_at: string
         }
         Insert: {
@@ -375,6 +378,9 @@ export type Database = {
           is_blocked?: boolean
           subscription_from?: string | null
           subscription_until?: string | null
+          telegram_linked_at?: string | null
+          telegram_user_id?: number | null
+          telegram_username?: string | null
           updated_at?: string
         }
         Update: {
@@ -388,6 +394,9 @@ export type Database = {
           is_blocked?: boolean
           subscription_from?: string | null
           subscription_until?: string | null
+          telegram_linked_at?: string | null
+          telegram_user_id?: number | null
+          telegram_username?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -431,6 +440,54 @@ export type Database = {
           key?: string
           updated_at?: string
           value?: Json
+        }
+        Relationships: []
+      }
+      telegram_auth_codes: {
+        Row: {
+          action_link: string | null
+          code: string
+          confirmed_at: string | null
+          consumed_at: string | null
+          created_at: string
+          error: string | null
+          expires_at: string
+          purpose: string
+          status: string
+          telegram_user_id: number | null
+          telegram_username: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          action_link?: string | null
+          code: string
+          confirmed_at?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          error?: string | null
+          expires_at: string
+          purpose: string
+          status?: string
+          telegram_user_id?: number | null
+          telegram_username?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          action_link?: string | null
+          code?: string
+          confirmed_at?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          error?: string | null
+          expires_at?: string
+          purpose?: string
+          status?: string
+          telegram_user_id?: number | null
+          telegram_username?: string | null
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
