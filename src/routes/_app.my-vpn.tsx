@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { alertDialog as toast } from "@/lib/alert";
 import { getMyIssuedLinks } from "@/lib/vpn.functions";
-import { CalendarClock, Copy, ShieldCheck, Hourglass, Server, Radio } from "lucide-react";
+import { CalendarClock, Copy, ShieldCheck, Hourglass, Server, Radio, WifiOff, Sparkles } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { readOfflineMyVpn, saveOfflineMyVpn } from "@/lib/offline-vpn-cache";
 
@@ -18,14 +18,39 @@ function MyVpnPage() {
   const qc = useQueryClient();
   const getLinks = useServerFn(getMyIssuedLinks);
   const [now, setNow] = useState(Date.now());
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine !== false,
+  );
 
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+
+  useEffect(() => {
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
+  }, []);
+
+  const initialCached = (() => {
+    const c = readOfflineMyVpn();
+    if (!c) return undefined;
+    return {
+      profile: c.profile as Profile | null,
+      configs: c.configs as Config[],
+      dirs: c.dirs as Record<string, Direction>,
+    };
+  })();
 
   const { data } = useQuery({
     queryKey: ["my-vpn"],
     staleTime: 30_000,
     refetchInterval: 30_000,
     retry: false,
+    initialData: initialCached,
     queryFn: async () => {
       // Offline short-circuit: don't hang on failing network calls.
       if (typeof navigator !== "undefined" && navigator.onLine === false) {
@@ -146,20 +171,36 @@ function MyVpnPage() {
   return (
     <>
       <div className="space-y-5">
+        {!isOnline && (
+          <div className="flex items-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-600 dark:text-amber-300">
+            <WifiOff className="h-4 w-4 shrink-0" />
+            <span>Офлайн-режим. Показаны сохранённые данные.</span>
+          </div>
+        )}
         {/* Hero */}
         <section
-          className="relative overflow-hidden rounded-3xl p-5"
+          className="relative overflow-hidden rounded-[28px] p-5"
           style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
         >
           <div
             aria-hidden
-            className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full"
+            className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full"
             style={{ background: "radial-gradient(closest-side, rgba(255,255,255,0.35), transparent 70%)" }}
           />
-          <div className="relative flex items-center gap-2 text-[11px] uppercase tracking-[0.14em]" style={{ color: "var(--primary-foreground)", opacity: 0.9 }}>
-            <span className={`inline-flex h-2 w-2 rounded-full ${active ? "ns-live" : ""}`} style={{ background: active ? "#22c55e" : "rgba(255,255,255,0.5)" }} />
-            <ShieldCheck className="h-3.5 w-3.5" />
-            {active ? "VPN активен" : "VPN не активен"}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -left-12 bottom-[-40px] h-40 w-40 rounded-full"
+            style={{ background: "radial-gradient(closest-side, rgba(255,255,255,0.18), transparent 70%)" }}
+          />
+          <div className="relative flex items-center justify-between" style={{ color: "var(--primary-foreground)" }}>
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] backdrop-blur">
+              <span className={`inline-flex h-1.5 w-1.5 rounded-full ${active ? "ns-live" : ""}`} style={{ background: active ? "#4ade80" : "rgba(255,255,255,0.6)" }} />
+              <ShieldCheck className="h-3 w-3" />
+              {active ? "VPN активен" : "VPN не активен"}
+            </div>
+            <div className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.14em] opacity-80">
+              <Sparkles className="h-3 w-3" /> NetSpas
+            </div>
           </div>
 
           <div className="relative mt-4 flex items-center gap-5">
@@ -189,7 +230,7 @@ function MyVpnPage() {
                   { v: minutes, l: "мин" },
                   { v: seconds, l: "сек" },
                 ].map((u, i) => (
-                  <div key={i} className="rounded-xl px-1.5 py-2 text-center" style={{ background: "rgba(255,255,255,0.14)", backdropFilter: "blur(6px)" }}>
+                  <div key={i} className="rounded-xl px-1.5 py-2 text-center ring-1 ring-white/15" style={{ background: "rgba(255,255,255,0.14)", backdropFilter: "blur(6px)" }}>
                     <div key={u.v} className="ns-tick text-lg font-bold tabular-nums leading-none">{pad(u.v)}</div>
                     <div className="mt-1 text-[9px] uppercase tracking-wider opacity-80">{u.l}</div>
                   </div>
@@ -202,19 +243,29 @@ function MyVpnPage() {
               )}
             </div>
           </div>
+
+          {/* Progress bar */}
+          {active && totalMs > 0 && (
+            <div className="relative mt-4 h-1.5 overflow-hidden rounded-full bg-white/20">
+              <div
+                className="h-full rounded-full bg-white/90 transition-[width] duration-700"
+                style={{ width: `${remainPercent}%` }}
+              />
+            </div>
+          )}
         </section>
 
         {/* Dates */}
         <section className="grid grid-cols-2 gap-3">
-          <div className="tg-card !p-3">
-            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground"><CalendarClock className="h-3.5 w-3.5" /> Начало</div>
-            <div className="mt-1.5 text-[13px] font-semibold">
+          <div className="tg-card !p-3.5">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.14em] text-muted-foreground"><CalendarClock className="h-3.5 w-3.5" /> Начало</div>
+            <div className="mt-2 text-[13px] font-semibold leading-tight">
               {profile?.subscription_from ? new Date(profile.subscription_from).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }) : "—"}
             </div>
           </div>
-          <div className="tg-card !p-3">
-            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground"><Hourglass className="h-3.5 w-3.5" /> Окончание</div>
-            <div className="mt-1.5 text-[13px] font-semibold">
+          <div className="tg-card !p-3.5">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.14em] text-muted-foreground"><Hourglass className="h-3.5 w-3.5" /> Окончание</div>
+            <div className="mt-2 text-[13px] font-semibold leading-tight">
               {profile?.subscription_until ? new Date(profile.subscription_until).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }) : "—"}
             </div>
           </div>
@@ -223,7 +274,7 @@ function MyVpnPage() {
         {/* Configs */}
         <section className="space-y-2.5">
           <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-muted-foreground">
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
               <Server className="h-3.5 w-3.5" /> Мои конфигурации
             </div>
             <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground tabular-nums">
@@ -241,7 +292,7 @@ function MyVpnPage() {
           {configs.map((c) => {
             const dir = c.directionId ? dirs[c.directionId] : null;
             return (
-              <div key={c.id} className="group relative overflow-hidden rounded-2xl border border-border bg-card p-3 transition-transform">
+              <div key={c.id} className="group relative overflow-hidden rounded-2xl border border-border bg-card p-3.5 shadow-sm transition-transform">
                 <div
                   aria-hidden
                   className="pointer-events-none absolute inset-x-0 top-0 h-[2px]"
@@ -249,7 +300,7 @@ function MyVpnPage() {
                 />
                 <div className="flex items-center gap-2.5">
                   <div
-                    className="flex h-9 w-9 items-center justify-center rounded-xl text-lg"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl text-lg"
                     style={{ background: "var(--gradient-surface)", border: "1px solid var(--border)" }}
                   >
                     {dir?.flag ?? "🌐"}
@@ -262,7 +313,7 @@ function MyVpnPage() {
                     </div>
                   </div>
                 </div>
-                <div className="mt-2.5 break-all rounded-xl bg-muted/70 p-2.5 font-mono text-[11px] leading-snug">
+                <div className="mt-3 break-all rounded-xl border border-border/60 bg-muted/60 p-2.5 font-mono text-[11px] leading-snug">
                   {c.link}
                 </div>
                 <button onClick={() => copy(c.link)} className="tg-btn-ghost mt-2 w-full">
