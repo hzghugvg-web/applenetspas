@@ -225,6 +225,16 @@ function AuthPage() {
           </form>
 
           {mode === "login" && (
+            <button
+              type="button"
+              onClick={() => setForgotOpen(true)}
+              className="mt-2 block w-full text-center text-[13px] font-medium text-primary hover:opacity-80"
+            >
+              Забыли пароль?
+            </button>
+          )}
+
+          {mode === "login" && (
             <>
               <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted-foreground">
                 <span className="h-px flex-1 bg-border" />
@@ -265,18 +275,10 @@ function AuthPage() {
             </>
           )}
 
-          {mode === "signup" ? (
+          {mode === "signup" && (
             <p className="mt-4 text-center text-[11px] leading-snug text-muted-foreground/80">
               Регистрируясь, вы соглашаетесь с правилами сервиса.
             </p>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setForgotOpen(true)}
-              className="mt-3 block w-full text-center text-[13px] font-medium text-primary hover:opacity-80"
-            >
-              Забыли пароль? Обратиться в поддержку
-            </button>
           )}
         </div>
       </motion.div>
