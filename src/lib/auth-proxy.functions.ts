@@ -20,11 +20,13 @@ export const signInWithPasswordServer = createServerFn({ method: "POST" })
       password: data.password,
     });
     if (error) throw new Error(error.message);
-    if (!result.session?.access_token || !result.session.refresh_token) throw new Error("session_missing");
+    const accessToken = result.session?.access_token;
+    const refreshToken = result.session?.refresh_token;
+    if (!accessToken || !refreshToken) throw new Error("session_missing");
 
     return {
-      accessToken: result.session.access_token,
-      refreshToken: result.session.refresh_token,
+      accessToken,
+      refreshToken,
       userId: result.user?.id ?? null,
     };
   });
@@ -52,25 +54,30 @@ export const signUpWithPasswordServer = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
 
-    if (!result.session?.access_token || !result.session.refresh_token) {
+    const accessToken = result.session?.access_token;
+    const refreshToken = result.session?.refresh_token;
+
+    if (!accessToken || !refreshToken) {
       const { data: loginResult, error: loginError } = await authClient.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });
       if (loginError) throw new Error(loginError.message);
-      if (!loginResult.session?.access_token || !loginResult.session.refresh_token) {
+      const loginAccessToken = loginResult.session?.access_token;
+      const loginRefreshToken = loginResult.session?.refresh_token;
+      if (!loginAccessToken || !loginRefreshToken) {
         return { needsConfirmation: true as const };
       }
       return {
-        accessToken: loginResult.session.access_token,
-        refreshToken: loginResult.session.refresh_token,
+        accessToken: loginAccessToken,
+        refreshToken: loginRefreshToken,
         userId: loginResult.user?.id ?? null,
       };
     }
 
     return {
-      accessToken: result.session.access_token,
-      refreshToken: result.session.refresh_token,
+      accessToken,
+      refreshToken,
       userId: result.user?.id ?? null,
     };
   });
