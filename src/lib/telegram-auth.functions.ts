@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
-import { botSendMessage, getBotUsername, maskEmail } from "@/lib/telegram-auth.server";
+import { botSendMessage, botSendMessageWithKeyboard, getBotUsername, maskEmail } from "@/lib/telegram-auth.server";
 
 /** Start "link Telegram" — must be signed in. Returns a code + deep link. */
 export const startLinkTelegram = createServerFn({ method: "POST" })
@@ -100,18 +100,77 @@ export const sendTelegramLoginCode = createServerFn({ method: "POST" })
     if (!row) throw new Error("not_linked");
 
     const text =
-      `🔐 <b>Код для входа в VPNSUS</b>\n\n` +
-      `Твой код: <code>${row.code}</code>\n\n` +
-      `Введи его в приложении, чтобы войти. Код действует 10 минут.\n` +
-      `Если это не ты — просто проигнорируй это сообщение.`;
+      `🔐 <b>Попытка входа в VPNSUS</b>\n\n` +
+      `Кто-то пытается войти в приложение через этот Telegram (@${clean}).\n\n` +
+      `Это ты? Если нет — нажми «Отклонить».`;
 
     try {
-      await botSendMessage(row.telegram_user_id, text);
-      return { ok: true, expiresAt: row.expires_at, code: null, delivery: "telegram" as const };
+      await botSendMessageWithKeyboard(row.telegram_user_id, text, {
+        inline_keyboard: [
+          [
+            { text: "✅ Подтвердить вход", callback_data: `login_ok:${row.code}` },
+            { text: "❌ Отклонить", callback_data: `login_no:${row.code}` },
+          ],
+        ],
+      });
+      return { ok: true, expiresAt: row.expires_at, code: row.code };
     } catch (e: any) {
-      console.error("[tg-login] direct code delivery failed; using bot-confirm fallback", e?.message ?? e);
-      return { ok: true, expiresAt: row.expires_at, code: row.code, delivery: "manual" as const };
+      console.error("[tg-login] confirm prompt failed", e?.message ?? e);
+      const msg = String(e?.message ?? "");
+      if (/chat_not_found/.test(msg)) throw new Error("chat_not_found");
+      throw new Error("telegram_send_failed");
     }
+  });
+
+/**
+ * Poll the status of a Telegram confirm/decline login attempt.
+ * Client keeps this in memory (the 6-digit code is never shown to the user).
+ */
+export const pollTelegramLoginStatus = createServerFn({ method: "POST" })
+  .validator((data: { username: string; code: string }) => data)
+  .handler(async ({ data }) => {
+    const clean = (data.username ?? "").trim().replace(/^@/, "").toLowerCase();
+    const code = (data.code ?? "").trim();
+    if (!/^\d{6}$/.test(code)) throw new Error("invalid_code");
+    if (clean.length < 3) throw new Error("invalid_username");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row } = await (supabaseAdmin as any)
+      .from("telegram_auth_codes")
+      .select("status, expires_at, telegram_user_id, telegram_username")
+      .eq("code", code)
+      .eq("purpose", "login")
+      .maybeSingle();
+
+    if (!row) return { status: "expired" as const };
+    if (new Date(row.expires_at).getTime() <= Date.now()) {
+      return { status: "expired" as const };
+    }
+    if (row.status === "rejected") return { status: "rejected" as const };
+    if (row.status !== "confirmed") return { status: "pending" as const };
+    if ((row.telegram_username ?? "").toLowerCase() !== clean) {
+      return { status: "pending" as const };
+    }
+
+    // Fetch profiles linked to this TG account (most-recent first).
+    const { data: profs } = await (supabaseAdmin as any)
+      .from("profiles")
+      .select("id, telegram_linked_at")
+      .eq("telegram_user_id", row.telegram_user_id)
+      .order("telegram_linked_at", { ascending: false, nullsFirst: false });
+    const list = (profs ?? []) as Array<{ id: string; telegram_linked_at: string | null }>;
+    if (!list.length) return { status: "rejected" as const };
+
+    const accounts: Array<{ id: string; email: string; emailMasked: string; linkedAt: string | null }> = [];
+    for (const p of list) {
+      const { data: u } = await supabaseAdmin.auth.admin.getUserById(p.id);
+      const email = u?.user?.email;
+      if (!email) continue;
+      accounts.push({ id: p.id, email, emailMasked: maskEmail(email), linkedAt: p.telegram_linked_at });
+    }
+    if (!accounts.length) return { status: "rejected" as const };
+    if (accounts.length > 1) return { status: "choose" as const, accounts };
+    return { status: "ready" as const, account: accounts[0] };
   });
 
 /**
