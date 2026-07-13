@@ -694,11 +694,20 @@ export type Database = {
       bootstrap_user: { Args: never; Returns: undefined }
       cleanup_expired_vless_links: { Args: never; Returns: number }
       close_own_complaint: { Args: { _id: string }; Returns: undefined }
+      count_linked_profiles: { Args: { _tg_id: number }; Returns: number }
       create_telegram_auth_code: {
         Args: { _purpose: string }
         Returns: {
           code: string
           expires_at: string
+        }[]
+      }
+      create_telegram_login_by_username: {
+        Args: { _username: string }
+        Returns: {
+          code: string
+          expires_at: string
+          telegram_user_id: number
         }[]
       }
       get_my_telegram_binding: {
@@ -752,6 +761,14 @@ export type Database = {
       }
       submit_amnesty: { Args: { _message: string }; Returns: string }
       unlink_my_telegram: { Args: never; Returns: undefined }
+      verify_telegram_login_code: {
+        Args: { _code: string; _username: string }
+        Returns: {
+          email: string
+          linked_at: string
+          profile_id: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"
