@@ -224,19 +224,23 @@ function AuthPage() {
             </button>
           </form>
 
-          <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted-foreground">
-            <span className="h-px flex-1 bg-border" />
-            или
-            <span className="h-px flex-1 bg-border" />
-          </div>
-          <button
-            type="button"
-            onClick={() => setTgLoginOpen(true)}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl text-[14px] font-semibold text-white transition-transform active:scale-[0.98]"
-            style={{ background: "linear-gradient(135deg,#38BDF8,#0EA5E9)" }}
-          >
-            <Send className="h-4 w-4" /> Войти через Telegram
-          </button>
+          {mode === "login" && (
+            <>
+              <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                или
+                <span className="h-px flex-1 bg-border" />
+              </div>
+              <button
+                type="button"
+                onClick={() => setTgLoginOpen(true)}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl text-[14px] font-semibold text-white transition-transform active:scale-[0.98]"
+                style={{ background: "linear-gradient(135deg,#38BDF8,#0EA5E9)" }}
+              >
+                <Send className="h-4 w-4" /> Войти через Telegram
+              </button>
+            </>
+          )}
 
           {mode === "signup" ? (
             <p className="mt-4 text-center text-[11px] leading-snug text-muted-foreground/80">
