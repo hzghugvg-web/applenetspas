@@ -1,35 +1,33 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
-import { AtSign, ArrowLeft, KeyRound, Loader2, Send, ShieldCheck, X } from "lucide-react";
+import { AtSign, ArrowLeft, Loader2, Send, ShieldCheck, X } from "lucide-react";
 import {
   finalizeTelegramSignIn,
-  getConfirmedTelegramLoginAccounts,
+  pollTelegramLoginStatus,
   sendTelegramLoginCode,
-  verifyTelegramLoginCode,
 } from "@/lib/telegram-auth.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { bootstrapUser } from "@/lib/bootstrap";
 import { alertDialog as toast } from "@/lib/alert";
 
 type Account = { id: string; email: string; emailMasked: string; linkedAt: string | null };
-type Step = "username" | "code" | "choose";
-type DeliveryMode = "telegram" | "manual";
+type Step = "username" | "waiting" | "choose";
 
 function translate(err: string): string {
   switch (err) {
     case "not_linked":
       return "Этот Telegram не привязан ни к одному аккаунту VPNSUS. Сначала войдите обычным способом и привяжите Telegram в настройках.";
     case "chat_not_found":
-      return "Не удалось отправить код в Telegram. Откройте бота @netspas_bot и нажмите Start — потом попробуйте ещё раз.";
+      return "Не удалось написать в Telegram. Откройте бота @netspas_bot и нажмите Start — потом попробуйте ещё раз.";
     case "invalid_username":
       return "Введите ваш @username из Telegram (минимум 3 символа).";
-    case "invalid_code":
-      return "Код неверный или устарел. Проверьте цифры или запросите новый.";
     case "expired":
-      return "Код истёк. Запросите новый.";
+      return "Запрос истёк. Попробуйте ещё раз.";
+    case "rejected":
+      return "Ошибка. Вы отклонили вход.";
     case "telegram_send_failed":
-      return "Не удалось отправить код в Telegram. Попробуйте ещё раз.";
+      return "Не удалось отправить запрос в Telegram. Попробуйте ещё раз.";
     case "link_failed":
       return "Не удалось подготовить вход. Попробуйте ещё раз.";
     case "auth_not_configured":
@@ -44,21 +42,16 @@ function translate(err: string): string {
 export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
   const sendCode = useServerFn(sendTelegramLoginCode);
-  const verifyCode = useServerFn(verifyTelegramLoginCode);
-  const getConfirmedAccounts = useServerFn(getConfirmedTelegramLoginAccounts);
+  const pollStatus = useServerFn(pollTelegramLoginStatus);
   const finalizeSignIn = useServerFn(finalizeTelegramSignIn);
 
   const [step, setStep] = useState<Step>("username");
   const [username, setUsername] = useState("");
-  const [code, setCode] = useState("");
-  const [displayCode, setDisplayCode] = useState("");
-  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("telegram");
+  const [code, setCode] = useState(""); // internal, never displayed
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [sending, setSending] = useState(false);
-  const [verifying, setVerifying] = useState(false);
   const [signingInId, setSigningInId] = useState<string | null>(null);
-  const [cooldown, setCooldown] = useState(0);
-  const startedAt = useRef<number>(0);
+  const pollTimer = useRef<number | null>(null);
 
   // reset on open
   useEffect(() => {
@@ -66,48 +59,80 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
       setStep("username");
       setUsername("");
       setCode("");
-        setDisplayCode("");
-        setDeliveryMode("telegram");
       setAccounts([]);
       setSending(false);
-      setVerifying(false);
       setSigningInId(null);
-      setCooldown(0);
     }
   }, [open]);
 
-  // resend cooldown timer
+  // stop polling on close
   useEffect(() => {
-    if (cooldown <= 0) return;
-    const t = window.setInterval(() => {
-      const rem = Math.max(0, 60 - Math.floor((Date.now() - startedAt.current) / 1000));
-      setCooldown(rem);
-      if (rem <= 0) window.clearInterval(t);
-    }, 1000);
-    return () => window.clearInterval(t);
-  }, [cooldown]);
+    if (!open && pollTimer.current) {
+      window.clearInterval(pollTimer.current);
+      pollTimer.current = null;
+    }
+  }, [open]);
 
   const canSend = useMemo(
     () => username.trim().replace(/^@/, "").length >= 3 && !sending,
     [username, sending],
   );
 
+  function stopPolling() {
+    if (pollTimer.current) {
+      window.clearInterval(pollTimer.current);
+      pollTimer.current = null;
+    }
+  }
+
   async function handleSend() {
     if (!canSend) return;
     setSending(true);
     try {
       const res = await sendCode({ data: { username: username.trim().replace(/^@/, "") } });
-      setCode("");
-      setDisplayCode(res.code ?? "");
-      setDeliveryMode(res.delivery);
-      startedAt.current = Date.now();
-      setCooldown(60);
-      setStep("code");
+      setCode(res.code);
+      setStep("waiting");
+      startPolling(res.code);
     } catch (e: any) {
       toast.error(translate(String(e?.message ?? "")));
     } finally {
       setSending(false);
     }
+  }
+
+  function startPolling(currentCode: string) {
+    stopPolling();
+    const uname = username.trim().replace(/^@/, "");
+    const tick = async () => {
+      try {
+        const res = await pollStatus({ data: { username: uname, code: currentCode } });
+        if (res.status === "pending") return;
+        stopPolling();
+        if (res.status === "rejected") {
+          toast.error("Ошибка. Вы отклонили вход.");
+          setStep("username");
+          return;
+        }
+        if (res.status === "expired") {
+          toast.error("Запрос истёк. Попробуйте ещё раз.");
+          setStep("username");
+          return;
+        }
+        if (res.status === "choose") {
+          setAccounts(res.accounts);
+          setStep("choose");
+          return;
+        }
+        if (res.status === "ready") {
+          await completeSignIn(res.account.id, currentCode);
+        }
+      } catch (e: any) {
+        // Transient errors — keep polling.
+        console.error("[tg-login] poll failed", e?.message ?? e);
+      }
+    };
+    void tick();
+    pollTimer.current = window.setInterval(tick, 2000);
   }
 
   async function completeSignIn(profileId: string, currentCode: string) {
@@ -135,39 +160,9 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
     }
   }
 
-  async function handleVerify() {
-    const currentCode = deliveryMode === "manual" ? displayCode : code;
-    if (!/^\d{6}$/.test(currentCode)) return;
-    setVerifying(true);
-    try {
-      const payload = {
-        username: username.trim().replace(/^@/, ""),
-        code: currentCode,
-      };
-      const res = deliveryMode === "manual"
-        ? await getConfirmedAccounts({ data: payload })
-        : await verifyCode({ data: payload });
-      if (res.status === "pending") {
-        toast.info("Код ещё не подтверждён", "Отправьте показанный код сообщением боту @netspas_bot, затем нажмите «Проверить». ");
-        return;
-      }
-      if (res.status === "choose") {
-        setAccounts(res.accounts);
-        setStep("choose");
-      } else if (res.status === "password") {
-        // No password step — Telegram itself is the confirmation.
-        await completeSignIn(res.account.id, currentCode);
-      }
-    } catch (e: any) {
-      toast.error(translate(String(e?.message ?? "")));
-    } finally {
-      setVerifying(false);
-    }
-  }
-
-  async function handleResend() {
-    if (cooldown > 0) return;
-    await handleSend();
+  function handleCancelWaiting() {
+    stopPolling();
+    setStep("username");
   }
 
   if (!open) return null;
@@ -187,7 +182,7 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
           <div className="flex items-center gap-2 text-[16px] font-semibold">
             <Send className="h-4 w-4" style={{ color: "#38BDF8" }} />
             {step === "username" && "Вход через Telegram"}
-            {step === "code" && "Введите код"}
+            {step === "waiting" && "Подтверди в Telegram"}
             {step === "choose" && "Выберите аккаунт"}
           </div>
           <button
@@ -202,7 +197,7 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
         {step === "username" && (
           <div className="space-y-4">
             <p className="text-[13px] leading-snug text-muted-foreground">
-              Введите ваш <b>@username</b> в Telegram — мы отправим одноразовый код в чат с ботом.
+              Введите ваш <b>@username</b> в Telegram — мы отправим запрос на подтверждение в чат с ботом.
             </p>
             <div className="relative">
               <AtSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -225,81 +220,31 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
               style={{ background: "linear-gradient(135deg,#38BDF8,#0EA5E9)" }}
             >
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Отправить код
+              Отправить запрос
             </button>
             <p className="text-[11px] leading-snug text-muted-foreground/80">
-              Чтобы получить код, нужно один раз нажать <b>Start</b> в нашем боте.
+              Чтобы получить запрос, нужно один раз нажать <b>Start</b> в нашем боте.
             </p>
           </div>
         )}
 
-        {step === "code" && (
-          <div className="space-y-4">
-            <p className="text-[13px] leading-snug text-muted-foreground">
-              {deliveryMode === "manual" ? (
-                <>
-                  Отправьте этот код сообщением боту <b>@netspas_bot</b> с привязанного Telegram:
-                </>
-              ) : (
-                <>
-                  Мы отправили 6-значный код в Telegram для <b>@{username.replace(/^@/, "")}</b>.
-                  Введите его ниже.
-                </>
-              )}
+        {step === "waiting" && (
+          <div className="space-y-4 text-center">
+            <div className="mx-auto grid h-14 w-14 place-items-center rounded-full" style={{ background: "color-mix(in srgb, #38BDF8 18%, transparent)" }}>
+              <Loader2 className="h-6 w-6 animate-spin" style={{ color: "#38BDF8" }} />
+            </div>
+            <p className="text-[13.5px] leading-snug text-foreground">
+              Мы отправили запрос в Telegram для <b>@{username.replace(/^@/, "")}</b>.
             </p>
-            {deliveryMode === "manual" && (
-              <div className="rounded-xl border border-border bg-input px-4 py-3 text-center">
-                <div className="font-mono text-[26px] font-semibold tracking-[0.28em] text-foreground">{displayCode}</div>
-                <a
-                  href={`https://t.me/netspas_bot?start=login_${displayCode}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-2 inline-flex text-[12px] font-medium text-primary"
-                >
-                  Открыть бота
-                </a>
-              </div>
-            )}
-            <div className="relative">
-              <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                autoFocus
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                placeholder="000000"
-                value={deliveryMode === "manual" ? displayCode : code}
-                readOnly={deliveryMode === "manual"}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                onKeyDown={(e) => e.key === "Enter" && handleVerify()}
-                className="h-12 w-full rounded-xl border border-border bg-input pl-9 pr-3 text-center font-mono text-[22px] tracking-[0.4em] text-foreground outline-none placeholder:text-muted-foreground/40 focus:border-primary/60"
-              />
-            </div>
+            <p className="text-[12.5px] leading-snug text-muted-foreground">
+              Откройте бота <b>@netspas_bot</b> и нажмите <b>«Подтвердить вход»</b>. Как только вы подтвердите — мы автоматически войдём.
+            </p>
             <button
-              onClick={() => handleVerify()}
-              disabled={(deliveryMode === "manual" ? displayCode.length !== 6 : code.length !== 6) || verifying}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl text-[14px] font-semibold text-primary-foreground disabled:opacity-60"
-              style={{ background: "linear-gradient(135deg,#38BDF8,#0EA5E9)" }}
+              onClick={handleCancelWaiting}
+              className="tg-press inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground"
             >
-              {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-              {deliveryMode === "manual" ? "Проверить" : "Войти"}
+              <ArrowLeft className="h-3.5 w-3.5" /> Отменить
             </button>
-            <div className="flex items-center justify-between text-[12px]">
-              <button
-                onClick={() => setStep("username")}
-                className="tg-press inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" /> Другой @username
-              </button>
-              <button
-                onClick={handleResend}
-                disabled={cooldown > 0}
-                className="tg-press text-primary disabled:text-muted-foreground/60"
-              >
-                {cooldown > 0 ? `Отправить ещё раз (${cooldown}с)` : "Отправить ещё раз"}
-              </button>
-            </div>
           </div>
         )}
 
@@ -313,10 +258,9 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
                 <button
                   key={a.id}
                   onClick={() => {
-                    const currentCode = deliveryMode === "manual" ? displayCode : code;
-                    void completeSignIn(a.id, currentCode);
+                    void completeSignIn(a.id, code);
                   }}
-                  disabled={verifying || signingInId !== null}
+                  disabled={signingInId !== null}
                   className="tg-press flex w-full items-center gap-3 rounded-xl border border-border bg-input px-3 py-3 text-left transition-colors hover:border-primary/60 disabled:opacity-60"
                 >
                   <div
@@ -340,7 +284,7 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
               ))}
             </div>
             <button
-              onClick={() => setStep("code")}
+              onClick={() => setStep("username")}
               className="tg-press inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="h-3.5 w-3.5" /> Назад
