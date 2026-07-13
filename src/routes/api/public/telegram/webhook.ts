@@ -365,6 +365,12 @@ async function handleCallback(cb: {
     await issueKeyForDirection(chatId, data.slice(4), cb.from.id);
     return;
   }
+  if (data.startsWith("login_ok:") || data.startsWith("login_no:")) {
+    const approve = data.startsWith("login_ok:");
+    const code = data.split(":")[1] ?? "";
+    await handleLoginDecision(chatId, cb.from.id, cb.from.username ?? null, code, approve, cb.message?.message_id);
+    return;
+  }
   if (data === "howto") {
     await tg("sendMessage", {
       chat_id: chatId,
@@ -794,3 +800,102 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
     },
   },
 });
+
+async function handleLoginDecision(
+  chatId: number,
+  tgUserId: number,
+  tgUsername: string | null,
+  code: string,
+  approve: boolean,
+  messageId?: number,
+) {
+  if (!/^\d{6}$/.test(code)) return;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: row } = await supabaseAdmin
+    .from("telegram_auth_codes")
+    .select("code, purpose, status, expires_at, telegram_user_id")
+    .eq("code", code)
+    .maybeSingle();
+
+  const editText = async (text: string) => {
+    if (!messageId) {
+      await tg("sendMessage", { chat_id: chatId, text, parse_mode: "HTML" });
+      return;
+    }
+    await tg("editMessageText", {
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      parse_mode: "HTML",
+    });
+  };
+
+  if (!row || row.purpose !== "login") {
+    await editText("❌ Запрос на вход не найден или устарел.");
+    return;
+  }
+  if (row.status === "confirmed" || row.status === "rejected") {
+    await editText(
+      row.status === "confirmed"
+        ? "ℹ️ Этот вход уже подтверждён."
+        : "ℹ️ Этот вход уже отклонён.",
+    );
+    return;
+  }
+  if (new Date(row.expires_at) < new Date()) {
+    await supabaseAdmin.from("telegram_auth_codes").update({ status: "expired" }).eq("code", code);
+    await editText("⌛ Запрос истёк. Попроси новый на странице входа.");
+    return;
+  }
+  if (row.telegram_user_id && Number(row.telegram_user_id) !== Number(tgUserId)) {
+    await editText("⚠️ Этот запрос не для тебя.");
+    return;
+  }
+
+  if (!approve) {
+    await supabaseAdmin
+      .from("telegram_auth_codes")
+      .update({
+        status: "rejected",
+        error: "declined",
+        telegram_user_id: tgUserId,
+        telegram_username: tgUsername,
+      })
+      .eq("code", code);
+    await editText("🚫 Вход отклонён. Если это был не ты — всё в порядке, никто не вошёл.");
+    return;
+  }
+
+  // Approve: find linked profile.
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("id")
+    .eq("telegram_user_id", tgUserId)
+    .order("telegram_linked_at", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!profile) {
+    await supabaseAdmin
+      .from("telegram_auth_codes")
+      .update({ status: "rejected", error: "not_linked" })
+      .eq("code", code);
+    await editText(
+      "⚠️ Твой Telegram ещё не привязан к аккаунту VPNSUS. Сначала войди по email и привяжи Telegram в настройках.",
+    );
+    return;
+  }
+
+  await supabaseAdmin
+    .from("telegram_auth_codes")
+    .update({
+      status: "confirmed",
+      telegram_user_id: tgUserId,
+      telegram_username: tgUsername,
+      confirmed_at: new Date().toISOString(),
+      user_id: profile.id,
+    })
+    .eq("code", code);
+
+  await editText("✅ Вход подтверждён! Возвращайся во вкладку VPNSUS — она войдёт автоматически.");
+}
