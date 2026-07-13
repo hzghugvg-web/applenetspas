@@ -107,7 +107,7 @@ export const sendTelegramLoginCode = createServerFn({ method: "POST" })
 
     try {
       await botSendMessage(row.telegram_user_id, text);
-      return { ok: true, expiresAt: row.expires_at, code: row.code, delivery: "telegram" as const };
+      return { ok: true, expiresAt: row.expires_at, code: null, delivery: "telegram" as const };
     } catch (e: any) {
       console.error("[tg-login] direct code delivery failed; using bot-confirm fallback", e?.message ?? e);
       return { ok: true, expiresAt: row.expires_at, code: row.code, delivery: "manual" as const };
