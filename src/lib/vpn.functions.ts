@@ -19,17 +19,22 @@ export const issueVpnConfig = createServerFn({ method: "POST" })
 export const getMyIssuedLinks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: rows, error } = await context.supabase
-      .from("issued_configs")
-      .select("id, vless_url, upstream_url, issued_at, direction_id")
-      .eq("user_id", context.userId)
-      .order("issued_at", { ascending: false });
+    // Unified list — includes keys issued from the site AND keys issued by the
+    // Telegram bot for the profile's linked telegram_user_id.
+    const { data: rows, error } = await (context.supabase as any).rpc("get_my_all_vpn_configs");
     if (error) throw new Error(error.message);
 
-    const list = (rows ?? []) as Array<{
-      id: string; vless_url: string | null; upstream_url: string | null;
-      issued_at: string; direction_id: string | null;
-    }>;
+    const list = ((rows ?? []) as Array<{
+      source: string;
+      id: string;
+      vless_url: string | null;
+      upstream_url: string | null;
+      issued_at: string;
+      direction_id: string | null;
+      direction_name: string | null;
+      direction_flag: string | null;
+    }>).sort((a, b) => (a.issued_at < b.issued_at ? 1 : -1));
+
     const upstreams = Array.from(new Set(list.map((r) => r.upstream_url).filter(Boolean))) as string[];
     const titleByUrl: Record<string, string | null> = {};
     if (upstreams.length) {
@@ -48,7 +53,10 @@ export const getMyIssuedLinks = createServerFn({ method: "GET" })
         return {
           id: r.id,
           link,
-          title: (r.upstream_url && titleByUrl[r.upstream_url]) || null,
+          title:
+            (r.upstream_url && titleByUrl[r.upstream_url]) ||
+            r.direction_name ||
+            null,
           issuedAt: r.issued_at,
           directionId: r.direction_id ?? null,
         };

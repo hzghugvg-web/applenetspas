@@ -718,6 +718,19 @@ export type Database = {
           profile_id: string
         }[]
       }
+      get_my_all_vpn_configs: {
+        Args: never
+        Returns: {
+          direction_flag: string
+          direction_id: string
+          direction_name: string
+          id: string
+          issued_at: string
+          source: string
+          upstream_url: string
+          vless_url: string
+        }[]
+      }
       get_my_telegram_binding: {
         Args: never
         Returns: {
@@ -768,6 +781,19 @@ export type Database = {
         Returns: undefined
       }
       submit_amnesty: { Args: { _message: string }; Returns: string }
+      tg_issue_vpn_config: {
+        Args: {
+          _chat_id: number
+          _direction_id: string
+          _tg_user_id: number
+          _tg_username: string
+        }
+        Returns: {
+          direction_flag: string
+          direction_name: string
+          vless_url: string
+        }[]
+      }
       unlink_my_telegram: { Args: never; Returns: undefined }
       verify_telegram_login_code: {
         Args: { _code: string; _username: string }
