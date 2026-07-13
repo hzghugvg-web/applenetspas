@@ -365,6 +365,12 @@ async function handleCallback(cb: {
     await issueKeyForDirection(chatId, data.slice(4), cb.from.id);
     return;
   }
+  if (data.startsWith("login_ok:") || data.startsWith("login_no:")) {
+    const approve = data.startsWith("login_ok:");
+    const code = data.split(":")[1] ?? "";
+    await handleLoginDecision(chatId, cb.from.id, cb.from.username ?? null, code, approve, cb.message?.message_id);
+    return;
+  }
   if (data === "howto") {
     await tg("sendMessage", {
       chat_id: chatId,
