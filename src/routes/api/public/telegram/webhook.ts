@@ -525,20 +525,25 @@ async function handleLinkPayload(
   }
 
   // Ensure this Telegram account is not already linked to another user
-  const { data: existing } = await supabaseAdmin
+  // Enforce max 2 profiles per Telegram (excluding the current profile being linked)
+  const { data: existingList } = await supabaseAdmin
     .from("profiles")
     .select("id")
     .eq("telegram_user_id", tgUserId)
-    .neq("id", row.user_id)
-    .maybeSingle();
-  if (existing) {
+    .neq("id", row.user_id);
+  const alreadyLinkedCount = existingList?.length ?? 0;
+  if (alreadyLinkedCount >= 2) {
     await supabaseAdmin
       .from("telegram_auth_codes")
-      .update({ status: "rejected", error: "telegram_already_linked" })
+      .update({ status: "rejected", error: "max_devices" })
       .eq("code", code);
     await tg("sendMessage", {
       chat_id: chatId,
-      text: "⚠️ Этот Telegram уже привязан к другому аккаунту VPNSUS. Сначала отвяжи его в старом профиле.",
+      text:
+        "⚠️ <b>Достигнут лимит устройств</b>\n\n" +
+        "К этому Telegram уже привязано максимальное количество аккаунтов VPNSUS (2). " +
+        "Отвяжите один из старых аккаунтов в разделе «Настройки → Telegram», а затем повторите попытку.",
+      parse_mode: "HTML",
       reply_markup: BACK_MENU,
     });
     return;
