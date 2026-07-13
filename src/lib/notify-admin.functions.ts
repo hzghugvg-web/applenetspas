@@ -35,7 +35,12 @@ async function sendTg(chatId: string, text: string) {
 export const notifyAdminAboutComplaint = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) =>
-    z.object({ complaintId: z.string().uuid() }).parse(data),
+    z.object({
+      complaintId: z.string().uuid(),
+      description: z.string().min(1).max(4000),
+      category: z.string().max(80).nullable().optional(),
+      phone: z.string().max(80).nullable().optional(),
+    }).parse(data),
   )
   .handler(async ({ data, context }) => {
     const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
@@ -44,34 +49,15 @@ export const notifyAdminAboutComplaint = createServerFn({ method: "POST" })
       return { ok: false, reason: "no_admin_chat" };
     }
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const { data: c, error } = await supabaseAdmin
-      .from("complaints")
-      .select("id, user_id, description, category, phone, video_url, created_at")
-      .eq("id", data.complaintId)
-      .maybeSingle();
-    if (error || !c) {
-      console.error("[notify-admin] complaint not found", error);
-      return { ok: false, reason: "not_found" };
-    }
-    if (c.user_id !== context.userId) {
-      return { ok: false, reason: "forbidden" };
-    }
-
-    let email: string | null = null;
-    try {
-      const { data: u } = await supabaseAdmin.auth.admin.getUserById(c.user_id);
-      email = u.user?.email ?? null;
-    } catch { /* ignore */ }
-
-    const desc = (c.description ?? "").slice(0, 3500);
+    const claims = context.claims as { email?: unknown } | undefined;
+    const email = typeof claims?.email === "string" ? claims.email : null;
+    const desc = data.description.slice(0, 3500);
     const text =
       `📩 <b>Новое обращение</b>\n` +
-      `👤 ${escapeHtml(email ?? c.user_id)}\n` +
-      (c.category ? `🏷 Категория: <code>${escapeHtml(c.category)}</code>\n` : "") +
-      (c.phone ? `📞 ${escapeHtml(c.phone)}\n` : "") +
-      `🆔 <code>${escapeHtml(c.id)}</code>\n\n` +
+      `👤 ${escapeHtml(email ?? context.userId)}\n` +
+      (data.category ? `🏷 Категория: <code>${escapeHtml(data.category)}</code>\n` : "") +
+      (data.phone ? `📞 ${escapeHtml(data.phone)}\n` : "") +
+      `🆔 <code>${escapeHtml(data.complaintId)}</code>\n\n` +
       `${escapeHtml(desc)}`;
 
     try {
