@@ -48,8 +48,19 @@ const BACK_MENU = {
   inline_keyboard: [[{ text: "⬅️ В меню", callback_data: "menu" }]],
 };
 
-const WELCOME =
-  "Привет! Я бот VPNSUS — помогу тебе получить свободный доступ в интернет. Выбери, что нужно:";
+function welcomeText(name?: string) {
+  const who = (name ?? "").trim() || "друг";
+  return (
+    `👋 Приветствуем тебя, <b>${escapeHtml(who)}</b>!\n\n` +
+    "🚀 <b>VPNSUS</b> — бесплатный и по-настоящему быстрый VPN, который стабильно работает у 100% пользователей в России.\n\n" +
+    "🎁 Дарим <b>30 дней премиум-доступа</b> — наслаждайся любимыми сервисами без ограничений и на максимальной скорости.\n\n" +
+    "⏱ Подключение займёт всего <b>2 минуты</b>. Поехали 👇"
+  );
+}
+
+function escapeHtml(s: string) {
+  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
+}
 
 const HOWTO =
   "📖 <b>Как установить и настроить</b>\n\n" +
@@ -288,10 +299,10 @@ async function sendMyVpn(chatId: number, telegramUserId: number) {
   });
 }
 
-async function sendMenu(chatId: number, text = WELCOME) {
+async function sendMenu(chatId: number, text?: string, name?: string) {
   await tg("sendMessage", {
     chat_id: chatId,
-    text,
+    text: text ?? welcomeText(name),
     parse_mode: "HTML",
     reply_markup: MAIN_MENU,
     disable_web_page_preview: true,
@@ -425,12 +436,12 @@ async function handleMessage(msg: {
       return;
     }
     // Unknown payload — fall back to menu
-    await sendMenu(msg.chat.id);
+    await sendMenu(msg.chat.id, undefined, msg.from?.first_name);
     return;
   }
 
   if (text === "/start" || text === "/menu") {
-    await sendMenu(msg.chat.id);
+    await sendMenu(msg.chat.id, undefined, msg.from?.first_name);
     return;
   }
   if (text === "/help") {
