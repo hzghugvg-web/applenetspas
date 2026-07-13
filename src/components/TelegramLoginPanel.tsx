@@ -102,7 +102,7 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
     try {
       const res = await sendCode({ data: { username: username.trim().replace(/^@/, "") } });
       setCode("");
-      setDisplayCode(res.code);
+      setDisplayCode(res.code ?? "");
       setDeliveryMode(res.delivery);
       startedAt.current = Date.now();
       setCooldown(60);
