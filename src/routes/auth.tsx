@@ -247,15 +247,14 @@ function AuthPage() {
                 className="mt-2 relative flex h-11 w-full items-center justify-center gap-2 rounded-xl text-[14px] font-semibold text-white opacity-70 cursor-not-allowed"
                 style={{ background: "linear-gradient(135deg,#4C75A3,#2E5A88)" }}
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="currentColor"
+                <span
+                  className="flex h-5 w-5 items-center justify-center rounded-md bg-white text-[11px] font-black tracking-tight"
+                  style={{ color: "#0077FF" }}
                   aria-hidden="true"
                 >
-                  <path d="M13.162 18.994c.609 0 .858-.406.851-.915-.031-1.917.714-2.949 2.059-1.604 1.488 1.488 1.796 2.519 3.603 2.519h3.2c.808 0 1.126-.26 1.126-.668 0-.863-1.421-2.386-2.606-3.478-1.66-1.529-1.735-1.569-.303-3.246 1.748-2.043 4.038-4.68 2.029-4.68h-3.2c-.771 0-.813.442-1.115 1.078-1.487 3.13-2.827 4.815-3.451 4.815-.415 0-.517-.398-.517-1.276V6.83c0-.912-.286-1.286-1.036-1.286H8.31c-.559 0-.895.284-.895.635 0 .887 1.325.657 1.325 3.129v3.325c0 1.16-.209 1.375-.657 1.375-.9 0-2.62-2.813-3.688-6.309-.24-.79-.457-1.155-1.222-1.155H.677C.076 6.544 0 6.831 0 7.187c0 .996 1.643 6.983 6.583 12.061 3.156 3.246 6.532 4.746 8.579 4.746z"/>
-                </svg>
-                Войти с VK
+                  VK
+                </span>
+                Войти через VK
                 <span
                   className="ml-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
                   style={{ background: "rgba(255,255,255,0.18)" }}
