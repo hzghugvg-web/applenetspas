@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { askSupportAI } from "@/lib/support-ai.functions";
+import { notifyAdminAboutComplaint } from "@/lib/notify-admin.functions";
 import { alertDialog as toast } from "@/lib/alert";
 import { translateAuthError } from "@/lib/errors";
 import { hasStoredSupabaseSession } from "@/lib/fast-auth";
@@ -110,6 +111,7 @@ const GREETING =
 function AiChatPage() {
   const navigate = useNavigate();
   const ask = useServerFn(askSupportAI);
+  const notifyAdmin = useServerFn(notifyAdminAboutComplaint);
   const { motion: motionPref } = useTheme();
   const [userId, setUserId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([greetingMsg()]);
@@ -317,15 +319,22 @@ function AiChatPage() {
         .map((a) => ({ kind: a.kind, path: a.path, name: a.name }));
       const description = appendComplaintAttachmentBlock(baseDescription, forwardedAttachments);
       const firstVideo = forwardedAttachments.find((a) => a.kind === "video");
-      const { error } = await supabase.from("complaints").insert({
+      const { data: inserted, error } = await supabase.from("complaints").insert({
         user_id: u.user.id,
         description,
         video_url: firstVideo?.path ?? null,
         status: "new",
         category: "question",
         phone: null,
-      });
+      }).select("id").single();
       if (error) throw error;
+      if (inserted?.id) {
+        try {
+          await notifyAdmin({ data: { complaintId: inserted.id } });
+        } catch (e) {
+          console.error("[support-ai] notify admin failed", e);
+        }
+      }
       setEscalated(true);
       setConfirmingEscalate(false);
       setMessages((prev) => [
