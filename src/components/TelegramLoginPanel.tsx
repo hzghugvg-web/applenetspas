@@ -115,12 +115,13 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
   }
 
   async function handleVerify() {
-    if (!/^\d{6}$/.test(code)) return;
+    const currentCode = deliveryMode === "manual" ? displayCode : code;
+    if (!/^\d{6}$/.test(currentCode)) return;
     setVerifying(true);
     try {
       const payload = {
         username: username.trim().replace(/^@/, ""),
-        code,
+        code: currentCode,
       };
       const res = deliveryMode === "manual"
         ? await getConfirmedAccounts({ data: payload })
