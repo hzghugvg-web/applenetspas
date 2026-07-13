@@ -53,7 +53,7 @@ function AuthPage() {
         const data = await signUpPassword({
           data: { email, password, emailRedirectTo: `${window.location.origin}/vpn` },
         });
-        if ("accessToken" in data) {
+        if ("accessToken" in data && data.accessToken && data.refreshToken) {
           await supabase.auth.setSession({
             access_token: data.accessToken,
             refresh_token: data.refreshToken,
