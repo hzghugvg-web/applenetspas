@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Megaphone, Copy, Mail, Sparkles, X, Globe, ChevronRight } from "lucide-react";
+import { Megaphone, Copy, Mail, Sparkles, X, Globe } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { alertDialog } from "@/lib/alert";
 
