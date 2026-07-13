@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
-import { AtSign, ArrowLeft, KeyRound, Loader2, Lock, Send, ShieldCheck, X } from "lucide-react";
+import { AtSign, ArrowLeft, KeyRound, Loader2, Send, ShieldCheck, X } from "lucide-react";
 import {
+  finalizeTelegramSignIn,
   getConfirmedTelegramLoginAccounts,
   sendTelegramLoginCode,
   verifyTelegramLoginCode,
 } from "@/lib/telegram-auth.functions";
-import { signInWithPasswordServer } from "@/lib/auth-proxy.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { bootstrapUser } from "@/lib/bootstrap";
 import { alertDialog as toast } from "@/lib/alert";
 
 type Account = { id: string; email: string; emailMasked: string; linkedAt: string | null };
-type Step = "username" | "code" | "choose" | "password";
+type Step = "username" | "code" | "choose";
 type DeliveryMode = "telegram" | "manual";
 
 function translate(err: string): string {
@@ -46,19 +46,17 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
   const sendCode = useServerFn(sendTelegramLoginCode);
   const verifyCode = useServerFn(verifyTelegramLoginCode);
   const getConfirmedAccounts = useServerFn(getConfirmedTelegramLoginAccounts);
-  const signInPassword = useServerFn(signInWithPasswordServer);
+  const finalizeSignIn = useServerFn(finalizeTelegramSignIn);
 
   const [step, setStep] = useState<Step>("username");
   const [username, setUsername] = useState("");
   const [code, setCode] = useState("");
-  const [password, setPassword] = useState("");
   const [displayCode, setDisplayCode] = useState("");
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("telegram");
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [loggingIn, setLoggingIn] = useState(false);
+  const [signingInId, setSigningInId] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
   const startedAt = useRef<number>(0);
 
@@ -68,14 +66,12 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
       setStep("username");
       setUsername("");
       setCode("");
-      setPassword("");
         setDisplayCode("");
         setDeliveryMode("telegram");
       setAccounts([]);
-      setSelectedAccount(null);
       setSending(false);
       setVerifying(false);
-      setLoggingIn(false);
+      setSigningInId(null);
       setCooldown(0);
     }
   }, [open]);
@@ -114,6 +110,31 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
     }
   }
 
+  async function completeSignIn(profileId: string, currentCode: string) {
+    setSigningInId(profileId);
+    try {
+      const session = await finalizeSignIn({
+        data: {
+          username: username.trim().replace(/^@/, ""),
+          code: currentCode,
+          profileId,
+        },
+      });
+      await supabase.auth.setSession({
+        access_token: session.accessToken,
+        refresh_token: session.refreshToken,
+      });
+      await bootstrapUser();
+      toast.success("Вход выполнен");
+      onClose();
+      navigate({ to: "/vpn", replace: true });
+    } catch (e: any) {
+      toast.error(translate(String(e?.message ?? "")));
+    } finally {
+      setSigningInId(null);
+    }
+  }
+
   async function handleVerify() {
     const currentCode = deliveryMode === "manual" ? displayCode : code;
     if (!/^\d{6}$/.test(currentCode)) return;
@@ -134,9 +155,8 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
         setAccounts(res.accounts);
         setStep("choose");
       } else if (res.status === "password") {
-        setSelectedAccount(res.account);
-        setPassword("");
-        setStep("password");
+        // No password step — Telegram itself is the confirmation.
+        await completeSignIn(res.account.id, currentCode);
       }
     } catch (e: any) {
       toast.error(translate(String(e?.message ?? "")));
@@ -148,28 +168,6 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
   async function handleResend() {
     if (cooldown > 0) return;
     await handleSend();
-  }
-
-  async function handlePasswordLogin() {
-    if (!selectedAccount || password.length < 6 || loggingIn) return;
-    setLoggingIn(true);
-    try {
-      const session = await signInPassword({
-        data: { email: selectedAccount.email, password },
-      });
-      await supabase.auth.setSession({
-        access_token: session.accessToken,
-        refresh_token: session.refreshToken,
-      });
-      await bootstrapUser();
-      toast.success("Вход выполнен");
-      onClose();
-      navigate({ to: "/vpn", replace: true });
-    } catch (e: any) {
-      toast.error(translate(String(e?.message ?? "")));
-    } finally {
-      setLoggingIn(false);
-    }
   }
 
   if (!open) return null;
@@ -191,7 +189,6 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
             {step === "username" && "Вход через Telegram"}
             {step === "code" && "Введите код"}
             {step === "choose" && "Выберите аккаунт"}
-            {step === "password" && "Введите пароль"}
           </div>
           <button
             onClick={onClose}
