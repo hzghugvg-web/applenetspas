@@ -159,23 +159,49 @@ async function sendDirectionPicker(chatId: number) {
 async function issueKeyForDirection(chatId: number, directionId: string, telegramUserId: number) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  // Clean up expired links first (mirrors app logic)
-  await supabaseAdmin
-    .from("vless_links")
-    .delete()
-    .eq("is_active", true)
-    .lt("expires_at", new Date().toISOString());
-
-  const nowIso = new Date().toISOString();
-  const { data: links, error } = await supabaseAdmin
-    .from("vless_links")
-    .select("id, url, title, available_from, expires_at")
-    .eq("direction_id", directionId)
-    .eq("is_active", true)
-    .limit(50);
+  const { data: rpc, error } = await (supabaseAdmin as any).rpc("tg_issue_vpn_config", {
+    _tg_user_id: telegramUserId,
+    _tg_username: null,
+    _chat_id: chatId,
+    _direction_id: directionId,
+  });
 
   if (error) {
-    console.error("[bot] fetch links failed", error);
+    const msg = String(error.message ?? "");
+    if (/limit_reached/.test(msg)) {
+      await tg("sendMessage", {
+        chat_id: chatId,
+        text:
+          "⚠️ У тебя уже есть выданный ключ.\n\n" +
+          "На один аккаунт (Telegram + сайт) выдаётся только <b>1 ключ</b>. " +
+          "Посмотреть его можно в разделе «🔐 Мой VPN».",
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🔐 Мой VPN", callback_data: "my_vpn" }],
+            [{ text: "⬅️ В меню", callback_data: "menu" }],
+          ],
+        },
+      });
+      return;
+    }
+    if (/no_links/.test(msg)) {
+      await tg("sendMessage", {
+        chat_id: chatId,
+        text: "😔 Для этого направления сейчас нет свободных ключей. Попробуй другое или загляни позже.",
+        reply_markup: BACK_MENU,
+      });
+      return;
+    }
+    if (/blocked/.test(msg)) {
+      await tg("sendMessage", {
+        chat_id: chatId,
+        text: "⛔ Твой аккаунт заблокирован. Обратись в поддержку.",
+        reply_markup: BACK_MENU,
+      });
+      return;
+    }
+    console.error("[bot] tg_issue_vpn_config failed", error);
     await tg("sendMessage", {
       chat_id: chatId,
       text: "⚠️ Ошибка при получении ключа. Попробуй ещё раз или напиши в поддержку.",
@@ -184,61 +210,21 @@ async function issueKeyForDirection(chatId: number, directionId: string, telegra
     return;
   }
 
-  const available = (links ?? []).filter((l) => {
-    if (l.available_from && l.available_from > nowIso) return false;
-    if (l.expires_at && l.expires_at <= nowIso) return false;
-    return true;
-  });
-
-  if (available.length === 0) {
+  const row = (rpc as Array<{ vless_url: string }> | null)?.[0];
+  if (!row?.vless_url) {
     await tg("sendMessage", {
       chat_id: chatId,
-      text: "😔 Для этого направления сейчас нет свободных ключей. Попробуй другое или загляни позже.",
+      text: "⚠️ Ошибка при получении ключа. Попробуй ещё раз или напиши в поддержку.",
       reply_markup: BACK_MENU,
     });
     return;
   }
 
-  const picked = available[Math.floor(Math.random() * available.length)];
-
-  // Reserve the link by marking inactive (only if still active — prevents double-issue)
-  const { data: reserved, error: updErr } = await supabaseAdmin
-    .from("vless_links")
-    .update({ is_active: false })
-    .eq("id", picked.id)
-    .eq("is_active", true)
-    .select("id")
-    .maybeSingle();
-
-  if (updErr || !reserved) {
-    // Someone else grabbed it — retry once
-    await issueKeyForDirection(chatId, directionId, telegramUserId);
-    return;
-  }
-
-  // Look up direction details for "My VPN" tab
-  const { data: dir } = await supabaseAdmin
-    .from("directions")
-    .select("name, flag")
-    .eq("id", directionId)
-    .maybeSingle();
-
-  // Persist the issued key so the user can see it later under "My VPN"
-  await supabaseAdmin.from("telegram_issued_keys").insert({
-    telegram_user_id: telegramUserId,
-    chat_id: chatId,
-    direction_id: directionId,
-    direction_name: dir?.name ?? null,
-    direction_flag: dir?.flag ?? null,
-    vless_url: picked.url,
-    vless_link_id: picked.id,
-  });
-
   await tg("sendMessage", {
     chat_id: chatId,
     text:
       "🚀 <b>Твой ключ доступа</b>\n\n" +
-      `<code>${picked.url}</code>\n\n` +
+      `<code>${row.vless_url}</code>\n\n` +
       "📱 Скачай VLESS-клиент (v2rayNG / Hiddify / FoXray), добавь этот ключ — готово!\n" +
       "Ключ всегда можно посмотреть снова в разделе «🔐 Мой VPN».",
     parse_mode: "HTML",
@@ -254,12 +240,33 @@ async function issueKeyForDirection(chatId: number, directionId: string, telegra
 
 async function sendMyVpn(chatId: number, telegramUserId: number) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data, error } = await supabaseAdmin
-    .from("telegram_issued_keys")
-    .select("direction_name, direction_flag, vless_url, issued_at")
+
+  // Combine Telegram-issued keys AND site-issued keys via the linked profile,
+  // so both surfaces show the same list.
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("id")
     .eq("telegram_user_id", telegramUserId)
-    .order("issued_at", { ascending: false })
-    .limit(10);
+    .order("telegram_linked_at", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+
+  const [{ data: tgRows, error }, siteRes] = await Promise.all([
+    supabaseAdmin
+      .from("telegram_issued_keys")
+      .select("direction_name, direction_flag, vless_url, issued_at")
+      .eq("telegram_user_id", telegramUserId)
+      .order("issued_at", { ascending: false })
+      .limit(10),
+    profile?.id
+      ? supabaseAdmin
+          .from("issued_configs")
+          .select("vless_url, upstream_url, issued_at, direction_id, directions(name, flag)")
+          .eq("user_id", profile.id)
+          .order("issued_at", { ascending: false })
+          .limit(10)
+      : Promise.resolve({ data: [] as any[], error: null }),
+  ]);
 
   if (error) {
     console.error("[bot] my_vpn fetch failed", error);
@@ -271,7 +278,31 @@ async function sendMyVpn(chatId: number, telegramUserId: number) {
     return;
   }
 
-  const rows = data ?? [];
+  const seen = new Set<string>();
+  const merged: Array<{ name: string; flag: string; url: string; issuedAt: string }> = [];
+  for (const r of tgRows ?? []) {
+    if (!r.vless_url || seen.has(r.vless_url)) continue;
+    seen.add(r.vless_url);
+    merged.push({
+      name: r.direction_name ?? "Направление",
+      flag: r.direction_flag ?? "🌐",
+      url: r.vless_url,
+      issuedAt: r.issued_at,
+    });
+  }
+  for (const r of (siteRes.data ?? []) as any[]) {
+    const url = r.upstream_url ?? r.vless_url;
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    merged.push({
+      name: r.directions?.name ?? "Направление",
+      flag: r.directions?.flag ?? "🌐",
+      url,
+      issuedAt: r.issued_at,
+    });
+  }
+  merged.sort((a, b) => (a.issuedAt < b.issuedAt ? 1 : -1));
+  const rows = merged;
   if (rows.length === 0) {
     await tg("sendMessage", {
       chat_id: chatId,
@@ -284,10 +315,8 @@ async function sendMyVpn(chatId: number, telegramUserId: number) {
   }
 
   const blocks = rows.map((r) => {
-    const flag = r.direction_flag ?? "🌐";
-    const name = r.direction_name ?? "Направление";
-    const date = r.issued_at ? new Date(r.issued_at).toLocaleDateString("ru-RU") : "";
-    return `${flag} <b>${name}</b>${date ? ` — ${date}` : ""}\n<code>${r.vless_url}</code>`;
+    const date = r.issuedAt ? new Date(r.issuedAt).toLocaleDateString("ru-RU") : "";
+    return `${r.flag} <b>${r.name}</b>${date ? ` — ${date}` : ""}\n<code>${r.url}</code>`;
   });
 
   await tg("sendMessage", {
