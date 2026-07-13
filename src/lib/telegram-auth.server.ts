@@ -41,6 +41,49 @@ export async function botSendMessage(chatId: number, text: string) {
   throw new Error("telegram_send_failed");
 }
 
+export async function botSendMessageWithKeyboard(
+  chatId: number,
+  text: string,
+  replyMarkup: Record<string, unknown>,
+) {
+  const lovableKey = process.env.LOVABLE_API_KEY;
+  const tgKey = process.env.TELEGRAM_API_KEY;
+  if (!lovableKey || !tgKey) throw new Error("telegram_not_configured");
+
+  const payload = JSON.stringify({
+    chat_id: chatId,
+    text,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+    reply_markup: replyMarkup,
+  });
+
+  let lastStatus = 0;
+  let lastBody = "";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(`${GATEWAY_URL}/sendMessage`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        "X-Connection-Api-Key": tgKey,
+        "Content-Type": "application/json",
+      },
+      body: payload,
+    });
+    if (res.ok) return;
+    lastStatus = res.status;
+    lastBody = await res.text().catch(() => "");
+    console.error("[tg] sendMessage(kb) failed", res.status, lastBody.slice(0, 400));
+    if (res.status === 400 && /chat not found|bot was blocked|user is deactivated/i.test(lastBody)) {
+      throw new Error("chat_not_found");
+    }
+    if (res.status < 500 && res.status !== 429) break;
+    await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+  }
+  console.error("[tg] sendMessage(kb) giving up", lastStatus);
+  throw new Error("telegram_send_failed");
+}
+
 export async function getBotUsername(): Promise<string> {
   const lovableKey = process.env.LOVABLE_API_KEY;
   const tgKey = process.env.TELEGRAM_API_KEY;
