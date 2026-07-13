@@ -14,18 +14,29 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 async function tg(method: string, payload: Record<string, unknown>) {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const tgKey = process.env.TELEGRAM_API_KEY;
-  if (!lovableKey || !tgKey) throw new Error("Telegram keys not configured");
-  const res = await fetch(`${GATEWAY_URL}/${method}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${lovableKey}`,
-      "X-Connection-Api-Key": tgKey,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  const body = JSON.stringify(payload);
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  let res: Response;
+  if (botToken) {
+    res = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+    });
+  } else {
+    const lovableKey = process.env.LOVABLE_API_KEY;
+    const tgKey = process.env.TELEGRAM_API_KEY;
+    if (!lovableKey || !tgKey) throw new Error("Telegram keys not configured");
+    res = await fetch(`${GATEWAY_URL}/${method}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        "X-Connection-Api-Key": tgKey,
+        "Content-Type": "application/json",
+      },
+      body,
+    });
+  }
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     console.error(`[tg] ${method} failed`, res.status, body.slice(0, 500));
