@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +11,7 @@ import { Shield, Loader2, Mail, Lock, Eye, EyeOff, Sparkles } from "lucide-react
 import { ForgotPasswordModal } from "@/components/ForgotPasswordModal";
 import { TelegramLoginPanel } from "@/components/TelegramLoginPanel";
 import { Send } from "lucide-react";
+import { signInWithPasswordServer, signUpWithPasswordServer } from "@/lib/auth-proxy.functions";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -18,6 +20,8 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const signInPassword = useServerFn(signInWithPasswordServer);
+  const signUpPassword = useServerFn(signUpWithPasswordServer);
   const [mode, setMode] = useState<"login" | "signup">("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,23 +50,28 @@ function AuthPage() {
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
-          email, password,
-          options: { emailRedirectTo: `${window.location.origin}/vpn` },
+        const data = await signUpPassword({
+          data: { email, password, emailRedirectTo: `${window.location.origin}/vpn` },
         });
-        if (error) throw error;
-        if (data.session) {
+        if ("accessToken" in data) {
+          await supabase.auth.setSession({
+            access_token: data.accessToken,
+            refresh_token: data.refreshToken,
+          });
           await bootstrapUser();
           toast.success("Аккаунт создан");
           navigate({ to: "/vpn" });
         } else {
-          // На всякий случай — сразу логиним
-          const { error: e2 } = await supabase.auth.signInWithPassword({ email, password });
-          if (e2) throw e2;
+          toast.success("Аккаунт создан. Проверьте почту для подтверждения входа.");
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        const data = await signInPassword({ data: { email, password } });
+        await supabase.auth.setSession({
+          access_token: data.accessToken,
+          refresh_token: data.refreshToken,
+        });
+        await bootstrapUser();
+        navigate({ to: "/vpn" });
       }
     } catch (err: any) {
       toast.error(translateAuthError(getAuthErrorMessage(err)));

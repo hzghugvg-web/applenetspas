@@ -330,7 +330,14 @@ function AiChatPage() {
       if (error) throw error;
       if (inserted?.id) {
         try {
-          await notifyAdmin({ data: { complaintId: inserted.id } });
+          await notifyAdmin({
+            data: {
+              complaintId: inserted.id,
+              description,
+              category: "question",
+              phone: null,
+            },
+          });
         } catch (e) {
           console.error("[support-ai] notify admin failed", e);
         }

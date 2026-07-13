@@ -476,7 +476,12 @@ async function handleMessage(msg: {
   }
 
   // Default fallback
-  await sendMenu(msg.chat.id, "Не понял 🤔 Вот что я умею:");
+  if (process.env.TELEGRAM_ADMIN_CHAT_ID && String(msg.chat.id) !== String(process.env.TELEGRAM_ADMIN_CHAT_ID)) {
+    await forwardToAdmin(msg);
+    return;
+  }
+
+  await sendMenu(msg.chat.id, "Выберите действие в меню:");
 }
 
 async function handleLinkPayload(

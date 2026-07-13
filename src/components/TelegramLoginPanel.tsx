@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { AtSign, ArrowLeft, KeyRound, Loader2, Send, ShieldCheck, X } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { AtSign, ArrowLeft, KeyRound, Loader2, Lock, Send, ShieldCheck, X } from "lucide-react";
 import {
   sendTelegramLoginCode,
   verifyTelegramLoginCode,
 } from "@/lib/telegram-auth.functions";
+import { signInWithPasswordServer } from "@/lib/auth-proxy.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { bootstrapUser } from "@/lib/bootstrap";
 import { alertDialog as toast } from "@/lib/alert";
 
-type Account = { id: string; emailMasked: string; linkedAt: string | null };
-type Step = "username" | "code" | "choose";
+type Account = { id: string; email: string; emailMasked: string; linkedAt: string | null };
+type Step = "username" | "code" | "choose" | "password";
 
 function translate(err: string): string {
   switch (err) {
@@ -26,21 +30,30 @@ function translate(err: string): string {
       return "Не удалось отправить код в Telegram. Попробуйте ещё раз.";
     case "link_failed":
       return "Не удалось подготовить вход. Попробуйте ещё раз.";
+    case "auth_not_configured":
+      return "Вход временно недоступен. Мы уже проверяем настройки сервера.";
     default:
+      if (/invalid login|credentials/i.test(err)) return "Пароль от выбранного аккаунта неверный.";
+      if (/permission denied/i.test(err)) return "Вход через Telegram обновляется. Попробуйте ещё раз через минуту.";
       return "Что-то пошло не так. Попробуйте ещё раз.";
   }
 }
 
 export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const navigate = useNavigate();
   const sendCode = useServerFn(sendTelegramLoginCode);
   const verifyCode = useServerFn(verifyTelegramLoginCode);
+  const signInPassword = useServerFn(signInWithPasswordServer);
 
   const [step, setStep] = useState<Step>("username");
   const [username, setUsername] = useState("");
   const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [loggingIn, setLoggingIn] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const startedAt = useRef<number>(0);
 
@@ -50,9 +63,12 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
       setStep("username");
       setUsername("");
       setCode("");
+      setPassword("");
       setAccounts([]);
+      setSelectedAccount(null);
       setSending(false);
       setVerifying(false);
+      setLoggingIn(false);
       setCooldown(0);
     }
   }, [open]);
@@ -88,7 +104,7 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
     }
   }
 
-  async function handleVerify(accountId?: string) {
+  async function handleVerify() {
     if (!/^\d{6}$/.test(code)) return;
     setVerifying(true);
     try {
@@ -96,14 +112,15 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
         data: {
           username: username.trim().replace(/^@/, ""),
           code,
-          ...(accountId ? { accountId } : {}),
         },
       });
       if (res.status === "choose") {
         setAccounts(res.accounts);
         setStep("choose");
-      } else if (res.status === "ready") {
-        window.location.href = res.actionLink;
+      } else if (res.status === "password") {
+        setSelectedAccount(res.account);
+        setPassword("");
+        setStep("password");
       }
     } catch (e: any) {
       toast.error(translate(String(e?.message ?? "")));
@@ -115,6 +132,28 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
   async function handleResend() {
     if (cooldown > 0) return;
     await handleSend();
+  }
+
+  async function handlePasswordLogin() {
+    if (!selectedAccount || password.length < 6 || loggingIn) return;
+    setLoggingIn(true);
+    try {
+      const session = await signInPassword({
+        data: { email: selectedAccount.email, password },
+      });
+      await supabase.auth.setSession({
+        access_token: session.accessToken,
+        refresh_token: session.refreshToken,
+      });
+      await bootstrapUser();
+      toast.success("Вход выполнен");
+      onClose();
+      navigate({ to: "/vpn", replace: true });
+    } catch (e: any) {
+      toast.error(translate(String(e?.message ?? "")));
+    } finally {
+      setLoggingIn(false);
+    }
   }
 
   if (!open) return null;
@@ -136,6 +175,7 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
             {step === "username" && "Вход через Telegram"}
             {step === "code" && "Введите код"}
             {step === "choose" && "Выберите аккаунт"}
+            {step === "password" && "Введите пароль"}
           </div>
           <button
             onClick={onClose}
@@ -237,7 +277,11 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
               {accounts.map((a) => (
                 <button
                   key={a.id}
-                  onClick={() => handleVerify(a.id)}
+                  onClick={() => {
+                    setSelectedAccount(a);
+                    setPassword("");
+                    setStep("password");
+                  }}
                   disabled={verifying}
                   className="tg-press flex w-full items-center gap-3 rounded-xl border border-border bg-input px-3 py-3 text-left transition-colors hover:border-primary/60 disabled:opacity-60"
                 >
@@ -263,6 +307,42 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
             </div>
             <button
               onClick={() => setStep("code")}
+              className="tg-press inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> Назад
+            </button>
+          </div>
+        )}
+
+        {step === "password" && selectedAccount && (
+          <div className="space-y-4">
+            <p className="text-[13px] leading-snug text-muted-foreground">
+              Код подтверждён. Введите пароль от аккаунта <b>{selectedAccount.emailMasked}</b>.
+            </p>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                autoFocus
+                type="password"
+                autoComplete="current-password"
+                placeholder="Пароль"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handlePasswordLogin()}
+                className="h-11 w-full rounded-xl border border-border bg-input pl-9 pr-3 text-[14px] text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/60"
+              />
+            </div>
+            <button
+              onClick={handlePasswordLogin}
+              disabled={password.length < 6 || loggingIn}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl text-[14px] font-semibold text-primary-foreground disabled:opacity-60"
+              style={{ background: "linear-gradient(135deg,#38BDF8,#0EA5E9)" }}
+            >
+              {loggingIn ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+              Войти
+            </button>
+            <button
+              onClick={() => (accounts.length > 1 ? setStep("choose") : setStep("code"))}
               className="tg-press inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="h-3.5 w-3.5" /> Назад
