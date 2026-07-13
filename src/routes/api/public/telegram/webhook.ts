@@ -398,7 +398,7 @@ async function handleCallback(cb: {
       chat_id: chatId,
       text: SUPPORT_PROMPT,
       parse_mode: "HTML",
-      reply_markup: { force_reply: true, selective: true },
+      reply_markup: { force_reply: true, input_field_placeholder: "Ваш вопрос…" },
     });
     return;
   }
@@ -408,6 +408,7 @@ async function forwardToAdmin(message: {
   chat: { id: number };
   message_id: number;
   from?: { id: number; first_name?: string; username?: string };
+  text?: string;
 }) {
   const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
   if (!adminChatId) {
@@ -417,19 +418,36 @@ async function forwardToAdmin(message: {
     });
     return;
   }
+  // Do not forward admin's own messages back to themselves
+  if (String(message.chat.id) === String(adminChatId)) {
+    return;
+  }
   const from = message.from;
   const who = from
     ? `${from.first_name ?? ""}${from.username ? " (@" + from.username + ")" : ""} [id ${from.id}]`
     : "unknown";
-  await tg("sendMessage", {
+  const header = await tg("sendMessage", {
     chat_id: adminChatId,
-    text: `📩 Обращение в поддержку от ${who}:`,
+    text: `📩 Обращение в поддержку от ${escapeHtml(who)}\n💬 Ответь <b>реплаем</b> на следующее сообщение — я передам ответ пользователю.`,
+    parse_mode: "HTML",
   });
-  await tg("forwardMessage", {
+  if (!header.ok) {
+    console.error("[support] header send failed", header.status);
+  }
+  // copyMessage works even when forwarding is restricted by user privacy settings
+  const copyRes = await tg("copyMessage", {
     chat_id: adminChatId,
     from_chat_id: message.chat.id,
     message_id: message.message_id,
   });
+  if (!copyRes.ok) {
+    // Fallback: send plaintext body with user id so admin can still reply manually
+    await tg("sendMessage", {
+      chat_id: adminChatId,
+      text: `(chat_id: ${message.chat.id})\n${message.text ? escapeHtml(message.text) : "<em>(без текста)</em>"}`,
+      parse_mode: "HTML",
+    });
+  }
   await tg("sendMessage", {
     chat_id: message.chat.id,
     text: "✅ Спасибо! Обращение передано администратору — ответим в ближайшее время.",
