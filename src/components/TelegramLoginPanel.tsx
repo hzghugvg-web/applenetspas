@@ -313,11 +313,10 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
                 <button
                   key={a.id}
                   onClick={() => {
-                    setSelectedAccount(a);
-                    setPassword("");
-                    setStep("password");
+                    const currentCode = deliveryMode === "manual" ? displayCode : code;
+                    void completeSignIn(a.id, currentCode);
                   }}
-                  disabled={verifying}
+                  disabled={verifying || signingInId !== null}
                   className="tg-press flex w-full items-center gap-3 rounded-xl border border-border bg-input px-3 py-3 text-left transition-colors hover:border-primary/60 disabled:opacity-60"
                 >
                   <div
@@ -336,48 +335,12 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
                       </div>
                     )}
                   </div>
-                  {verifying && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                  {signingInId === a.id && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                 </button>
               ))}
             </div>
             <button
               onClick={() => setStep("code")}
-              className="tg-press inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Назад
-            </button>
-          </div>
-        )}
-
-        {step === "password" && selectedAccount && (
-          <div className="space-y-4">
-            <p className="text-[13px] leading-snug text-muted-foreground">
-              Код подтверждён. Введите пароль от аккаунта <b>{selectedAccount.emailMasked}</b>.
-            </p>
-            <div className="relative">
-              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                autoFocus
-                type="password"
-                autoComplete="current-password"
-                placeholder="Пароль"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handlePasswordLogin()}
-                className="h-11 w-full rounded-xl border border-border bg-input pl-9 pr-3 text-[14px] text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/60"
-              />
-            </div>
-            <button
-              onClick={handlePasswordLogin}
-              disabled={password.length < 6 || loggingIn}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl text-[14px] font-semibold text-primary-foreground disabled:opacity-60"
-              style={{ background: "linear-gradient(135deg,#38BDF8,#0EA5E9)" }}
-            >
-              {loggingIn ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-              Войти
-            </button>
-            <button
-              onClick={() => (accounts.length > 1 ? setStep("choose") : setStep("code"))}
               className="tg-press inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="h-3.5 w-3.5" /> Назад
