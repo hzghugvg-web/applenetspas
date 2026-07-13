@@ -14,18 +14,29 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 async function tg(method: string, payload: Record<string, unknown>) {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const tgKey = process.env.TELEGRAM_API_KEY;
-  if (!lovableKey || !tgKey) throw new Error("Telegram keys not configured");
-  const res = await fetch(`${GATEWAY_URL}/${method}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${lovableKey}`,
-      "X-Connection-Api-Key": tgKey,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  const body = JSON.stringify(payload);
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  let res: Response;
+  if (botToken) {
+    res = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+    });
+  } else {
+    const lovableKey = process.env.LOVABLE_API_KEY;
+    const tgKey = process.env.TELEGRAM_API_KEY;
+    if (!lovableKey || !tgKey) throw new Error("Telegram keys not configured");
+    res = await fetch(`${GATEWAY_URL}/${method}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        "X-Connection-Api-Key": tgKey,
+        "Content-Type": "application/json",
+      },
+      body,
+    });
+  }
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     console.error(`[tg] ${method} failed`, res.status, body.slice(0, 500));
@@ -762,10 +773,13 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const tgKey = process.env.TELEGRAM_API_KEY;
-        if (!tgKey) return new Response("Not configured", { status: 500 });
-
-        const expected = deriveSecret(tgKey);
+        // Prefer TELEGRAM_WEBHOOK_SECRET when set (works on Vercel where the
+        // Lovable gateway env vars are absent). Otherwise derive the secret
+        // from TELEGRAM_API_KEY / TELEGRAM_BOT_TOKEN for backwards compat.
+        const explicitSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+        const seed = explicitSecret || process.env.TELEGRAM_API_KEY || process.env.TELEGRAM_BOT_TOKEN;
+        if (!seed) return new Response("Not configured", { status: 500 });
+        const expected = explicitSecret ? explicitSecret : deriveSecret(seed);
         const got = request.headers.get("X-Telegram-Bot-Api-Secret-Token") ?? "";
         if (!safeEqual(got, expected)) {
           return new Response("Unauthorized", { status: 401 });

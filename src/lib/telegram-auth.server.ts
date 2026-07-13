@@ -1,10 +1,32 @@
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/telegram";
 
-export async function botSendMessage(chatId: number, text: string) {
+// Fallback: if TELEGRAM_BOT_TOKEN is set (e.g. deployed on Vercel where the
+// Lovable connector gateway env vars are absent), call the Telegram Bot API
+// directly instead of going through the gateway.
+async function tgFetch(method: string, body: string) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (botToken) {
+    return fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+    });
+  }
   const lovableKey = process.env.LOVABLE_API_KEY;
   const tgKey = process.env.TELEGRAM_API_KEY;
   if (!lovableKey || !tgKey) throw new Error("telegram_not_configured");
+  return fetch(`${GATEWAY_URL}/${method}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${lovableKey}`,
+      "X-Connection-Api-Key": tgKey,
+      "Content-Type": "application/json",
+    },
+    body,
+  });
+}
 
+export async function botSendMessage(chatId: number, text: string) {
   const payload = JSON.stringify({
     chat_id: chatId,
     text,
@@ -17,15 +39,7 @@ export async function botSendMessage(chatId: number, text: string) {
   let lastStatus = 0;
   let lastBody = "";
   for (let attempt = 0; attempt < 3; attempt++) {
-    const res = await fetch(`${GATEWAY_URL}/sendMessage`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        "X-Connection-Api-Key": tgKey,
-        "Content-Type": "application/json",
-      },
-      body: payload,
-    });
+    const res = await tgFetch("sendMessage", payload);
     if (res.ok) return;
     lastStatus = res.status;
     lastBody = await res.text().catch(() => "");
@@ -46,10 +60,6 @@ export async function botSendMessageWithKeyboard(
   text: string,
   replyMarkup: Record<string, unknown>,
 ) {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const tgKey = process.env.TELEGRAM_API_KEY;
-  if (!lovableKey || !tgKey) throw new Error("telegram_not_configured");
-
   const payload = JSON.stringify({
     chat_id: chatId,
     text,
@@ -61,15 +71,7 @@ export async function botSendMessageWithKeyboard(
   let lastStatus = 0;
   let lastBody = "";
   for (let attempt = 0; attempt < 3; attempt++) {
-    const res = await fetch(`${GATEWAY_URL}/sendMessage`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        "X-Connection-Api-Key": tgKey,
-        "Content-Type": "application/json",
-      },
-      body: payload,
-    });
+    const res = await tgFetch("sendMessage", payload);
     if (res.ok) return;
     lastStatus = res.status;
     lastBody = await res.text().catch(() => "");
@@ -85,19 +87,8 @@ export async function botSendMessageWithKeyboard(
 }
 
 export async function getBotUsername(): Promise<string> {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const tgKey = process.env.TELEGRAM_API_KEY;
-  if (!lovableKey || !tgKey) return "netspas_bot";
   try {
-    const res = await fetch(`${GATEWAY_URL}/getMe`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        "X-Connection-Api-Key": tgKey,
-        "Content-Type": "application/json",
-      },
-      body: "{}",
-    });
+    const res = await tgFetch("getMe", "{}");
     if (res.ok) {
       const j = (await res.json()) as { result?: { username?: string } };
       if (j?.result?.username) return j.result.username;
