@@ -67,8 +67,9 @@ export const askSupportAI = createServerFn({ method: "POST" })
       text = text.replace(/\[ESCALATE\]\s*$/i, "").trim();
     }
     if (!text) {
-      text = "Я не совсем понял вопрос. Хотите, я передам его оператору?";
-      escalate = true;
+      text = escalate
+        ? "Понял вас, передаю ваш вопрос оператору. Ответ придёт в разделе «Мои обращения»."
+        : "Готов помочь. Уточните, пожалуйста, детали вопроса — или я передам его оператору.";
     }
     return { text, escalate };
   });
