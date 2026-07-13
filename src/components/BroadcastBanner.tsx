@@ -137,31 +137,91 @@ export function BroadcastBanner() {
         {current && (
           <motion.div
             key={current.id}
-            initial={{ opacity: 0, y: -8, height: 0 }}
-            animate={{ opacity: dismissing === current.id ? 0 : 1, y: 0, height: "auto" }}
-            exit={{ opacity: 0, y: -8, height: 0 }}
-            transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-            className="mx-2 mt-2 overflow-hidden"
+            initial={{ opacity: 0, y: -24, scale: 0.92, height: 0 }}
+            animate={{
+              opacity: dismissing === current.id ? 0 : 1,
+              y: 0,
+              scale: 1,
+              height: "auto",
+            }}
+            exit={{ opacity: 0, y: -16, scale: 0.94, height: 0 }}
+            transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.9 }}
+            className="mx-2 mt-2 overflow-visible"
           >
-            <button
+            <motion.button
               onClick={() => setOpened(current)}
-              className="tg-press relative flex w-full items-center gap-3 overflow-hidden rounded-2xl p-3 text-left"
-              style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
+              whileTap={{ scale: 0.965 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              className="ios-notif group relative flex w-full items-start gap-2.5 overflow-hidden rounded-[22px] px-3 py-2.5 text-left"
             >
-              <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/20 blur-2xl" />
-              <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/20 backdrop-blur">
-                <Megaphone className="h-4.5 w-4.5 text-white" />
-              </div>
-              <div className="relative min-w-0 flex-1 text-white">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-white/80">
-                  Новое сообщение
-                </div>
-                <div className="truncate text-[13.5px] font-semibold">
-                  {current.title?.trim() || "Сообщение от администратора"}
-                </div>
-              </div>
-              <ChevronRight className="relative h-4 w-4 shrink-0 text-white/90" />
-            </button>
+              {/* Frosted glass background layers */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 rounded-[22px] backdrop-blur-2xl"
+                style={{
+                  background:
+                    "color-mix(in oklab, var(--card) 82%, transparent)",
+                }}
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 rounded-[22px] ring-1 ring-inset ring-white/10"
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-t-[22px]"
+                style={{
+                  background:
+                    "linear-gradient(to right, transparent, rgba(255,255,255,0.35), transparent)",
+                }}
+              />
+              {/* Sheen sweep on mount */}
+              <motion.span
+                aria-hidden
+                initial={{ x: "-120%" }}
+                animate={{ x: "220%" }}
+                transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+                className="pointer-events-none absolute inset-y-0 w-1/3 rounded-[22px]"
+                style={{
+                  background:
+                    "linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.16) 50%, transparent 80%)",
+                }}
+              />
+
+              {/* App icon */}
+              <span
+                className="relative grid h-[38px] w-[38px] shrink-0 place-items-center rounded-[10px] shadow-[0_2px_8px_-2px_rgba(0,0,0,0.35)]"
+                style={{ background: "var(--gradient-primary)" }}
+              >
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 rounded-[10px]"
+                  style={{
+                    background:
+                      "linear-gradient(180deg, rgba(255,255,255,0.28), transparent 55%)",
+                  }}
+                />
+                <Megaphone className="relative h-[18px] w-[18px] text-white" strokeWidth={2.4} />
+              </span>
+
+              {/* Content */}
+              <span className="relative min-w-0 flex-1">
+                <span className="flex items-center gap-1.5 leading-none">
+                  <span className="truncate text-[13px] font-semibold text-foreground">
+                    VPNSUS
+                  </span>
+                  <span className="text-[11px] font-medium text-muted-foreground">
+                    сейчас
+                  </span>
+                </span>
+                <span className="mt-1 block truncate text-[13.5px] font-semibold leading-tight text-foreground">
+                  {current.title?.trim() || "Новое сообщение"}
+                </span>
+                <span className="mt-0.5 block truncate text-[12.5px] leading-tight text-muted-foreground">
+                  {current.message?.trim() || "Нажмите, чтобы открыть"}
+                </span>
+              </span>
+            </motion.button>
             {unread.length > 1 && (
               <div className="mt-1.5 text-center text-[10.5px] font-medium text-muted-foreground">
                 +{unread.length - 1} ещё в очереди
