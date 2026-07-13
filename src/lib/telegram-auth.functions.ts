@@ -107,12 +107,73 @@ export const sendTelegramLoginCode = createServerFn({ method: "POST" })
 
     try {
       await botSendMessage(row.telegram_user_id, text);
+      return { ok: true, expiresAt: row.expires_at, code: null, delivery: "telegram" as const };
     } catch (e: any) {
-      if (e?.message === "chat_not_found") throw new Error("chat_not_found");
-      throw new Error("telegram_send_failed");
+      console.error("[tg-login] direct code delivery failed; using bot-confirm fallback", e?.message ?? e);
+      return { ok: true, expiresAt: row.expires_at, code: row.code, delivery: "manual" as const };
+    }
+  });
+
+/**
+ * Fallback for Telegram delivery failures: user sees the code in the app,
+ * sends it to the bot from the linked Telegram account, then the app reads
+ * only codes already confirmed by the bot webhook.
+ */
+export const getConfirmedTelegramLoginAccounts = createServerFn({ method: "POST" })
+  .validator((data: { username: string; code: string }) => data)
+  .handler(async ({ data }) => {
+    const clean = (data.username ?? "").trim().replace(/^@/, "");
+    const code = (data.code ?? "").trim();
+    if (!/^\d{6}$/.test(code)) throw new Error("invalid_code");
+    if (!clean) throw new Error("invalid_username");
+
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) throw new Error("auth_not_configured");
+    const supabasePublic = createClient<Database>(url, key, {
+      auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+    });
+
+    const { data: rows, error } = await (supabasePublic as any).rpc("get_confirmed_telegram_login_accounts", {
+      _username: clean,
+      _code: code,
+    });
+    if (error) {
+      const msg = String(error.message ?? "");
+      if (/invalid_code/.test(msg)) throw new Error("invalid_code");
+      if (/invalid_username/.test(msg)) throw new Error("invalid_username");
+      throw new Error(msg || "invalid_code");
     }
 
-    return { ok: true, expiresAt: row.expires_at };
+    const accounts = ((rows as any[]) ?? []).map((r) => ({
+      profile_id: r.profile_id,
+      email: r.email,
+      linked_at: r.linked_at,
+    }));
+    if (!accounts.length) return { status: "pending" as const };
+
+    if (accounts.length > 1) {
+      return {
+        status: "choose" as const,
+        accounts: accounts.map((a) => ({
+          id: a.profile_id,
+          email: a.email,
+          emailMasked: maskEmail(a.email),
+          linkedAt: a.linked_at,
+        })),
+      };
+    }
+
+    const pick = accounts[0];
+    return {
+      status: "password" as const,
+      account: {
+        id: pick.profile_id,
+        email: pick.email,
+        emailMasked: maskEmail(pick.email),
+        linkedAt: pick.linked_at,
+      },
+    };
   });
 
 /**

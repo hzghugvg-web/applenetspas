@@ -634,6 +634,7 @@ async function handleLoginPayload(
     .from("profiles")
     .select("id")
     .eq("telegram_user_id", tgUserId)
+    .limit(1)
     .maybeSingle();
 
   if (!profile) {

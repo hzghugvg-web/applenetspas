@@ -710,6 +710,14 @@ export type Database = {
           telegram_user_id: number
         }[]
       }
+      get_confirmed_telegram_login_accounts: {
+        Args: { _code: string; _username: string }
+        Returns: {
+          email: string
+          linked_at: string
+          profile_id: string
+        }[]
+      }
       get_my_telegram_binding: {
         Args: never
         Returns: {
