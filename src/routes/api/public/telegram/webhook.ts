@@ -408,6 +408,7 @@ async function forwardToAdmin(message: {
   chat: { id: number };
   message_id: number;
   from?: { id: number; first_name?: string; username?: string };
+  text?: string;
 }) {
   const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
   if (!adminChatId) {
