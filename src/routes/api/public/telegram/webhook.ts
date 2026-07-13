@@ -773,10 +773,13 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const tgKey = process.env.TELEGRAM_API_KEY;
-        if (!tgKey) return new Response("Not configured", { status: 500 });
-
-        const expected = deriveSecret(tgKey);
+        // Prefer TELEGRAM_WEBHOOK_SECRET when set (works on Vercel where the
+        // Lovable gateway env vars are absent). Otherwise derive the secret
+        // from TELEGRAM_API_KEY / TELEGRAM_BOT_TOKEN for backwards compat.
+        const explicitSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+        const seed = explicitSecret || process.env.TELEGRAM_API_KEY || process.env.TELEGRAM_BOT_TOKEN;
+        if (!seed) return new Response("Not configured", { status: 500 });
+        const expected = explicitSecret ? explicitSecret : deriveSecret(seed);
         const got = request.headers.get("X-Telegram-Bot-Api-Secret-Token") ?? "";
         if (!safeEqual(got, expected)) {
           return new Response("Unauthorized", { status: 401 });
