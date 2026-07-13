@@ -22,7 +22,7 @@ function AuthPage() {
   const navigate = useNavigate();
   const signInPassword = useServerFn(signInWithPasswordServer);
   const signUpPassword = useServerFn(signUpWithPasswordServer);
-  const [mode, setMode] = useState<"login" | "signup">("signup");
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -136,7 +136,7 @@ function AuthPage() {
           </div>
 
           <div className="mb-4 grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
-            {(["signup", "login"] as const).map((k) => {
+            {(["login", "signup"] as const).map((k) => {
               const active = mode === k;
               return (
                 <button
