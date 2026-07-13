@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { AtSign, ArrowLeft, KeyRound, Loader2, Lock, Send, ShieldCheck, X } from "lucide-react";
 import {
+  getConfirmedTelegramLoginAccounts,
   sendTelegramLoginCode,
   verifyTelegramLoginCode,
 } from "@/lib/telegram-auth.functions";
@@ -13,6 +14,7 @@ import { alertDialog as toast } from "@/lib/alert";
 
 type Account = { id: string; email: string; emailMasked: string; linkedAt: string | null };
 type Step = "username" | "code" | "choose" | "password";
+type DeliveryMode = "telegram" | "manual";
 
 function translate(err: string): string {
   switch (err) {
@@ -43,12 +45,15 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
   const navigate = useNavigate();
   const sendCode = useServerFn(sendTelegramLoginCode);
   const verifyCode = useServerFn(verifyTelegramLoginCode);
+  const getConfirmedAccounts = useServerFn(getConfirmedTelegramLoginAccounts);
   const signInPassword = useServerFn(signInWithPasswordServer);
 
   const [step, setStep] = useState<Step>("username");
   const [username, setUsername] = useState("");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
+  const [displayCode, setDisplayCode] = useState("");
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("telegram");
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [sending, setSending] = useState(false);
@@ -64,6 +69,8 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
       setUsername("");
       setCode("");
       setPassword("");
+        setDisplayCode("");
+        setDeliveryMode("telegram");
       setAccounts([]);
       setSelectedAccount(null);
       setSending(false);
@@ -93,7 +100,10 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
     if (!canSend) return;
     setSending(true);
     try {
-      await sendCode({ data: { username: username.trim().replace(/^@/, "") } });
+      const res = await sendCode({ data: { username: username.trim().replace(/^@/, "") } });
+      setCode("");
+      setDisplayCode(res.code);
+      setDeliveryMode(res.delivery);
       startedAt.current = Date.now();
       setCooldown(60);
       setStep("code");
@@ -108,12 +118,17 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
     if (!/^\d{6}$/.test(code)) return;
     setVerifying(true);
     try {
-      const res = await verifyCode({
-        data: {
-          username: username.trim().replace(/^@/, ""),
-          code,
-        },
-      });
+      const payload = {
+        username: username.trim().replace(/^@/, ""),
+        code,
+      };
+      const res = deliveryMode === "manual"
+        ? await getConfirmedAccounts({ data: payload })
+        : await verifyCode({ data: payload });
+      if (res.status === "pending") {
+        toast.info("Код ещё не подтверждён", "Отправьте показанный код сообщением боту @netspas_bot, затем нажмите «Проверить». ");
+        return;
+      }
       if (res.status === "choose") {
         setAccounts(res.accounts);
         setStep("choose");
@@ -223,9 +238,30 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
         {step === "code" && (
           <div className="space-y-4">
             <p className="text-[13px] leading-snug text-muted-foreground">
-              Мы отправили 6-значный код в Telegram для <b>@{username.replace(/^@/, "")}</b>.
-              Введите его ниже.
+              {deliveryMode === "manual" ? (
+                <>
+                  Отправьте этот код сообщением боту <b>@netspas_bot</b> с привязанного Telegram:
+                </>
+              ) : (
+                <>
+                  Мы отправили 6-значный код в Telegram для <b>@{username.replace(/^@/, "")}</b>.
+                  Введите его ниже.
+                </>
+              )}
             </p>
+            {deliveryMode === "manual" && (
+              <div className="rounded-xl border border-border bg-input px-4 py-3 text-center">
+                <div className="font-mono text-[26px] font-semibold tracking-[0.28em] text-foreground">{displayCode}</div>
+                <a
+                  href={`https://t.me/netspas_bot?start=login_${displayCode}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex text-[12px] font-medium text-primary"
+                >
+                  Открыть бота
+                </a>
+              </div>
+            )}
             <div className="relative">
               <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -235,7 +271,8 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
                 autoComplete="one-time-code"
                 maxLength={6}
                 placeholder="000000"
-                value={code}
+                value={deliveryMode === "manual" ? displayCode : code}
+                readOnly={deliveryMode === "manual"}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 onKeyDown={(e) => e.key === "Enter" && handleVerify()}
                 className="h-12 w-full rounded-xl border border-border bg-input pl-9 pr-3 text-center font-mono text-[22px] tracking-[0.4em] text-foreground outline-none placeholder:text-muted-foreground/40 focus:border-primary/60"
@@ -243,12 +280,12 @@ export function TelegramLoginPanel({ open, onClose }: { open: boolean; onClose: 
             </div>
             <button
               onClick={() => handleVerify()}
-              disabled={code.length !== 6 || verifying}
+              disabled={(deliveryMode === "manual" ? displayCode.length !== 6 : code.length !== 6) || verifying}
               className="flex h-11 w-full items-center justify-center gap-2 rounded-xl text-[14px] font-semibold text-primary-foreground disabled:opacity-60"
               style={{ background: "linear-gradient(135deg,#38BDF8,#0EA5E9)" }}
             >
               {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-              Войти
+              {deliveryMode === "manual" ? "Проверить" : "Войти"}
             </button>
             <div className="flex items-center justify-between text-[12px]">
               <button
