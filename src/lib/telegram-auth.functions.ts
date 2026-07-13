@@ -237,3 +237,86 @@ export const verifyTelegramLoginCode = createServerFn({ method: "POST" })
       },
     };
   });
+
+/**
+ * Finalize a Telegram-based sign-in and return a Supabase session.
+ * The Telegram code + linked @username IS the confirmation — no password needed.
+ * Called after verifyTelegramLoginCode / getConfirmedTelegramLoginAccounts have
+ * proven the code is valid; here we re-check the binding, then mint a session
+ * for the chosen profile via a magiclink hashed_token exchanged into a session.
+ */
+export const finalizeTelegramSignIn = createServerFn({ method: "POST" })
+  .validator((data: { username: string; code: string; profileId: string }) => data)
+  .handler(async ({ data }) => {
+    const clean = (data.username ?? "").trim().replace(/^@/, "").toLowerCase();
+    const code = (data.code ?? "").trim();
+    const profileId = (data.profileId ?? "").trim();
+    if (!/^\d{6}$/.test(code)) throw new Error("invalid_code");
+    if (clean.length < 3) throw new Error("invalid_username");
+    if (!/^[0-9a-f-]{36}$/i.test(profileId)) throw new Error("invalid_profile");
+
+    const url = process.env.SUPABASE_URL;
+    const pubKey = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !pubKey) throw new Error("auth_not_configured");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Re-check the code binding server-side (defense in depth).
+    const { data: codeRow, error: codeErr } = await (supabaseAdmin as any)
+      .from("telegram_auth_codes")
+      .select("telegram_user_id, telegram_username, status, expires_at, purpose")
+      .eq("code", code)
+      .maybeSingle();
+    if (codeErr) throw new Error(codeErr.message);
+    if (!codeRow) throw new Error("invalid_code");
+    if (codeRow.purpose !== "login") throw new Error("invalid_code");
+    if (new Date(codeRow.expires_at).getTime() <= Date.now()) throw new Error("expired");
+    if (!["pending", "confirmed"].includes(String(codeRow.status))) throw new Error("invalid_code");
+    if ((codeRow.telegram_username ?? "").toLowerCase() !== clean) throw new Error("invalid_code");
+
+    // Ensure the chosen profile is actually linked to this Telegram account.
+    const { data: profile, error: profErr } = await (supabaseAdmin as any)
+      .from("profiles")
+      .select("id, telegram_user_id")
+      .eq("id", profileId)
+      .maybeSingle();
+    if (profErr) throw new Error(profErr.message);
+    if (!profile || String(profile.telegram_user_id ?? "") !== String(codeRow.telegram_user_id)) {
+      throw new Error("not_linked");
+    }
+
+    // Consume the code so it can't be replayed.
+    await (supabaseAdmin as any)
+      .from("telegram_auth_codes")
+      .delete()
+      .eq("code", code);
+
+    // Get the auth email for this profile.
+    const { data: userRes, error: userErr } = await supabaseAdmin.auth.admin.getUserById(profileId);
+    if (userErr) throw new Error(userErr.message);
+    const email = userRes.user?.email;
+    if (!email) throw new Error("auth_not_configured");
+
+    // Mint a magiclink and exchange the hashed_token for a real session server-side.
+    const { data: linkRes, error: linkErr } = await (supabaseAdmin as any).auth.admin.generateLink({
+      type: "magiclink",
+      email,
+    });
+    if (linkErr) throw new Error(linkErr.message);
+    const hashedToken: string | undefined = linkRes?.properties?.hashed_token;
+    if (!hashedToken) throw new Error("link_failed");
+
+    const authClient = createClient<Database>(url, pubKey, {
+      auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+    });
+    const { data: sess, error: otpErr } = await authClient.auth.verifyOtp({
+      type: "magiclink",
+      token_hash: hashedToken,
+    });
+    if (otpErr) throw new Error(otpErr.message);
+    const accessToken = sess.session?.access_token;
+    const refreshToken = sess.session?.refresh_token;
+    if (!accessToken || !refreshToken) throw new Error("session_missing");
+
+    return { accessToken, refreshToken, userId: sess.user?.id ?? profileId };
+  });
