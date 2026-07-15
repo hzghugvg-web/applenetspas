@@ -818,6 +818,329 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
   },
 });
 
+// ============================================================
+// Admin commands (управление направлениями и vless-ссылками из бота)
+// ============================================================
+
+async function isBotAdmin(tgUserId: number): Promise<boolean> {
+  const envAdmin = process.env.TELEGRAM_ADMIN_CHAT_ID;
+  if (envAdmin && String(envAdmin) === String(tgUserId)) return true;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("telegram_bot_admins")
+    .select("telegram_user_id")
+    .eq("telegram_user_id", tgUserId)
+    .maybeSingle();
+  return !!data;
+}
+
+const ADMIN_HELP =
+  "🛠 <b>Админ-команды</b>\n\n" +
+  "<b>Админы:</b>\n" +
+  "• <code>/adminhelp</code> — эта справка\n" +
+  "• <code>/admins</code> — список админов\n" +
+  "• <code>/grantadmin ID</code> — выдать админку\n" +
+  "• <code>/revokeadmin ID</code> — забрать админку\n\n" +
+  "<b>Направления:</b>\n" +
+  "• <code>/directions</code> — список\n" +
+  "• <code>/adddir 🇩🇪 Germany</code> — добавить\n" +
+  "• <code>/toggledir &lt;id_или_имя&gt;</code> — вкл/выкл\n" +
+  "• <code>/deldir &lt;id_или_имя&gt;</code> — удалить (если нет ссылок)\n\n" +
+  "<b>VLESS-ссылки:</b>\n" +
+  "• <code>/links</code> — список активных\n" +
+  "• <code>/links &lt;имя&gt;</code> — по направлению\n" +
+  "• <code>/addlink &lt;имя&gt; &lt;vless://...&gt;</code> — добавить\n" +
+  "• <code>/dellink &lt;id_ссылки&gt;</code> — удалить";
+
+async function findDirection(query: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const q = query.trim();
+  if (/^[0-9a-f-]{8,}$/i.test(q)) {
+    const { data } = await supabaseAdmin
+      .from("directions")
+      .select("id, name, flag, is_active")
+      .ilike("id", `${q}%`)
+      .limit(2);
+    if (data && data.length === 1) return data[0];
+    if (data && data.length > 1) return { _ambiguous: true };
+  }
+  const { data } = await supabaseAdmin
+    .from("directions")
+    .select("id, name, flag, is_active")
+    .ilike("name", q)
+    .limit(2);
+  if (data && data.length === 1) return data[0];
+  if (data && data.length > 1) return { _ambiguous: true };
+  return null;
+}
+
+async function tryHandleAdminCommand(chatId: number, tgUserId: number, text: string): Promise<boolean> {
+  const [cmdRaw, ...restParts] = text.split(/\s+/);
+  const cmd = cmdRaw.toLowerCase().replace(/@\w+$/, "");
+  const adminCmds = new Set([
+    "/adminhelp",
+    "/admins",
+    "/grantadmin",
+    "/revokeadmin",
+    "/directions",
+    "/adddir",
+    "/toggledir",
+    "/deldir",
+    "/links",
+    "/addlink",
+    "/dellink",
+  ]);
+  if (!adminCmds.has(cmd)) return false;
+
+  if (!(await isBotAdmin(tgUserId))) {
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: "⛔ У тебя нет прав администратора бота.",
+    });
+    return true;
+  }
+
+  const rest = restParts.join(" ").trim();
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  try {
+    if (cmd === "/adminhelp") {
+      await tg("sendMessage", { chat_id: chatId, text: ADMIN_HELP, parse_mode: "HTML" });
+      return true;
+    }
+
+    if (cmd === "/admins") {
+      const { data } = await supabaseAdmin
+        .from("telegram_bot_admins")
+        .select("telegram_user_id, note, created_at")
+        .order("created_at", { ascending: true });
+      const envAdmin = process.env.TELEGRAM_ADMIN_CHAT_ID;
+      const lines = (data ?? []).map(
+        (r) => `• <code>${r.telegram_user_id}</code>${r.note ? ` — ${escapeHtml(r.note)}` : ""}`,
+      );
+      if (envAdmin) lines.unshift(`• <code>${envAdmin}</code> — root (env)`);
+      await tg("sendMessage", {
+        chat_id: chatId,
+        text: `👥 <b>Админы бота</b>\n\n${lines.length ? lines.join("\n") : "— пусто —"}`,
+        parse_mode: "HTML",
+      });
+      return true;
+    }
+
+    if (cmd === "/grantadmin") {
+      const id = Number(rest.split(/\s+/)[0]);
+      if (!Number.isFinite(id) || id <= 0) {
+        await tg("sendMessage", { chat_id: chatId, text: "Использование: <code>/grantadmin ID</code>", parse_mode: "HTML" });
+        return true;
+      }
+      const { error } = await supabaseAdmin
+        .from("telegram_bot_admins")
+        .upsert({ telegram_user_id: id, added_by: tgUserId }, { onConflict: "telegram_user_id" });
+      if (error) throw error;
+      await tg("sendMessage", { chat_id: chatId, text: `✅ Админка выдана: <code>${id}</code>`, parse_mode: "HTML" });
+      return true;
+    }
+
+    if (cmd === "/revokeadmin") {
+      const id = Number(rest.split(/\s+/)[0]);
+      if (!Number.isFinite(id) || id <= 0) {
+        await tg("sendMessage", { chat_id: chatId, text: "Использование: <code>/revokeadmin ID</code>", parse_mode: "HTML" });
+        return true;
+      }
+      const { error } = await supabaseAdmin.from("telegram_bot_admins").delete().eq("telegram_user_id", id);
+      if (error) throw error;
+      await tg("sendMessage", { chat_id: chatId, text: `✅ Админка отозвана: <code>${id}</code>`, parse_mode: "HTML" });
+      return true;
+    }
+
+    if (cmd === "/directions") {
+      const { data } = await supabaseAdmin
+        .from("directions")
+        .select("id, name, flag, is_active")
+        .order("name", { ascending: true });
+      const lines = (data ?? []).map(
+        (d) =>
+          `${d.is_active ? "🟢" : "⚪️"} ${d.flag ?? "🌐"} <b>${escapeHtml(d.name)}</b>\n   <code>${d.id.slice(0, 8)}</code>`,
+      );
+      await tg("sendMessage", {
+        chat_id: chatId,
+        text: `🗺 <b>Направления</b>\n\n${lines.length ? lines.join("\n\n") : "— пусто —"}`,
+        parse_mode: "HTML",
+      });
+      return true;
+    }
+
+    if (cmd === "/adddir") {
+      const parts = rest.split(/\s+/);
+      const flag = parts[0] ?? "";
+      const name = parts.slice(1).join(" ").trim();
+      if (!flag || !name || name.length > 60) {
+        await tg("sendMessage", { chat_id: chatId, text: "Использование: <code>/adddir 🇩🇪 Germany</code>", parse_mode: "HTML" });
+        return true;
+      }
+      const { data, error } = await supabaseAdmin
+        .from("directions")
+        .insert({ name, flag, is_active: true })
+        .select("id")
+        .single();
+      if (error) throw error;
+      await tg("sendMessage", {
+        chat_id: chatId,
+        text: `✅ Направление создано: ${flag} <b>${escapeHtml(name)}</b>\n<code>${data.id}</code>`,
+        parse_mode: "HTML",
+      });
+      return true;
+    }
+
+    if (cmd === "/toggledir" || cmd === "/deldir") {
+      if (!rest) {
+        await tg("sendMessage", { chat_id: chatId, text: `Использование: <code>${cmd} &lt;id или имя&gt;</code>`, parse_mode: "HTML" });
+        return true;
+      }
+      const dir = await findDirection(rest);
+      if (!dir) {
+        await tg("sendMessage", { chat_id: chatId, text: "❌ Направление не найдено." });
+        return true;
+      }
+      if ((dir as any)._ambiguous) {
+        await tg("sendMessage", { chat_id: chatId, text: "⚠️ Найдено несколько — уточни ID." });
+        return true;
+      }
+      const d = dir as { id: string; name: string; flag: string; is_active: boolean };
+      if (cmd === "/toggledir") {
+        const { error } = await supabaseAdmin
+          .from("directions")
+          .update({ is_active: !d.is_active })
+          .eq("id", d.id);
+        if (error) throw error;
+        await tg("sendMessage", {
+          chat_id: chatId,
+          text: `✅ ${d.flag} <b>${escapeHtml(d.name)}</b> теперь ${!d.is_active ? "🟢 активно" : "⚪️ выключено"}`,
+          parse_mode: "HTML",
+        });
+        return true;
+      }
+      // deldir
+      const { count } = await supabaseAdmin
+        .from("vless_links")
+        .select("id", { count: "exact", head: true })
+        .eq("direction_id", d.id);
+      if ((count ?? 0) > 0) {
+        await tg("sendMessage", {
+          chat_id: chatId,
+          text: `⚠️ Нельзя удалить: у направления есть ${count} ссылок. Сначала удали их (<code>/links ${escapeHtml(d.name)}</code>).`,
+          parse_mode: "HTML",
+        });
+        return true;
+      }
+      const { error } = await supabaseAdmin.from("directions").delete().eq("id", d.id);
+      if (error) throw error;
+      await tg("sendMessage", { chat_id: chatId, text: `✅ Удалено: ${d.flag} ${escapeHtml(d.name)}`, parse_mode: "HTML" });
+      return true;
+    }
+
+    if (cmd === "/links") {
+      let dirId: string | null = null;
+      let dirLabel = "все";
+      if (rest) {
+        const dir = await findDirection(rest);
+        if (!dir || (dir as any)._ambiguous) {
+          await tg("sendMessage", { chat_id: chatId, text: "❌ Направление не найдено (или неоднозначно)." });
+          return true;
+        }
+        const d = dir as { id: string; name: string; flag: string };
+        dirId = d.id;
+        dirLabel = `${d.flag} ${d.name}`;
+      }
+      let q = supabaseAdmin
+        .from("vless_links")
+        .select("id, direction_id, url, is_active, expires_at, directions(name, flag)")
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (dirId) q = q.eq("direction_id", dirId);
+      const { data } = await q;
+      const lines = ((data ?? []) as any[]).map((l) => {
+        const dn = l.directions?.name ? `${l.directions.flag ?? "🌐"} ${l.directions.name}` : "—";
+        const state = l.is_active ? "🟢" : "⚪️";
+        return `${state} <b>${escapeHtml(dn)}</b>\n<code>${l.id.slice(0, 8)}</code> · ${escapeHtml((l.url ?? "").slice(0, 60))}…`;
+      });
+      await tg("sendMessage", {
+        chat_id: chatId,
+        text: `🔗 <b>Ссылки (${escapeHtml(dirLabel)})</b>\n\n${lines.length ? lines.join("\n\n") : "— пусто —"}`,
+        parse_mode: "HTML",
+      });
+      return true;
+    }
+
+    if (cmd === "/addlink") {
+      // /addlink <name> <vless://...>  — имя может быть многословным, разделитель — пробел перед протоколом
+      const m = rest.match(/^(.*?)\s+((?:vless|vmess|trojan|ss):\/\/\S+)\s*$/i);
+      if (!m) {
+        await tg("sendMessage", {
+          chat_id: chatId,
+          text: "Использование: <code>/addlink Germany vless://...</code>",
+          parse_mode: "HTML",
+        });
+        return true;
+      }
+      const [, dirQuery, url] = m;
+      const dir = await findDirection(dirQuery);
+      if (!dir || (dir as any)._ambiguous) {
+        await tg("sendMessage", { chat_id: chatId, text: "❌ Направление не найдено." });
+        return true;
+      }
+      const d = dir as { id: string; name: string; flag: string };
+      const { data, error } = await supabaseAdmin
+        .from("vless_links")
+        .insert({ direction_id: d.id, url, is_active: true })
+        .select("id")
+        .single();
+      if (error) throw error;
+      await tg("sendMessage", {
+        chat_id: chatId,
+        text: `✅ Ссылка добавлена в ${d.flag} <b>${escapeHtml(d.name)}</b>\n<code>${data.id}</code>`,
+        parse_mode: "HTML",
+      });
+      return true;
+    }
+
+    if (cmd === "/dellink") {
+      const q = rest.split(/\s+/)[0] ?? "";
+      if (!q) {
+        await tg("sendMessage", { chat_id: chatId, text: "Использование: <code>/dellink &lt;id_ссылки&gt;</code>", parse_mode: "HTML" });
+        return true;
+      }
+      const { data: found } = await supabaseAdmin
+        .from("vless_links")
+        .select("id")
+        .ilike("id", `${q}%`)
+        .limit(2);
+      if (!found || found.length === 0) {
+        await tg("sendMessage", { chat_id: chatId, text: "❌ Ссылка не найдена." });
+        return true;
+      }
+      if (found.length > 1) {
+        await tg("sendMessage", { chat_id: chatId, text: "⚠️ Найдено несколько — уточни ID." });
+        return true;
+      }
+      const { error } = await supabaseAdmin.from("vless_links").delete().eq("id", found[0].id);
+      if (error) throw error;
+      await tg("sendMessage", { chat_id: chatId, text: `✅ Удалено: <code>${found[0].id}</code>`, parse_mode: "HTML" });
+      return true;
+    }
+  } catch (err) {
+    console.error("[admin-cmd] failed", err);
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: `⚠️ Ошибка: ${escapeHtml(String((err as Error).message ?? err))}`,
+      parse_mode: "HTML",
+    });
+    return true;
+  }
+
+  return false;
+}
+
 async function handleLoginDecision(
   chatId: number,
   tgUserId: number,
