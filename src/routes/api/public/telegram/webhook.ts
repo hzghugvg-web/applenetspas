@@ -1149,6 +1149,34 @@ async function tryHandleAdminCommand(chatId: number, tgUserId: number, text: str
     }
 
     if (cmd === "/addlink") {
+      // Без аргументов — показываем интерактивный выбор направления
+      if (!rest) {
+        const { data: dirs } = await supabaseAdmin
+          .from("directions")
+          .select("id, name, flag")
+          .eq("is_active", true)
+          .order("name", { ascending: true });
+        if (!dirs || dirs.length === 0) {
+          await tg("sendMessage", { chat_id: chatId, text: "❌ Нет активных направлений. Сначала добавь через <code>/adddir</code>.", parse_mode: "HTML" });
+          return true;
+        }
+        const keyboard: { text: string; callback_data: string }[][] = [];
+        for (let i = 0; i < dirs.length; i += 2) {
+          keyboard.push(
+            dirs.slice(i, i + 2).map((d) => ({
+              text: `${d.flag ?? "🌐"} ${d.name}`,
+              callback_data: `alink:${d.id}`,
+            })),
+          );
+        }
+        await tg("sendMessage", {
+          chat_id: chatId,
+          text: "➕ <b>Добавление ссылки</b>\n\nВыбери направление:",
+          parse_mode: "HTML",
+          reply_markup: { inline_keyboard: keyboard },
+        });
+        return true;
+      }
       // /addlink <name> <vless://...>  — имя может быть многословным, разделитель — пробел перед протоколом
       const m = rest.match(/^(.*?)\s+((?:vless|vmess|trojan|ss):\/\/\S+)\s*$/i);
       if (!m) {
