@@ -417,6 +417,34 @@ async function handleCallback(cb: {
     });
     return;
   }
+  if (data.startsWith("alink:")) {
+    // Админ выбрал направление для добавления vless-ссылки
+    if (!(await isBotAdmin(cb.from.id))) {
+      await tg("sendMessage", { chat_id: chatId, text: "⛔ Нет прав." });
+      return;
+    }
+    const dirId = data.slice(6);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: d } = await supabaseAdmin
+      .from("directions")
+      .select("id, name, flag")
+      .eq("id", dirId)
+      .maybeSingle();
+    if (!d) {
+      await tg("sendMessage", { chat_id: chatId, text: "❌ Направление не найдено." });
+      return;
+    }
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text:
+        `➕ Добавляем ключ в ${d.flag ?? "🌐"} <b>${escapeHtml(d.name)}</b>.\n\n` +
+        `Пришли <b>ответом</b> на это сообщение vless-ссылку (начинается с <code>vless://</code>).\n\n` +
+        `<code>[dir:${d.id}]</code>`,
+      parse_mode: "HTML",
+      reply_markup: { force_reply: true, input_field_placeholder: "vless://..." },
+    });
+    return;
+  }
 }
 
 async function forwardToAdmin(message: {
