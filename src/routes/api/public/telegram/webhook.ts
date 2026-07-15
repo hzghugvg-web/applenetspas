@@ -310,7 +310,8 @@ async function sendMyVpn(chatId: number, telegramUserId: number) {
     });
   }
   merged.sort((a, b) => (a.issuedAt < b.issuedAt ? 1 : -1));
-  const rows = merged;
+  // Показываем только самый свежий ключ — политика «1 ключ на аккаунт»
+  const rows = merged.slice(0, 1);
   if (rows.length === 0) {
     await tg("sendMessage", {
       chat_id: chatId,
@@ -416,6 +417,34 @@ async function handleCallback(cb: {
     });
     return;
   }
+  if (data.startsWith("alink:")) {
+    // Админ выбрал направление для добавления vless-ссылки
+    if (!(await isBotAdmin(cb.from.id))) {
+      await tg("sendMessage", { chat_id: chatId, text: "⛔ Нет прав." });
+      return;
+    }
+    const dirId = data.slice(6);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: d } = await supabaseAdmin
+      .from("directions")
+      .select("id, name, flag")
+      .eq("id", dirId)
+      .maybeSingle();
+    if (!d) {
+      await tg("sendMessage", { chat_id: chatId, text: "❌ Направление не найдено." });
+      return;
+    }
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text:
+        `➕ Добавляем ключ в ${d.flag ?? "🌐"} <b>${escapeHtml(d.name)}</b>.\n\n` +
+        `Пришли <b>ответом</b> на это сообщение vless-ссылку (начинается с <code>vless://</code>).\n\n` +
+        `<code>[dir:${d.id}]</code>`,
+      parse_mode: "HTML",
+      reply_markup: { force_reply: true, input_field_placeholder: "vless://..." },
+    });
+    return;
+  }
 }
 
 async function forwardToAdmin(message: {
@@ -482,6 +511,50 @@ async function handleMessage(msg: {
   if (text.startsWith("/") && msg.from?.id) {
     const handled = await tryHandleAdminCommand(msg.chat.id, msg.from.id, text);
     if (handled) return;
+  }
+
+  // Admin: reply to "add link" prompt with a vless URL
+  const replyText = msg.reply_to_message?.text ?? "";
+  const dirMarker = replyText.match(/\[dir:([0-9a-f-]{36})\]/i);
+  if (dirMarker && msg.reply_to_message?.from?.is_bot && msg.from?.id) {
+    if (!(await isBotAdmin(msg.from.id))) {
+      await tg("sendMessage", { chat_id: msg.chat.id, text: "⛔ Нет прав." });
+      return;
+    }
+    const url = text;
+    if (!/^(vless|vmess|trojan|ss):\/\/\S+/i.test(url)) {
+      await tg("sendMessage", {
+        chat_id: msg.chat.id,
+        text: "❌ Это не похоже на vless-ссылку. Отправь ещё раз ответом на прошлое сообщение.",
+      });
+      return;
+    }
+    const dirId = dirMarker[1];
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: d } = await supabaseAdmin
+      .from("directions")
+      .select("id, name, flag")
+      .eq("id", dirId)
+      .maybeSingle();
+    if (!d) {
+      await tg("sendMessage", { chat_id: msg.chat.id, text: "❌ Направление больше не существует." });
+      return;
+    }
+    const { data: inserted, error } = await supabaseAdmin
+      .from("vless_links")
+      .insert({ direction_id: d.id, url, is_active: true })
+      .select("id")
+      .single();
+    if (error) {
+      await tg("sendMessage", { chat_id: msg.chat.id, text: `⚠️ Ошибка: ${escapeHtml(error.message)}`, parse_mode: "HTML" });
+      return;
+    }
+    await tg("sendMessage", {
+      chat_id: msg.chat.id,
+      text: `✅ Ссылка добавлена в ${d.flag ?? "🌐"} <b>${escapeHtml(d.name)}</b>\n<code>${inserted.id}</code>`,
+      parse_mode: "HTML",
+    });
+    return;
   }
 
   // Support flow: user replied to the support prompt
@@ -849,7 +922,7 @@ const ADMIN_HELP =
   "<b>VLESS-ссылки:</b>\n" +
   "• <code>/links</code> — список активных\n" +
   "• <code>/links &lt;имя&gt;</code> — по направлению\n" +
-  "• <code>/addlink &lt;имя&gt; &lt;vless://...&gt;</code> — добавить\n" +
+  "• <code>/addlink</code> — добавить ключ (кнопки + ответ)\n" +
   "• <code>/dellink &lt;id_ссылки&gt;</code> — удалить";
 
 async function findDirection(query: string) {
@@ -1076,6 +1149,34 @@ async function tryHandleAdminCommand(chatId: number, tgUserId: number, text: str
     }
 
     if (cmd === "/addlink") {
+      // Без аргументов — показываем интерактивный выбор направления
+      if (!rest) {
+        const { data: dirs } = await supabaseAdmin
+          .from("directions")
+          .select("id, name, flag")
+          .eq("is_active", true)
+          .order("name", { ascending: true });
+        if (!dirs || dirs.length === 0) {
+          await tg("sendMessage", { chat_id: chatId, text: "❌ Нет активных направлений. Сначала добавь через <code>/adddir</code>.", parse_mode: "HTML" });
+          return true;
+        }
+        const keyboard: { text: string; callback_data: string }[][] = [];
+        for (let i = 0; i < dirs.length; i += 2) {
+          keyboard.push(
+            dirs.slice(i, i + 2).map((d) => ({
+              text: `${d.flag ?? "🌐"} ${d.name}`,
+              callback_data: `alink:${d.id}`,
+            })),
+          );
+        }
+        await tg("sendMessage", {
+          chat_id: chatId,
+          text: "➕ <b>Добавление ссылки</b>\n\nВыбери направление:",
+          parse_mode: "HTML",
+          reply_markup: { inline_keyboard: keyboard },
+        });
+        return true;
+      }
       // /addlink <name> <vless://...>  — имя может быть многословным, разделитель — пробел перед протоколом
       const m = rest.match(/^(.*?)\s+((?:vless|vmess|trojan|ss):\/\/\S+)\s*$/i);
       if (!m) {
