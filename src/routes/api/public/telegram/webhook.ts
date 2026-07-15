@@ -922,7 +922,7 @@ const ADMIN_HELP =
   "<b>VLESS-ссылки:</b>\n" +
   "• <code>/links</code> — список активных\n" +
   "• <code>/links &lt;имя&gt;</code> — по направлению\n" +
-  "• <code>/addlink &lt;имя&gt; &lt;vless://...&gt;</code> — добавить\n" +
+  "• <code>/addlink</code> — добавить ключ (кнопки + ответ)\n" +
   "• <code>/dellink &lt;id_ссылки&gt;</code> — удалить";
 
 async function findDirection(query: string) {
