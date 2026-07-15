@@ -1161,13 +1161,30 @@ async function tryHandleAdminCommand(chatId: number, tgUserId: number, text: str
     if (cmd === "/addlink") {
       // Без аргументов — показываем интерактивный выбор направления
       if (!rest) {
-        const { data: dirs } = await supabaseAdmin
-          .from("directions")
-          .select("id, name, flag")
-          .eq("is_active", true)
-          .order("name", { ascending: true });
-        if (!dirs || dirs.length === 0) {
-          await tg("sendMessage", { chat_id: chatId, text: "❌ Нет активных направлений. Сначала добавь через <code>/adddir</code>.", parse_mode: "HTML" });
+        const [dirRes, tgIssuedRes, siteIssuedRes] = await Promise.all([
+          supabaseAdmin
+            .from("directions")
+            .select("id, name, flag")
+            .eq("is_active", true)
+            .order("name", { ascending: true }),
+          supabaseAdmin.from("telegram_issued_keys").select("direction_id"),
+          supabaseAdmin.from("issued_configs").select("direction_id"),
+        ]);
+        if (dirRes.error || tgIssuedRes.error || siteIssuedRes.error) {
+          await tg("sendMessage", { chat_id: chatId, text: "⚠️ Не смог загрузить направления. Попробуй ещё раз." });
+          return true;
+        }
+        const takenDirIds = new Set(
+          [...(tgIssuedRes.data ?? []), ...(siteIssuedRes.data ?? [])]
+            .map((r: any) => r.direction_id)
+            .filter(Boolean),
+        );
+        const dirs = (dirRes.data ?? []).filter((d) => !takenDirIds.has(d.id));
+        if (dirs.length === 0) {
+          await tg("sendMessage", {
+            chat_id: chatId,
+            text: "❌ Нет свободных направлений для добавления ссылок — все активные направления уже кто-то брал.",
+          });
           return true;
         }
         const keyboard: { text: string; callback_data: string }[][] = [];
