@@ -513,6 +513,50 @@ async function handleMessage(msg: {
     if (handled) return;
   }
 
+  // Admin: reply to "add link" prompt with a vless URL
+  const replyText = msg.reply_to_message?.text ?? "";
+  const dirMarker = replyText.match(/\[dir:([0-9a-f-]{36})\]/i);
+  if (dirMarker && msg.reply_to_message?.from?.is_bot && msg.from?.id) {
+    if (!(await isBotAdmin(msg.from.id))) {
+      await tg("sendMessage", { chat_id: msg.chat.id, text: "⛔ Нет прав." });
+      return;
+    }
+    const url = text;
+    if (!/^(vless|vmess|trojan|ss):\/\/\S+/i.test(url)) {
+      await tg("sendMessage", {
+        chat_id: msg.chat.id,
+        text: "❌ Это не похоже на vless-ссылку. Отправь ещё раз ответом на прошлое сообщение.",
+      });
+      return;
+    }
+    const dirId = dirMarker[1];
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: d } = await supabaseAdmin
+      .from("directions")
+      .select("id, name, flag")
+      .eq("id", dirId)
+      .maybeSingle();
+    if (!d) {
+      await tg("sendMessage", { chat_id: msg.chat.id, text: "❌ Направление больше не существует." });
+      return;
+    }
+    const { data: inserted, error } = await supabaseAdmin
+      .from("vless_links")
+      .insert({ direction_id: d.id, url, is_active: true })
+      .select("id")
+      .single();
+    if (error) {
+      await tg("sendMessage", { chat_id: msg.chat.id, text: `⚠️ Ошибка: ${escapeHtml(error.message)}`, parse_mode: "HTML" });
+      return;
+    }
+    await tg("sendMessage", {
+      chat_id: msg.chat.id,
+      text: `✅ Ссылка добавлена в ${d.flag ?? "🌐"} <b>${escapeHtml(d.name)}</b>\n<code>${inserted.id}</code>`,
+      parse_mode: "HTML",
+    });
+    return;
+  }
+
   // Support flow: user replied to the support prompt
   const reply = msg.reply_to_message;
   if (reply?.from?.is_bot && reply.text?.includes(SUPPORT_PROMPT_PLAIN)) {
