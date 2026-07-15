@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FaqList } from "@/components/FaqList";
+import { AboutProject } from "@/components/AboutProject";
 
 export const Route = createFileRoute("/_app/faq")({ component: FaqPage });
 
 function FaqPage() {
   return (
     <>
-      <FaqList />
+      <AboutProject />
     </>
   );
 }
