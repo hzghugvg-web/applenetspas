@@ -478,6 +478,12 @@ async function handleMessage(msg: {
 }) {
   const text = msg.text?.trim() ?? "";
 
+  // Admin commands (Telegram-based management of directions and vless links)
+  if (text.startsWith("/") && msg.from?.id) {
+    const handled = await tryHandleAdminCommand(msg.chat.id, msg.from.id, text);
+    if (handled) return;
+  }
+
   // Support flow: user replied to the support prompt
   const reply = msg.reply_to_message;
   if (reply?.from?.is_bot && reply.text?.includes(SUPPORT_PROMPT_PLAIN)) {
