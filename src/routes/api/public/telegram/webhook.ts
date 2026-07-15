@@ -891,11 +891,14 @@ async function tryHandleAdminCommand(chatId: number, tgUserId: number, text: str
     "/dellink",
   ]);
   if (!adminCmds.has(cmd)) return false;
+  console.log(`[admin-cmd] user=${tgUserId} cmd=${cmd}`);
 
   if (!(await isBotAdmin(tgUserId))) {
+    console.log(`[admin-cmd] denied for tgUserId=${tgUserId}`);
     await tg("sendMessage", {
       chat_id: chatId,
-      text: "⛔ У тебя нет прав администратора бота.",
+      text: `⛔ У тебя нет прав администратора бота.\n\nТвой Telegram ID: <code>${tgUserId}</code>`,
+      parse_mode: "HTML",
     });
     return true;
   }
