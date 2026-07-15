@@ -310,7 +310,8 @@ async function sendMyVpn(chatId: number, telegramUserId: number) {
     });
   }
   merged.sort((a, b) => (a.issuedAt < b.issuedAt ? 1 : -1));
-  const rows = merged;
+  // Показываем только самый свежий ключ — политика «1 ключ на аккаунт»
+  const rows = merged.slice(0, 1);
   if (rows.length === 0) {
     await tg("sendMessage", {
       chat_id: chatId,
