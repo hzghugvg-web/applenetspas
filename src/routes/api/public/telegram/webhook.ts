@@ -100,7 +100,7 @@ const SUPPORT_PROMPT =
 
 const SUPPORT_PROMPT_PLAIN = "Напиши свой вопрос ответом на это сообщение";
 
-async function sendDirectionPicker(chatId: number) {
+async function sendDirectionPicker(chatId: number, telegramUserId?: number) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   // Clean up expired links so we don't offer directions whose only links are expired
@@ -112,7 +112,7 @@ async function sendDirectionPicker(chatId: number) {
 
   const nowIso = new Date().toISOString();
 
-  const [dirRes, linksRes] = await Promise.all([
+  const [dirRes, linksRes, issuedRes] = await Promise.all([
     supabaseAdmin
       .from("directions")
       .select("id, name, flag")
@@ -122,6 +122,12 @@ async function sendDirectionPicker(chatId: number) {
       .from("vless_links")
       .select("direction_id, available_from, expires_at")
       .eq("is_active", true),
+    telegramUserId
+      ? supabaseAdmin
+          .from("telegram_issued_keys")
+          .select("direction_id")
+          .eq("telegram_user_id", telegramUserId)
+      : Promise.resolve({ data: [] as { direction_id: string }[], error: null } as any),
   ]);
 
   const directions = dirRes.data ?? [];
@@ -135,7 +141,13 @@ async function sendDirectionPicker(chatId: number) {
       .map((l) => l.direction_id),
   );
 
-  const usable = directions.filter((d) => availableDirIds.has(d.id));
+  const takenDirIds = new Set(
+    (issuedRes?.data ?? []).map((r: any) => r.direction_id).filter(Boolean),
+  );
+
+  const usable = directions.filter(
+    (d) => availableDirIds.has(d.id) && !takenDirIds.has(d.id),
+  );
 
   if (dirRes.error || linksRes.error || usable.length === 0) {
     await tg("sendMessage", {
@@ -363,7 +375,7 @@ async function handleCallback(cb: {
     return;
   }
   if (data === "get_vpn") {
-    await sendDirectionPicker(chatId);
+    await sendDirectionPicker(chatId, cb.from.id);
     return;
   }
   if (data === "my_vpn") {
