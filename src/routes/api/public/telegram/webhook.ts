@@ -112,7 +112,7 @@ async function sendDirectionPicker(chatId: number, telegramUserId?: number) {
 
   const nowIso = new Date().toISOString();
 
-  const [dirRes, linksRes, issuedRes] = await Promise.all([
+  const [dirRes, linksRes, tgIssuedRes, siteIssuedRes] = await Promise.all([
     supabaseAdmin
       .from("directions")
       .select("id, name, flag")
@@ -122,12 +122,8 @@ async function sendDirectionPicker(chatId: number, telegramUserId?: number) {
       .from("vless_links")
       .select("direction_id, available_from, expires_at")
       .eq("is_active", true),
-    telegramUserId
-      ? supabaseAdmin
-          .from("telegram_issued_keys")
-          .select("direction_id")
-          .eq("telegram_user_id", telegramUserId)
-      : Promise.resolve({ data: [] as { direction_id: string }[], error: null } as any),
+    supabaseAdmin.from("telegram_issued_keys").select("direction_id"),
+    supabaseAdmin.from("issued_configs").select("direction_id"),
   ]);
 
   const directions = dirRes.data ?? [];
@@ -142,14 +138,16 @@ async function sendDirectionPicker(chatId: number, telegramUserId?: number) {
   );
 
   const takenDirIds = new Set(
-    (issuedRes?.data ?? []).map((r: any) => r.direction_id).filter(Boolean),
+    [...(tgIssuedRes.data ?? []), ...(siteIssuedRes.data ?? [])]
+      .map((r: any) => r.direction_id)
+      .filter(Boolean),
   );
 
-  // Показываем все направления, которые пользователь ещё НЕ получил
-  // (включая пустые, без активных ссылок).
-  const usable = directions.filter((d) => !takenDirIds.has(d.id));
+  // Показываем только глобально свободные направления:
+  // никто ещё не получал это направление, и в нём есть активная свободная ссылка.
+  const usable = directions.filter((d) => availableDirIds.has(d.id) && !takenDirIds.has(d.id));
 
-  if (dirRes.error || linksRes.error || usable.length === 0) {
+  if (dirRes.error || linksRes.error || tgIssuedRes.error || siteIssuedRes.error || usable.length === 0) {
     await tg("sendMessage", {
       chat_id: chatId,
       text: "😕 Сейчас нет свободных направлений — все ключи разобрали. Загляни позже.",
