@@ -145,9 +145,9 @@ async function sendDirectionPicker(chatId: number, telegramUserId?: number) {
     (issuedRes?.data ?? []).map((r: any) => r.direction_id).filter(Boolean),
   );
 
-  const usable = directions.filter(
-    (d) => availableDirIds.has(d.id) && !takenDirIds.has(d.id),
-  );
+  // Показываем все направления, которые пользователь ещё НЕ получил
+  // (включая пустые, без активных ссылок).
+  const usable = directions.filter((d) => !takenDirIds.has(d.id));
 
   if (dirRes.error || linksRes.error || usable.length === 0) {
     await tg("sendMessage", {
