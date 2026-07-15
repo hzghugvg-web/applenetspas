@@ -11,7 +11,7 @@ function titleFor(pathname: string): string {
   if (pathname.startsWith("/support")) return "Поддержка";
   if (pathname.startsWith("/profile")) return "Настройки";
   if (pathname.startsWith("/admin")) return "Админ-панель";
-  if (pathname.startsWith("/faq")) return "FAQ";
+  if (pathname.startsWith("/faq")) return "О проекте";
   return "";
 }
 

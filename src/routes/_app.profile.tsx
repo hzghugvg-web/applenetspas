@@ -267,7 +267,7 @@ function ProfilePage() {
         <SettingsCard title="Информация">
           <Row
             icon={FileText}
-            label="Частые вопросы"
+            label="О проекте"
             onClick={() => navigate({ to: "/faq" })}
             right={<ExternalLink className="h-4 w-4 text-muted-foreground" />}
           />
